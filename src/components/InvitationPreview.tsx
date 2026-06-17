@@ -258,7 +258,8 @@ const InvitationPreview: React.FC<{ embedded?: boolean; embeddedModel?: UserMode
 const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: UserModel | null }> = ({ embedded = false, embeddedModel = null }) => {
   const { inviteId } = useParams<{ inviteId: string }>();
   const navigate = useNavigate();
-  const { permission, requestPermission, isLoading: isNotificationLoading } = useNotifications(undefined, inviteId);
+  const [inviteDocPath, setInviteDocPath] = useState<string | null>(null);
+  const { token, permission, requestPermission, isLoading: isNotificationLoading, error, isFCMSupported } = useNotifications();
   const [userModel, setUserModel] = useState<UserModel | null>(embedded ? embeddedModel : null);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -288,6 +289,11 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
   const [isMusicMuted, setIsMusicMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  // Etats pour la page d'administration
+  const [isAdminView, setIsAdminView] = useState(false);
+  const [adminEditingId, setAdminEditingId] = useState<string | null>(null);
+  const [adminFilterConfirmed, setAdminFilterConfirmed] = useState(false);
 
   const invitationTextRef = useRef<HTMLParagraphElement | null>(null);
   const typingTimerRef = useRef<number | null>(null);
@@ -305,6 +311,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         const inviteData = await InviteService.getInviteGlobal(inviteId);
         if (inviteData) {
           setInvite(inviteData);
+          setInviteDocPath(`users/${inviteData.userId}/invites/${inviteData.id}`);
           setIsConfirmed(inviteData.confirmed);
           setSelectedDrink((inviteData as any).selectedDrink || '');
           const models = await UserModelService.getUserModels(inviteData.userId);
@@ -429,6 +436,39 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isMusicPlaying, safeUserModel.backgroundMusic]);
+
+  // Afficher le modal de notifications une seule fois si non vu et pas encore autorisé
+  useEffect(() => {
+    console.log('=== DEBUG NOTIFICATION MODAL ===');
+    console.log('inviteDocPath:', inviteDocPath);
+    console.log('permission:', permission);
+    console.log('isLoading:', isLoading);
+    console.log('isAdminView:', isAdminView);
+    console.log('Notification in window:', 'Notification' in window);
+    console.log('Protocol:', window.location.protocol);
+    console.log('Is localhost:', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    if (inviteDocPath && !isLoading && !isAdminView && isSecure) {
+      // Vérifier dans localStorage si l'utilisateur a déjà vu le modal
+      const hasSeenModal = localStorage.getItem('furaha_notification_modal_seen');
+      console.log('hasSeenModal:', hasSeenModal);
+      
+      if (!hasSeenModal) {
+        console.log('→ Setting timer to show notification modal');
+        const timer = setTimeout(() => {
+          setShowNotificationModal(true);
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      console.log('→ Conditions not met to show modal');
+      if (!isSecure) {
+        console.warn('→ Site is not served over HTTPS or localhost - notifications will not work!');
+      }
+    }
+  }, [inviteDocPath, permission, isLoading, isAdminView]);
 
   const toggleMusic = () => {
     if (!audioRef.current) return;
@@ -1115,49 +1155,52 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         </div>
       )}
 
-      {/* FLOATING CONTROLS (Music & Guest Book) */}
-      <div className="fixed bottom-12 right-6 z-50 flex flex-col space-y-4">
-        {/* MUSIC CONTROL BUTTON */}
+      {/* FLOATING CONTROLS (Music, Notifications & Guest Book) - DESIGN COMPACT */}
+      <div className="fixed bottom-8 right-4 z-50 flex flex-col space-y-2">
+        {/* MUSIC CONTROL BUTTON (COMPACT) */}
         {safeUserModel.backgroundMusic && (
-          <div className="relative group">
-            {/* Animated Ring when playing */}
-            {isMusicPlaying && !isMusicMuted && (
-              <div className="absolute inset-[-4px] rounded-full overflow-hidden pointer-events-none">
-                <div 
-                  className="absolute inset-0 animate-spin-slow"
-                  style={{ 
-                    background: `conic-gradient(from 0deg, transparent 70%, ${colors.primary}, ${colors.secondary})`,
-                    animationDuration: '2s'
-                  }}
-                ></div>
-              </div>
+          <button 
+            onClick={toggleMute}
+            className={`w-10 h-10 rounded-full shadow-md flex items-center justify-center text-white border border-white/50 backdrop-blur-md transform hover:scale-105 transition-all active:scale-95 relative ${
+              isMusicMuted ? 'bg-slate-800/80' : ''
+            }`}
+            style={{ 
+              background: isMusicMuted ? undefined : `linear-gradient(to br, ${colors.primary}, ${colors.secondary})`
+            }}
+          >
+            {isMusicMuted ? (
+              <VolumeX className="h-5 w-5 text-white" />
+            ) : (
+              <Volume2 className={`h-5 w-5 text-white ${isMusicPlaying ? 'animate-pulse' : ''}`} />
             )}
-            
-            <button 
-              onClick={toggleMute}
-              className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white border-2 border-white/50 backdrop-blur-md transform hover:scale-110 transition-all active:scale-95 relative z-10 ${
-                isMusicMuted ? 'bg-slate-800/80' : ''
-              }`}
-              style={{ 
-                background: isMusicMuted ? undefined : `linear-gradient(to br, ${colors.primary}, ${colors.secondary})`
-              }}
-            >
-              {isMusicMuted ? (
-                <VolumeX className="h-5 w-5 text-white" />
-              ) : (
-                <Volume2 className={`h-5 w-5 text-white ${isMusicPlaying ? 'animate-pulse' : ''}`} />
-              )}
-              
-              {/* Music Note Icon floating when playing */}
-              {isMusicPlaying && !isMusicMuted && (
-                <MusicIcon className="absolute -top-1 -right-1 h-4 w-4 text-white animate-bounce" />
-              )}
-            </button>
-          </div>
+          </button>
         )}
 
+        {/* BOUTON NOTIFICATIONS (COMPACT) */}
+        <button 
+          onClick={async () => {
+            console.log('=== Manual notification button clicked ===');
+            setShowNotificationModal(true);
+          }}
+          className="w-10 h-10 rounded-full shadow-md flex items-center justify-center text-white border border-white/50 backdrop-blur-md transform hover:scale-105 transition-all active:scale-95 relative"
+          style={{ 
+            background: `linear-gradient(to br, ${colors.secondary}, ${colors.primary})`,
+            backgroundColor: colors.secondary // Fallback
+          }}
+        >
+          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          </svg>
+          {token && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center border border-white text-[10px] font-bold shadow-sm">
+              ✓
+            </div>
+          )}
+        </button>
+        
+        {/* BOUTON LIVRE D'OR (COMPACT + EFFETS ATTRACTIFS) */}
         <div className="relative group">
-          {/* Circular light border effect */}
+          {/* Contour lumineux tournant */}
           <div className="absolute inset-[-4px] rounded-full overflow-hidden pointer-events-none">
             <div 
               className="absolute inset-0 animate-spin-slow"
@@ -1171,20 +1214,20 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           
           <button 
             onClick={() => setShowGuestBook(true)}
-            className="w-14 h-14 rounded-full shadow-[0_8px_25px_rgba(0,0,0,0.3)] flex items-center justify-center text-white border-2 border-white transform hover:scale-110 transition-all active:scale-95 relative z-10"
+            className="w-10 h-10 rounded-full shadow-md flex items-center justify-center text-white border border-white/50 backdrop-blur-md transform hover:scale-105 transition-all active:scale-95 relative z-10"
             style={{ 
               background: `linear-gradient(to br, ${colors.primary}, ${colors.secondary})`,
               backgroundColor: colors.primary // Fallback
             }}
           >
-            <BookOpen className="h-6 w-6 text-white" />
+            <BookOpen className="h-5 w-5 text-white" />
             {guestBookMessages.length > 0 && (
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-rose-600 text-white rounded-full flex items-center justify-center text-[8px] font-black border-2 border-white shadow-lg animate-bounce">
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold border border-white shadow-sm animate-bounce">
                 {guestBookMessages.length}
               </div>
             )}
             
-            {/* Minimalist Sparkle */}
+            {/* Petit sparkle en bas à gauche */}
             <div className="absolute -bottom-1 -left-1 text-white opacity-80">
               <Sparkles className="h-3 w-3" style={{ color: colors.secondary }} />
             </div>
@@ -1388,6 +1431,113 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         primaryColor={colors.primary}
         secondaryColor={colors.secondary}
       />
+
+      {/* MODAL DE NOTIFICATION */}
+      {showNotificationModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* Overlay sombre */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              // Fermer le modal sans rien faire et marquer comme vu
+              localStorage.setItem('furaha_notification_modal_seen', 'true');
+              setShowNotificationModal(false);
+            }}
+          />
+          
+          {/* Contenu du modal */}
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden animate-slide-up">
+            {/* En-tête avec dégradé */}
+            <div 
+              className="p-6 text-center"
+              style={{ 
+                background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` 
+              }}
+            >
+              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-white">Ne manquez pas l'événement !</h2>
+            </div>
+            
+            {/* Corps */}
+            <div className="p-6">
+              {isFCMSupported === false && (
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm">
+                  <div className="flex items-start gap-3">
+                    <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold mb-1">Notifications non disponibles</p>
+                      <p>Les notifications push ne sont pas prises en charge sur Safari iOS. Utilisez Google Chrome ou un autre navigateur pour activer les rappels.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {error && (
+                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm">
+                  ⚠️ Erreur : {error}
+                </div>
+              )}
+              
+              {token && (
+                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+                  ✅ Notifications activées avec succès !
+                </div>
+              )}
+              
+              {isFCMSupported !== false && (
+                <>
+                  <p className="text-slate-600 text-center mb-6">
+                    Recevez un rappel automatiquement pour ne pas oublier la date !
+                  </p>
+                  
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={async () => {
+                        localStorage.setItem('furaha_notification_modal_seen', 'true');
+                        console.log('=== CLIC SUR BOUTON AUTORISER ===');
+                        console.log('inviteId:', inviteId);
+                        console.log('inviteDocPath:', inviteDocPath);
+                        console.log('invite state:', invite);
+                        await requestPermission({ inviteId, inviteDocPath });
+                      }}
+                      disabled={isNotificationLoading || isFCMSupported === false}
+                      className="w-full py-3 px-4 text-white font-semibold rounded-xl shadow-lg transition-all active:scale-95"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` 
+                      }}
+                    >
+                      {isNotificationLoading ? 'Chargement...' : token ? 'Réactiver les rappels' : 'Autoriser les rappels'}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('furaha_notification_modal_seen', 'true');
+                        setShowNotificationModal(false);
+                      }}
+                      className="w-full py-3 px-4 text-slate-500 font-medium rounded-xl transition-all hover:bg-slate-100"
+                    >
+                      Plus tard
+                    </button>
+                  </div>
+                </>
+              )}
+              
+              {isFCMSupported === false && (
+                <button
+                  onClick={() => setShowNotificationModal(false)}
+                  className="w-full py-3 px-4 text-slate-500 font-medium rounded-xl transition-all hover:bg-slate-100"
+                >
+                  Fermer
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         .animate-bounce-slow {
   animation: bounce-slow 3s infinite ease-in-out;

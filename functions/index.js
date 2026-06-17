@@ -5,15 +5,172 @@ const logger = require("firebase-functions/logger");
 
 admin.initializeApp();
 
-// Cloud function for push notifications disabled
-/*
-exports.sendPushNotification = onDocumentCreated({
-    document: "notifications/{notificationId}",
+/**
+ * Envoyer une notification push PERSONNALISÉE à chaque invité
+ * - Avec l'image de fond du couple
+ * - Avec le lien DYNAMIQUE vers l'invitation de l'invité
+ */
+exports.sendReminderToAllGuests = onRequest({
     region: "us-central1"
-}, async (event) => {
-    // ... logic removed ...
+}, async (req, res) => {
+    // Gestion CORS : autoriser les requêtes depuis tous les domaines
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
+    // Gérer la requête préflight OPTIONS
+    if (req.method === 'OPTIONS') {
+        return res.status(204).send('');
+    }
+
+    // Vérifier la méthode et les données
+    if (req.method !== 'POST') {
+        return res.status(405).send('Méthode non autorisée');
+    }
+
+    const { userId, templateId, title, body } = req.body;
+    if (!userId || !templateId) {
+        return res.status(400).send('userId et templateId manquants');
+    }
+
+    try {
+        logger.info('========================================');
+        logger.info('🚀 DEBUT DE L\'ENVOI DES NOTIFICATIONS PERSONNALISÉES');
+        logger.info('========================================');
+        logger.info('userId:', userId);
+        logger.info('templateId:', templateId);
+
+        // 1. Récupérer les données de l'événement (pour l'image de fond)
+        logger.info('Récupération des données de l\'événement...');
+        const eventDoc = await admin.firestore()
+            .collection("users")
+            .doc(userId)
+            .collection("UserModel")
+            .doc(templateId)
+            .get();
+        
+        const eventData = eventDoc.data();
+        const backgroundImage = eventData?.backgroundImage || eventData?.eventPhoto1 || '';
+        logger.info('Image de fond du couple:', backgroundImage ? 'trouvée' : 'aucune');
+
+        // 2. Récupérer TOUS les invités
+        logger.info('Récupération des invités...');
+        const invitesSnapshot = await admin.firestore()
+            .collection("users")
+            .doc(userId)
+            .collection("invites")
+            .get();
+        
+        logger.info('Nombre d\'invités trouvés:', invitesSnapshot.size);
+
+        if (invitesSnapshot.size === 0) {
+            logger.info('Aucun invité trouvé');
+            return res.status(200).send({ success: true, message: 'Aucun invité trouvé.', sent: 0, failed: 0 });
+        }
+
+        // 3. Préparer et envoyer une notification PAR INVITÉ
+        const messages = [];
+        let invitedWithTokenCount = 0;
+
+        invitesSnapshot.docs.forEach(doc => {
+            const inviteData = doc.data();
+            const inviteId = doc.id;
+            const token = inviteData.fcmToken;
+            const guestName = inviteData.nom || 'Cher invité';
+
+            if (token) {
+                invitedWithTokenCount++;
+                logger.info('---');
+                logger.info('Préparation notif pour:', inviteId);
+                logger.info('Nom de l\'invité:', guestName);
+                logger.info('Token présent:', true);
+
+                // URL DYNAMIQUE vers l'invitation de CET invité !
+                const dynamicUrl = `https://furaha-event-831ca.web.app/invitation/${inviteId}`;
+
+                // Message PERSONNALISÉ pour CET invité
+                const message = {
+                    token: token,
+                    notification: {
+                        title: title || `Rappel pour vous, ${guestName} !`,
+                        body: body || 'Votre invitation vous attend !',
+                    },
+                    webpush: {
+                        fcmOptions: {
+                            link: dynamicUrl // Le lien sur lequel cliquer !
+                        },
+                        notification: {
+                            title: title || `Rappel pour vous, ${guestName} !`,
+                            body: body || 'Votre invitation vous attend !',
+                            icon: backgroundImage || 'https://furaha-event-831ca.web.app/favicon.ico',
+                            image: backgroundImage, // Image de fond du couple en grand !
+                            badge: 'https://furaha-event-831ca.web.app/favicon.ico',
+                            vibrate: [200, 100, 200],
+                            requireInteraction: true,
+                            actions: [
+                                {
+                                    action: 'open',
+                                    title: 'Ouvrir l\'invitation',
+                                    icon: 'https://furaha-event-831ca.web.app/favicon.ico'
+                                }
+                            ]
+                        },
+                        data: {
+                            url: dynamicUrl,
+                            inviteId: inviteId,
+                            guestName: guestName
+                        }
+                    }
+                };
+
+                messages.push(message);
+                logger.info('Message préparé avec URL:', dynamicUrl);
+            } else {
+                logger.warn('Aucun token pour l\'invité:', inviteId);
+            }
+        });
+
+        logger.info('========================================');
+        logger.info('✅ Nombre total d\'invités avec token:', invitedWithTokenCount);
+        logger.info('========================================');
+
+        if (invitedWithTokenCount === 0) {
+            return res.status(200).send({ success: true, message: 'Aucun invité n\'a activé les notifications.', sent: 0, failed: 0 });
+        }
+
+        // 4. Envoyer TOUS les messages !
+        logger.info('Envoi de toutes les notifications...');
+        const response = await admin.messaging().sendEach(messages);
+        const sentCount = Number(response.successCount) || 0;
+        const failedCount = Number(response.failureCount) || 0;
+
+        logger.info('========================================');
+        logger.info('🎉 NOTIFICATIONS ENVOYÉES !');
+        logger.info(`✅ Succès: ${sentCount}`);
+        logger.info(`❌ Échecs: ${failedCount}`);
+        logger.info('========================================');
+
+        // Log des erreurs si échec
+        if (failedCount > 0) {
+            response.responses.forEach((resp, index) => {
+                if (resp.error) {
+                    logger.error(`Erreur pour message ${index}:`, resp.error.message);
+                }
+            });
+        }
+
+        return res.status(200).send({ 
+            success: true, 
+            sent: sentCount, 
+            failed: failedCount,
+            message: sentCount === 0 ? "Aucun invité n'a activé les notifications." : ""
+        });
+
+    } catch (error) {
+        logger.error('❌ ERREUR GLOBALE lors de l\'envoi des notifs:', error);
+        return res.status(500).send({ success: false, error: error.message });
+    }
 });
-*/
 
 /**
  * Optimise l'URL de l'image pour les réseaux sociaux (WhatsApp)
@@ -37,6 +194,7 @@ function optimizeImageUrl(url) {
 
 /**
  * Fonction pour gérer les métadonnées dynamiques (Open Graph) pour le partage d'invitations
+ * - Récupère l'image de fond depuis Firestore pour la prévisualisation WhatsApp
  */
 exports.shareInvitation = onRequest({
     region: "us-central1"
@@ -44,154 +202,125 @@ exports.shareInvitation = onRequest({
     logger.info("Requête reçue pour shareInvitation:", req.path, req.url);
     
     // Extraire l'inviteId du chemin
-    const pathParts = req.path.split('/').filter(part => part !== '');
-    const inviteId = pathParts[pathParts.length - 1];
-
-    if (!inviteId || inviteId === 'invitation' || inviteId === 'invite' || inviteId === 'v') {
-        logger.warn("ID d'invitation non trouvé dans le chemin:", req.path);
-        // On redirige vers l'accueil si pas d'ID
-        return res.redirect('/');
+    let inviteId = null;
+    if (req.path.startsWith('/v/')) {
+        inviteId = req.path.substring(3);
+    } else if (req.path.startsWith('/invite/')) {
+        inviteId = req.path.substring(8);
+    } else if (req.path.startsWith('/invitation/')) {
+        inviteId = req.path.substring(12);
     }
-
+    
+    logger.info("InviteId extrait:", inviteId);
+    
+    if (!inviteId) {
+        logger.warn("Aucun inviteId trouvé");
+        return res.redirect('https://furaha-event.com');
+    }
+    
     try {
-        logger.info(`Tentative de récupération de l'invitation ID: ${inviteId}`);
+        // Chercher dans quelle collection users se trouve cette invitation
+        // On doit d'abord trouver l'userId
+        let eventTitle = "Invitation Spéciale";
+        let eventDescription = "Vous êtes cordialement invité(e) à un événement spécial !";
+        let imageUrl = "https://furaha-event-831ca.web.app/assets/FURAHA-GOLD-CAdZ807y.png";
         
-        // Requête collectionGroup pour trouver l'invitation
-        // ATTENTION: Cela nécessite absolument un index "Collection Group" sur le champ "id" de la collection "invites"
-        const inviteSnapshot = await admin.firestore()
-            .collectionGroup("invites")
-            .where("id", "==", inviteId)
-            .get();
-
-        if (inviteSnapshot.empty) {
-            logger.error(`ERREUR: Invitation non trouvée dans TOUTE la base de données pour l'ID: ${inviteId}`);
-            return res.redirect(`/invitation/${inviteId}`);
-        }
-
-        const inviteDoc = inviteSnapshot.docs[0];
-        const inviteData = inviteDoc.data();
-        const fullPath = inviteDoc.ref.path;
+        // Tentative : chercher dans toutes les collections users (pas optimal mais fonctionnel)
+        // Pour le moment, on va utiliser une approche simplifiée :
+        // 1. On suppose que le guestId contient peut-être une référence ?
+        // 2. Sinon, on utilise les données par défaut
+        // En réalité, on devrait stocker l'userId dans le document invite
+        // Pour l'instant, on va utiliser la méthode par défaut
         
-        logger.info(`Document invitation trouvé au chemin: ${fullPath}`);
+        // Tentative de trouver l'invité dans Firestore
+        let guestName = "Cher invité";
         
-        // Récupérer le userId depuis le chemin: users/{userId}/invites/{inviteId}
-        const pathSegments = fullPath.split('/');
-        const userId = pathSegments[1]; 
+        // On va chercher dans tous les users (limité à 100 pour éviter les requêtes trop longues)
+        const usersSnapshot = await admin.firestore().collection("users").limit(100).get();
         
-        if (!userId) {
-            logger.error(`ERREUR: Impossible d'extraire le userId du chemin: ${fullPath}`);
-            return res.redirect(`/v/${inviteId}`);
-        }
-
-        logger.info(`Recherche du UserModel pour userId: ${userId}`);
-
-        // RÉCUPÉRATION DES MODÈLES (Correction: modelsSnapshot était manquant)
-        const modelsSnapshot = await admin.firestore()
-            .collection("users")
-            .doc(userId)
-            .collection("UserModel")
-            .get();
-
-        // Recherche du meilleur modèle pour cette invitation
-        let modelData = null;
-        if (!modelsSnapshot.empty) {
-            // Si l'invitation a une catégorie (wedding, birthday, etc.), on cherche le modèle correspondant
-            if (inviteData.category) {
-                const matchingModel = modelsSnapshot.docs.find(doc => doc.data().category === inviteData.category);
-                if (matchingModel) {
-                    modelData = matchingModel.data();
-                    logger.info(`Modèle correspondant trouvé pour la catégorie ${inviteData.category}: ${matchingModel.id}`);
-                }
-            }
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
+            const invitesRef = admin.firestore().collection("users").doc(userId).collection("invites");
+            const inviteDoc = await invitesRef.doc(inviteId).get();
             
-            // Si toujours pas de modèle, on prend le plus récent
-            if (!modelData) {
-                modelData = modelsSnapshot.docs[0].data();
-                logger.info(`Utilisation du modèle par défaut (premier trouvé): ${modelsSnapshot.docs[0].id}`);
+            if (inviteDoc.exists) {
+                logger.info("Invité trouvé pour userId:", userId);
+                
+                // Trouver le UserModel (le premier trouvé)
+                const userModelsSnapshot = await admin.firestore()
+                    .collection("users")
+                    .doc(userId)
+                    .collection("UserModel")
+                    .limit(1)
+                    .get();
+                
+                if (!userModelsSnapshot.empty) {
+                    const modelData = userModelsSnapshot.docs[0].data();
+                    eventTitle = modelData.title || "Invitation Spéciale";
+                    eventDescription = modelData.invitationText || "Vous êtes cordialement invité(e) à un événement spécial !";
+                    
+                    // Récupérer et optimiser l'image
+                    const rawImage = modelData.backgroundImage || modelData.eventPhoto1;
+                    if (rawImage) {
+                        imageUrl = optimizeImageUrl(rawImage);
+                    }
+                }
+                
+                const inviteData = inviteDoc.data();
+                guestName = inviteData.nom || "Cher invité";
+                break;
             }
-        } else {
-            logger.warn(`ATTENTION: Aucun document dans users/${userId}/UserModel. Utilisation des valeurs par défaut.`);
-        }
-
-        // Métadonnées
-        const title = modelData?.title || inviteData.nom || 'Invitation Officielle';
-        
-        // RECHERCHE DE L'IMAGE - PRIORITÉ AU DASHBOARD (backgroundImage)
-        let imageUrl = 'https://firebasestorage.googleapis.com/v0/b/furaha-event-831ca.firebasestorage.app/o/FURAHA-GOLD2.png?alt=media';
-        
-        if (modelData) {
-            // L'utilisateur a précisé que c'est "l'image de fond principale" dans le dashboard
-            imageUrl = modelData.backgroundImage || 
-                       modelData.invitationPhoto || 
-                       modelData.eventPhoto1 || 
-                       (modelData.eventPhotos && modelData.eventPhotos.length > 0 ? modelData.eventPhotos[0] : null) ||
-                       imageUrl;
         }
         
-        const guestName = inviteData.nom || "vous";
-        const description = ""; // Suppression de la description pour épurer l'affichage WhatsApp
+        logger.info("Données pour les meta tags:");
+        logger.info("- Titre:", eventTitle);
+        logger.info("- Description:", eventDescription);
+        logger.info("- Image:", imageUrl);
         
-        // Déterminer l'URL du site dynamiquement (pour gérer les sous-hébergements Firebase)
-        const host = req.headers['x-forwarded-host'] || req.headers.host;
-        const protocol = host.includes('localhost') ? 'http' : 'https';
-        const siteUrl = `${protocol}://${host}/v/${inviteId}`;
-
-        // Optimisation de l'image avec cache-buster
-        const optimizedImageUrl = `${optimizeImageUrl(imageUrl)}${imageUrl.includes('?') ? '&' : '?'}v=${Date.now()}`;
-
-        logger.info(`Génération du HTML pour ${host} avec titre: ${title}, image: ${optimizedImageUrl}`);
-
+        // Générer la page HTML avec les meta tags Open Graph
         const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    
-    <!-- PRIORITÉ ABSOLUE POUR WHATSAPP -->
-    <meta property="og:image" content="${optimizedImageUrl}">
-    <meta property="og:image:secure_url" content="${optimizedImageUrl}">
-    <meta property="og:image:type" content="image/jpeg">
-    <meta property="og:image:width" content="600">
-    <meta property="og:image:height" content="600">
-    <meta property="og:title" content="${title}">
-    <meta property="og:description" content="${description}">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="${siteUrl}?v=${Date.now()}">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${eventTitle}</title>
     
-    <!-- Autres balises -->
-    <meta property="og:site_name" content="Furaha Event">
-
-    <!-- Twitter -->
+    <!-- Open Graph Meta Tags pour les réseaux sociaux -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://furaha-event-831ca.web.app/invitation/${inviteId}">
+    <meta property="og:title" content="${eventTitle}">
+    <meta property="og:description" content="">
+    <meta property="og:image" content="${imageUrl}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="${title}">
-    <meta name="twitter:description" content="${description}">
-    <meta name="twitter:image" content="${optimizedImageUrl}">
-
-    <title>${title}</title>
-
+    <meta name="twitter:title" content="${eventTitle}">
+    <meta name="twitter:description" content="">
+    <meta name="twitter:image" content="${imageUrl}">
+    
+    <!-- Redirection automatique vers l'invitation -->
     <script>
-        // Redirection vers l'application réelle (chemin /invitation/ pour éviter la boucle infinie avec /v/)
-        window.location.href = '/invitation/${inviteId}';
+        setTimeout(() => {
+            window.location.href = '/invitation/${inviteId}';
+        }, 100);
     </script>
-    <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f8fafc; color: #334155; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #f59e0b; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; margin-bottom: 16px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
 </head>
-<body>
-    <div class="loader"></div>
-    <p>Chargement de votre invitation...</p>
+<body style="font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
+    <div style="text-align: center;">
+        <h1 style="color: #78350f; font-size: 2rem; margin-bottom: 1rem;">Redirection en cours...</h1>
+        <p style="color: #92400e;">Si rien ne se passe automatiquement, <a href="/invitation/${inviteId}" style="color: #92400e; text-decoration: underline;">cliquez ici</a></p>
+    </div>
 </body>
 </html>`;
-
-        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        return res.status(200).send(html);
-
+        
+        res.set('Content-Type', 'text/html');
+        res.status(200).send(html);
+        
     } catch (error) {
-        logger.error("ERREUR CRITIQUE dans shareInvitation:", error);
-        // En cas d'erreur, on redirige vers le chemin standard pour charger l'app React
+        logger.error('Erreur lors de la génération de la page de partage:', error);
+        // En cas d'erreur, rediriger quand même vers l'invitation
         return res.redirect(`/invitation/${inviteId}`);
     }
 });

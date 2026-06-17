@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getMessaging, isSupported, onMessage } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,23 +13,98 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-
-// Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app);
-
-// Configure persistence to keep user logged in
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error('Erreur lors de la configuration de la persistance initiale:', error);
-});
-
-// Initialize Cloud Firestore and get a reference to the service
 export const db = getFirestore(app);
-
-// Initialize Firebase Storage and get a reference to the service
 export const storage = getStorage(app);
 
-console.log('Firebase initialisé avec le projet:', import.meta.env.VITE_FIREBASE_PROJECT_ID);
+setPersistence(auth, browserLocalPersistence).catch(e => console.warn('Persistence init error:', e));
 
+// FCM Setup
+let messagingInstance: ReturnType<typeof getMessaging> | null = null;
+let initPromise: Promise<ReturnType<typeof getMessaging> | null> | null = null;
+
+const initFcm = async () => {
+  try {
+    const supported = await isSupported();
+    if (!supported) {
+      console.log('FCM not supported');
+      return null;
+    }
+
+    // Register SW first
+    if ('serviceWorker' in navigator) {
+      try {
+        const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('✅ SW registered');
+        messagingInstance = getMessaging(app, { serviceWorkerRegistration: swReg });
+      } catch (e) {
+        console.warn('SW reg error (trying without sw):', e);
+        messagingInstance = getMessaging(app);
+      }
+    } else {
+      messagingInstance = getMessaging(app);
+    }
+
+    // Gérer les NOTIFICATIONS EN PREMIER PLAN (l'app est ouverte)
+    if (messagingInstance) {
+      onMessage(messagingInstance, (payload) => {
+        console.log('%c📩 [FCM] Message en PREMIER PLAN reçu !', 'font-size:13px;font-weight:bold;color:blue;');
+        console.log('%c📦 Payload complet:', 'font-size:11px;color:gray;', payload);
+
+        // Afficher une notification même si l'app est ouverte !
+        if (Notification.permission === 'granted') {
+          const notificationTitle = payload.notification?.title || 'Rappel événement';
+          const notificationOptions = {
+            body: payload.notification?.body || 'Ne manquez pas votre événement !',
+            icon: payload.notification?.icon || 'https://furaha-event-831ca.web.app/favicon.ico',
+            badge: 'https://furaha-event-831ca.web.app/favicon.ico',
+            image: payload.notification?.image, // Photo du couple !
+            vibrate: [200, 100, 200],
+            data: {
+              url: payload.data?.url || '/',
+              inviteId: payload.data?.inviteId,
+              guestName: payload.data?.guestName
+            }
+          };
+
+          console.log('%c📢 Affichage de la notification en premier plan !', 'font-size:12px;color:purple;');
+          const notification = new Notification(notificationTitle, notificationOptions);
+          
+          // Gérer le clic sur la notification en premier plan
+          notification.onclick = (event) => {
+            console.log('%c👆 Clic sur notification en premier plan !', 'font-size:12px;font-weight:bold;color:cyan;');
+            notification.close();
+            
+            // Rediriger vers l'invitation dynamique !
+            const targetUrl = event.target?.data?.url || '/';
+            if (targetUrl && targetUrl !== '/') {
+              window.location.href = targetUrl;
+            } else {
+              window.focus();
+            }
+          };
+        }
+      });
+      console.log('✅ Listener de notification en premier plan DYNAMIQUE configuré');
+    }
+
+    console.log('✅ FCM initialized');
+    return messagingInstance;
+  } catch (e) {
+    console.error('FCM init error:', e);
+    return null;
+  }
+};
+
+initPromise = initFcm();
+
+export const getMessagingInstance = () => messagingInstance;
+export const getMessagingInstanceAsync = async () => {
+  if (messagingInstance) return messagingInstance;
+  if (initPromise) return initPromise;
+  return null;
+};
+
+console.log('✅ Firebase initialized for project:', import.meta.env.VITE_FIREBASE_PROJECT_ID);
 export default app;

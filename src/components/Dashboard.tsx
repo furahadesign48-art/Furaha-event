@@ -150,6 +150,11 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
   const [showImportModal, setShowImportModal] = useState(false);
   const [showBulkSendModal, setShowBulkSendModal] = useState(false);
   const [sentGuestIds, setSentGuestIds] = useState<string[]>([]);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderTitle, setReminderTitle] = useState('Rappel important');
+  const [reminderBody, setReminderBody] = useState('Ne manquez pas notre événement !');
+  const [reminderUrl, setReminderUrl] = useState('');
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
   
   // États pour la recherche et le tri des invités
   const [guestSearchTerm, setGuestSearchTerm] = useState('');
@@ -483,6 +488,51 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
     } catch (err) {
       console.error('Bulk import error:', err);
       showToast('error', "Une erreur est survenue lors de l'importation.");
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!userData?.id) {
+      showToast('error', 'Vous devez être connecté pour envoyer des notifications.');
+      return;
+    }
+
+    if (userModels.length === 0) {
+      showToast('error', 'Aucun modèle d\'événement trouvé.');
+      return;
+    }
+
+    setIsSendingReminder(true);
+    try {
+      // Call your Firebase Cloud Function!
+      const functionUrl = 'https://us-central1-furaha-event-831ca.cloudfunctions.net/sendReminderToAllGuests';
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userData.id,
+          templateId: userModels[0].id,
+          title: reminderTitle,
+          body: reminderBody
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.message) {
+          showToast('info', result.message);
+        } else {
+          showToast('success', `Notifications envoyées ! (${result.sent} envoyées, ${result.failed} échecs)`);
+        }
+        setShowReminderModal(false);
+      } else {
+        showToast('error', 'Erreur lors de l\'envoi des notifications.');
+      }
+    } catch (err) {
+      console.error('Reminder error:', err);
+      showToast('error', 'Erreur lors de l\'envoi des notifications.');
+    } finally {
+      setIsSendingReminder(false);
     }
   };
 
@@ -1460,6 +1510,13 @@ const renderOverview = () => {
             Exporter
           </button>
           <button
+            onClick={() => setShowReminderModal(true)}
+            className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-purple text-xs md:text-sm"
+          >
+            <Bell className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
+            Rappel
+          </button>
+          <button
             onClick={openAddGuestModal}
             className="col-span-2 sm:flex-none bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-amber transform hover:scale-105 text-xs md:text-sm"
           >
@@ -2159,6 +2216,89 @@ const renderOverview = () => {
         tables={tables}
         existingGuests={guests}
       />
+
+      {/* Modal de rappel push */}
+      {showReminderModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-fade-in">
+          <div className="bg-white rounded-[32px] shadow-2xl max-w-lg w-full flex flex-col overflow-hidden animate-zoom-in">
+            {/* Header */}
+            <div className="p-6 border-b border-neutral-100 bg-gradient-to-r from-purple-50 to-violet-50/30">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <div className="bg-purple-500 p-2.5 rounded-2xl mr-4 shadow-lg shadow-purple-200">
+                    <Bell className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900 leading-tight">Envoyer un rappel</h2>
+                    <p className="text-slate-500 text-sm font-medium">Notification push à tous les invités</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowReminderModal(false)}
+                  className="p-2 hover:bg-white rounded-xl transition-all text-neutral-400 hover:text-neutral-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Titre de la notification</label>
+                <input
+                  type="text"
+                  value={reminderTitle}
+                  onChange={(e) => setReminderTitle(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-sm"
+                  placeholder="Rappel événement"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Message</label>
+                <textarea
+                  value={reminderBody}
+                  onChange={(e) => setReminderBody(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-sm resize-none"
+                  placeholder="Message de rappel..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Lien de redirection (optionnel)</label>
+                <input
+                  type="text"
+                  value={reminderUrl}
+                  onChange={(e) => setReminderUrl(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-sm"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-neutral-100 bg-gradient-to-r from-white to-neutral-50">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowReminderModal(false)}
+                  className="flex-1 px-5 py-3 bg-white border border-neutral-300 text-slate-700 font-semibold rounded-xl hover:bg-neutral-50 transition-all duration-200"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSendReminder}
+                  disabled={isSendingReminder}
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSendingReminder ? "Envoi en cours..." : "Envoyer le rappel"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal d'envoi en masse WhatsApp */}
       {showBulkSendModal && (
