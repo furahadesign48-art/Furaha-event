@@ -383,11 +383,11 @@ const sendGuestBookNotificationHelper = async (snapshot, context) => {
 // Trigger for new guest messages (new collection: guestMessages)
 exports.sendGuestBookNotification = onDocumentCreated({
   document: "users/{userId}/invites/{inviteId}/guestMessages/{messageId}",
-  region: "us-central1"
+  region: "europe-west1"
 }, sendGuestBookNotificationHelper);
 
 // Trigger for new guest messages (legacy collection: message)
 exports.sendLegacyGuestBookNotification = onDocumentCreated({
   document: "users/{userId}/invites/{inviteId}/message/{messageId}",
-  region: "us-central1"
+  region: "europe-west1"
 }, sendGuestBookNotificationHelper);
