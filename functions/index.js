@@ -3,7 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 
-admin.initializeApp(); // Force deploy
+admin.initializeApp(); // Force deploy - v2
 
 /**
  * Envoyer une notification push PERSONNALISÉE à chaque invité
