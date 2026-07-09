@@ -93,15 +93,13 @@ exports.sendReminderToAllGuests = onRequest({
                     token: token,
                     notification: {
                         title: title || `Rappel pour vous, ${guestName} !`,
-                        body: body || 'Votre invitation vous attend !',
-                        ...(imageUrl && { image: imageUrl })
+                        body: body || 'Votre invitation vous attend !'
                     },
                     webpush: {
                         notification: {
                             title: title || `Rappel pour vous, ${guestName} !`,
                             body: body || 'Votre invitation vous attend !',
-                            icon: 'https://furaha-event-831ca.web.app/favicon.ico',
-                            ...(imageUrl && { image: imageUrl })
+                            icon: 'https://furaha-event-831ca.web.app/favicon.ico'
                         },
                         fcmOptions: {
                             link: dynamicUrl
@@ -113,6 +111,11 @@ exports.sendReminderToAllGuests = onRequest({
                         guestName: guestName
                     }
                 };
+
+                // Ajouter l'image si présente
+                if (imageUrl) {
+                    message.webpush.notification.image = imageUrl;
+                }
 
                 messages.push(message);
                 logger.info('Message préparé avec URL:', dynamicUrl);
@@ -362,15 +365,13 @@ const sendGuestBookNotificationHelper = async (snapshot, context) => {
           token: token,
           notification: {
             title: `${authorName} a écrit dans le livre d'or !`,
-            body: content.length > 100 ? content.substring(0, 97) + '...' : content,
-            ...(imageUrl && { image: imageUrl })
+            body: content.length > 100 ? content.substring(0, 97) + '...' : content
           },
           webpush: {
             notification: {
               title: `${authorName} a écrit dans le livre d'or !`,
               body: content.length > 100 ? content.substring(0, 97) + '...' : content,
-              icon: 'https://furaha-event-831ca.web.app/favicon.ico',
-              ...(imageUrl && { image: imageUrl })
+              icon: 'https://furaha-event-831ca.web.app/favicon.ico'
             },
             fcmOptions: {
               link: dynamicUrl
@@ -383,6 +384,11 @@ const sendGuestBookNotificationHelper = async (snapshot, context) => {
             type: 'guestBookMessage'
           }
         };
+
+        // Ajouter l'image si présente
+        if (imageUrl) {
+          notificationMessage.webpush.notification.image = imageUrl;
+        }
         
         messages.push(notificationMessage);
       }
