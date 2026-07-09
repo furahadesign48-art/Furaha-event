@@ -1,9 +1,9 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 
-admin.initializeApp();
+admin.initializeApp(); // Force deploy
 
 /**
  * Envoyer une notification push PERSONNALISÉE à chaque invité
@@ -96,30 +96,19 @@ exports.sendReminderToAllGuests = onRequest({
                         body: body || 'Votre invitation vous attend !',
                     },
                     webpush: {
-                        fcmOptions: {
-                            link: dynamicUrl // Le lien sur lequel cliquer !
-                        },
                         notification: {
                             title: title || `Rappel pour vous, ${guestName} !`,
                             body: body || 'Votre invitation vous attend !',
-                            icon: backgroundImage || 'https://furaha-event-831ca.web.app/favicon.ico',
-                            image: backgroundImage, // Image de fond du couple en grand !
-                            badge: 'https://furaha-event-831ca.web.app/favicon.ico',
-                            vibrate: [200, 100, 200],
-                            requireInteraction: true,
-                            actions: [
-                                {
-                                    action: 'open',
-                                    title: 'Ouvrir l\'invitation',
-                                    icon: 'https://furaha-event-831ca.web.app/favicon.ico'
-                                }
-                            ]
+                            icon: 'https://furaha-event-831ca.web.app/favicon.ico'
                         },
-                        data: {
-                            url: dynamicUrl,
-                            inviteId: inviteId,
-                            guestName: guestName
+                        fcmOptions: {
+                            link: dynamicUrl
                         }
+                    },
+                    data: {
+                        url: dynamicUrl,
+                        inviteId: inviteId,
+                        guestName: guestName
                     }
                 };
 
@@ -140,6 +129,8 @@ exports.sendReminderToAllGuests = onRequest({
 
         // 4. Envoyer TOUS les messages !
         logger.info('Envoi de toutes les notifications...');
+        logger.info('Messages préparés:', messages.map((m, i) => ({ index: i, tokenPrefix: m.token.substring(0, 20) + '...' })));
+        
         const response = await admin.messaging().sendEach(messages);
         const sentCount = Number(response.successCount) || 0;
         const failedCount = Number(response.failureCount) || 0;
@@ -150,14 +141,14 @@ exports.sendReminderToAllGuests = onRequest({
         logger.info(`❌ Échecs: ${failedCount}`);
         logger.info('========================================');
 
-        // Log des erreurs si échec
-        if (failedCount > 0) {
-            response.responses.forEach((resp, index) => {
-                if (resp.error) {
-                    logger.error(`Erreur pour message ${index}:`, resp.error.message);
-                }
-            });
-        }
+        // Log des erreurs si échec et des succès
+        response.responses.forEach((resp, index) => {
+            if (resp.error) {
+                logger.error(`❌ Erreur pour message ${index}:`, resp.error.message, resp.error.code);
+            } else {
+                logger.info(`✅ Succès pour message ${index}:`, resp.messageId);
+            }
+        });
 
         return res.status(200).send({ 
             success: true, 
@@ -219,33 +210,27 @@ exports.shareInvitation = onRequest({
     }
     
     try {
-        // Chercher dans quelle collection users se trouve cette invitation
-        // On doit d'abord trouver l'userId
         let eventTitle = "Invitation Spéciale";
         let eventDescription = "Vous êtes cordialement invité(e) à un événement spécial !";
         let imageUrl = "https://furaha-event-831ca.web.app/assets/FURAHA-GOLD-CAdZ807y.png";
-        
-        // Tentative : chercher dans toutes les collections users (pas optimal mais fonctionnel)
-        // Pour le moment, on va utiliser une approche simplifiée :
-        // 1. On suppose que le guestId contient peut-être une référence ?
-        // 2. Sinon, on utilise les données par défaut
-        // En réalité, on devrait stocker l'userId dans le document invite
-        // Pour l'instant, on va utiliser la méthode par défaut
-        
-        // Tentative de trouver l'invité dans Firestore
         let guestName = "Cher invité";
+        let userId = null;
         
-        // On va chercher dans tous les users (limité à 100 pour éviter les requêtes trop longues)
-        const usersSnapshot = await admin.firestore().collection("users").limit(100).get();
+        // Utiliser une collection group query pour trouver l'invite rapidement
+        const invitesCollectionGroup = admin.firestore().collectionGroup('invites');
+        const inviteQuery = invitesCollectionGroup.where('id', '==', inviteId);
+        const inviteSnapshot = await inviteQuery.limit(1).get();
         
-        for (const userDoc of usersSnapshot.docs) {
-            const userId = userDoc.id;
-            const invitesRef = admin.firestore().collection("users").doc(userId).collection("invites");
-            const inviteDoc = await invitesRef.doc(inviteId).get();
+        if (!inviteSnapshot.empty) {
+            const inviteDoc = inviteSnapshot.docs[0];
+            const inviteData = inviteDoc.data();
+            guestName = inviteData.nom || "Cher invité";
             
-            if (inviteDoc.exists) {
-                logger.info("Invité trouvé pour userId:", userId);
-                
+            // Extraire userId du champ inviteData si disponible, sinon du chemin du document
+            userId = inviteData.userId || inviteDoc.ref.parent.parent?.id;
+            logger.info("Invité trouvé pour userId:", userId);
+            
+            if (userId) {
                 // Trouver le UserModel (le premier trouvé)
                 const userModelsSnapshot = await admin.firestore()
                     .collection("users")
@@ -265,11 +250,9 @@ exports.shareInvitation = onRequest({
                         imageUrl = optimizeImageUrl(rawImage);
                     }
                 }
-                
-                const inviteData = inviteDoc.data();
-                guestName = inviteData.nom || "Cher invité";
-                break;
             }
+        } else {
+            logger.warn("Invité non trouvé avec la collection group query");
         }
         
         logger.info("Données pour les meta tags:");
@@ -303,14 +286,14 @@ exports.shareInvitation = onRequest({
     <!-- Redirection automatique vers l'invitation -->
     <script>
         setTimeout(() => {
-            window.location.href = '/invitation/${inviteId}';
+            window.location.href = '/i/${inviteId}';
         }, 100);
     </script>
 </head>
 <body style="font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
     <div style="text-align: center;">
         <h1 style="color: #78350f; font-size: 2rem; margin-bottom: 1rem;">Redirection en cours...</h1>
-        <p style="color: #92400e;">Si rien ne se passe automatiquement, <a href="/invitation/${inviteId}" style="color: #92400e; text-decoration: underline;">cliquez ici</a></p>
+        <p style="color: #92400e;">Si rien ne se passe automatiquement, <a href="/i/${inviteId}" style="color: #92400e; text-decoration: underline;">cliquez ici</a></p>
     </div>
 </body>
 </html>`;
@@ -324,3 +307,87 @@ exports.shareInvitation = onRequest({
         return res.redirect(`/invitation/${inviteId}`);
     }
 });
+
+// Helper function to send guest book notifications
+const sendGuestBookNotificationHelper = async (snapshot, context) => {
+  try {
+    const messageData = snapshot.data();
+    const authorName = messageData.authorName || 'Invité';
+    const content = messageData.content || '';
+    
+    // Extract userId from the path
+    const userId = context.params.userId;
+    const authorInviteId = context.params.inviteId;
+    
+    logger.info('📖 Nouveau message du livre d\'or pour utilisateur:', userId);
+    logger.info('Auteur:', authorName);
+    
+    // Get all invites for this user
+    const invitesSnapshot = await admin.firestore()
+      .collection('users')
+      .doc(userId)
+      .collection('invites')
+      .get();
+    
+    const messages = [];
+    for (const doc of invitesSnapshot.docs) {
+      const inviteData = doc.data();
+      const token = inviteData.fcmToken;
+      const guestName = inviteData.nom || 'Cher invité';
+      const inviteId = doc.id;
+      
+      // Don't send notification to the author themselves
+      if (token && inviteId !== authorInviteId) {
+        const dynamicUrl = `https://furaha-event-831ca.web.app/invitation/${inviteId}`;
+        
+        const notificationMessage = {
+          token: token,
+          notification: {
+            title: `${authorName} a écrit dans le livre d'or !`,
+            body: content.length > 100 ? content.substring(0, 97) + '...' : content,
+          },
+          webpush: {
+            notification: {
+              title: `${authorName} a écrit dans le livre d'or !`,
+              body: content.length > 100 ? content.substring(0, 97) + '...' : content,
+              icon: 'https://furaha-event-831ca.web.app/favicon.ico'
+            },
+            fcmOptions: {
+              link: dynamicUrl
+            }
+          },
+          data: {
+            url: dynamicUrl,
+            inviteId: inviteId,
+            guestName: guestName,
+            type: 'guestBookMessage'
+          }
+        };
+        
+        messages.push(notificationMessage);
+      }
+    }
+    
+    logger.info('Notifications préparées pour', messages.length, 'invités');
+    
+    if (messages.length > 0) {
+      const response = await admin.messaging().sendEach(messages);
+      logger.info('✅ Notifications envoyées:', response.successCount);
+      logger.info('❌ Échecs:', response.failureCount);
+    }
+  } catch (error) {
+    logger.error('❌ Erreur lors de l\'envoi des notifications du livre d\'or:', error);
+  }
+};
+
+// Trigger for new guest messages (new collection: guestMessages)
+exports.sendGuestBookNotification = onDocumentCreated({
+  document: "users/{userId}/invites/{inviteId}/guestMessages/{messageId}",
+  region: "us-central1"
+}, sendGuestBookNotificationHelper);
+
+// Trigger for new guest messages (legacy collection: message)
+exports.sendLegacyGuestBookNotification = onDocumentCreated({
+  document: "users/{userId}/invites/{inviteId}/message/{messageId}",
+  region: "us-central1"
+}, sendGuestBookNotificationHelper);
