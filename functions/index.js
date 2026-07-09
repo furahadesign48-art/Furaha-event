@@ -94,12 +94,14 @@ exports.sendReminderToAllGuests = onRequest({
                     notification: {
                         title: title || `Rappel pour vous, ${guestName} !`,
                         body: body || 'Votre invitation vous attend !',
+                        ...(imageUrl && { image: imageUrl })
                     },
                     webpush: {
                         notification: {
                             title: title || `Rappel pour vous, ${guestName} !`,
                             body: body || 'Votre invitation vous attend !',
-                            icon: 'https://furaha-event-831ca.web.app/favicon.ico'
+                            icon: 'https://furaha-event-831ca.web.app/favicon.ico',
+                            ...(imageUrl && { image: imageUrl })
                         },
                         fcmOptions: {
                             link: dynamicUrl
@@ -322,6 +324,22 @@ const sendGuestBookNotificationHelper = async (snapshot, context) => {
     logger.info('📖 Nouveau message du livre d\'or pour utilisateur:', userId);
     logger.info('Auteur:', authorName);
     
+    // Get user's template to retrieve background image
+    let imageUrl = '';
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      const templateCustomization = userData.templateCustomization;
+      const modelData = userData.modelData;
+      if (templateCustomization?.backgroundImage) {
+        imageUrl = optimizeImageUrl(templateCustomization.backgroundImage);
+      } else if (modelData?.backgroundImage || modelData?.eventPhoto1) {
+        const rawImage = modelData.backgroundImage || modelData.eventPhoto1;
+        imageUrl = optimizeImageUrl(rawImage);
+      }
+    }
+    logger.info('Image pour notifications du livre d\'or:', imageUrl);
+    
     // Get all invites for this user
     const invitesSnapshot = await admin.firestore()
       .collection('users')
@@ -345,12 +363,14 @@ const sendGuestBookNotificationHelper = async (snapshot, context) => {
           notification: {
             title: `${authorName} a écrit dans le livre d'or !`,
             body: content.length > 100 ? content.substring(0, 97) + '...' : content,
+            ...(imageUrl && { image: imageUrl })
           },
           webpush: {
             notification: {
               title: `${authorName} a écrit dans le livre d'or !`,
               body: content.length > 100 ? content.substring(0, 97) + '...' : content,
-              icon: 'https://furaha-event-831ca.web.app/favicon.ico'
+              icon: 'https://furaha-event-831ca.web.app/favicon.ico',
+              ...(imageUrl && { image: imageUrl })
             },
             fcmOptions: {
               link: dynamicUrl
