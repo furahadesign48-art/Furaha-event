@@ -3,7 +3,7 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 
-admin.initializeApp(); // Force deploy - v2
+admin.initializeApp(); // Force deploy - v3
 
 /**
  * Envoyer une notification push PERSONNALISÉE à chaque invité
@@ -51,7 +51,9 @@ exports.sendReminderToAllGuests = onRequest({
         
         const eventData = eventDoc.data();
         const backgroundImage = eventData?.backgroundImage || eventData?.eventPhoto1 || '';
+        const imageUrl = optimizeImageUrl(backgroundImage);
         logger.info('Image de fond du couple:', backgroundImage ? 'trouvée' : 'aucune');
+        logger.info('Image optimisée:', imageUrl);
 
         // 2. Récupérer TOUS les invités
         logger.info('Récupération des invités...');
