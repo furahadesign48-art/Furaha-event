@@ -1628,6 +1628,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     key={i} 
                     initial={{ y: 20, opacity: 0, rotate: -5 }}
                     whileInView={{ y: 0, opacity: 1, rotate: 0 }}
+                    viewport={{ once: false }}
                     transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
                     className="relative aspect-[3/4] overflow-hidden shadow-2xl border-2 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group"
                     style={{
@@ -1647,6 +1648,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       <motion.span 
                         initial={{ scale: 0.5 }}
                         whileInView={{ scale: 1 }}
+                        viewport={{ once: false }}
                         transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
                         className="text-3xl md:text-4xl font-luxury text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]"
                       >
@@ -1664,8 +1666,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   <motion.div 
                     initial={{ scale: 0, rotate: 180 }}
                     whileInView={{ scale: 1, rotate: 0 }}
+                    viewport={{ once: false }}
                     transition={{ duration: 0.6, type: "spring" }}
-                    className="relative group cursor-pointer"
+                    className="relative group cursor-pointer mx-auto"
                     onClick={() => {
                       const query = safeUserModel.eventAddress || safeUserModel.eventLocation;
                       const url = /iPhone|iPad|iPod/.test(navigator.userAgent) 
@@ -1704,7 +1707,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     <motion.div 
                       whileHover={{ scale: 1.2, rotate: 5 }}
                       whileTap={{ scale: 0.95 }}
-                      className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-4 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-500"
+                      className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-4 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-500 mx-auto"
                       style={{ 
                         borderColor: colors.primary,
                         boxShadow: `0 0 40px ${colors.primary}60`
@@ -1717,6 +1720,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: false }}
                       transition={{ duration: 0.5, delay: 0.5 }}
                       className="mt-3 text-center"
                     >
@@ -1730,6 +1734,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   <motion.div 
                     initial={{ y: 20, opacity: 0 }}
                     whileInView={{ y: 0, opacity: 1 }}
+                    viewport={{ once: false }}
                     transition={{ duration: 0.5, delay: 0.6 }}
                     className="cursor-pointer group w-full"
                     onClick={() => {
@@ -1849,7 +1854,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             {/* Falling Dots */}
             <FallingDots colors={colors} />
           <div className="relative z-10 w-full max-w-lg px-4">
-          <RevealOnScroll className="space-y-4 flex flex-col items-center">
+          <RevealOnScroll className="space-y-4 flex flex-col items-center mb-8">
           <ShinyButton 
             onClick={handleConfirmation}
             primaryColor={colors.primary}
@@ -1905,9 +1910,13 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             </div>
             
             <div className="grid grid-cols-3 gap-2">
-              {safeUserModel.drinkOptions.map((drink) => (
-                <button
+              {safeUserModel.drinkOptions.map((drink, index) => (
+                <motion.button
                   key={drink}
+                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: false }}
+                  transition={{ duration: 0.4, delay: 0.1 * index, ease: "easeOut" }}
                   onClick={() => handleDrinkSelection(drink)}
                   className={`flex items-center space-x-1.5 px-2 py-2.5 rounded-xl transition-all text-left group h-full ${
                     selectedDrink.includes(drink)
@@ -1921,7 +1930,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     style={{ color: selectedDrink.includes(drink) ? colors.primary : '#94a3b8' }} 
                   />
                   <span className="text-[10px] font-bold leading-tight break-words uppercase">{drink}</span>
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
@@ -1989,20 +1998,32 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </div>
                 
                 <div className="space-y-4 relative z-10">
-                  {games.filter((g: GameConfiguration) => g.isEnabled).map((game: GameConfiguration) => {
+                  {games.filter((g: GameConfiguration) => g.isEnabled).map((game: GameConfiguration, index) => {
                     const gameInfo = AVAILABLE_GAMES.find(g => g.type === game.type);
                     const isCompleted = completedGames.has(game.id);
 
                     return (
-                      <div key={game.id} className="bg-white/10 backdrop-blur-xl rounded-[30px] overflow-hidden border border-white/10 shadow-xl transition-all duration-500 hover:scale-[1.01] hover:shadow-2xl hover:bg-white/15 group">
+                      <motion.div 
+                        key={game.id}
+                        initial={{ opacity: 0, y: 20, scale: 0.9, rotate: -2 }}
+                        whileInView={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+                        whileHover={{ scale: 1.02, y: -5, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
+                        viewport={{ once: false }}
+                        transition={{ duration: 0.4, delay: 0.15 * index, ease: "easeOut" }}
+                        className="bg-white/10 backdrop-blur-xl rounded-[30px] overflow-hidden border border-white/10 shadow-xl transition-all duration-500 hover:shadow-2xl hover:bg-white/15 group"
+                      >
                         <button
                           onClick={() => setCurrentGameId(game.id)}
                           className="w-full px-6 py-5 flex items-center justify-between text-left"
                         >
                           <div className="flex items-center gap-5">
-                            <div className="w-14 h-14 bg-white/25 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                            <motion.div 
+                              animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.1, 1] }}
+                              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
+                              className="w-14 h-14 bg-white/25 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300"
+                            >
                               {gameInfo?.icon || '🎮'}
-                            </div>
+                            </motion.div>
                             <div className="flex-1">
                               <h3 className="text-white font-bold text-lg">{game.title}</h3>
                               <p className="text-white/80 text-sm mt-1">{game.description}</p>
@@ -2010,17 +2031,25 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                           </div>
                           <div className="flex items-center gap-3">
                             {isCompleted && (
-                              <div className="flex items-center gap-2 bg-emerald-400/25 px-3 py-1.5 rounded-full border border-emerald-300/30">
+                              <motion.div 
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                className="flex items-center gap-2 bg-emerald-400/25 px-3 py-1.5 rounded-full border border-emerald-300/30"
+                              >
                                 <Check className="text-emerald-300 w-5 h-5" />
                                 <span className="text-emerald-200 text-xs font-bold">Terminé</span>
-                              </div>
+                              </motion.div>
                             )}
-                            <div className="w-10 h-10 bg-white/25 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-white/35 transition-all duration-300">
+                            <motion.div 
+                              animate={{ x: [0, 3, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                              className="w-10 h-10 bg-white/25 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-white/35 transition-all duration-300"
+                            >
                               <ChevronRight className="text-white w-6 h-6" />
-                            </div>
+                            </motion.div>
                           </div>
                         </button>
-                      </div>
+                      </motion.div>
                     );
                   })}
                 </div>
