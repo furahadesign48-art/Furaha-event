@@ -48,45 +48,47 @@ const initFcm = async () => {
 
     // Gérer les NOTIFICATIONS EN PREMIER PLAN (l'app est ouverte)
     if (messagingInstance) {
-      onMessage(messagingInstance, (payload) => {
-        console.log('%c📩 [FCM] Message en PREMIER PLAN reçu !', 'font-size:13px;font-weight:bold;color:blue;');
-        console.log('%c📦 Payload complet:', 'font-size:11px;color:gray;', payload);
+        onMessage(messagingInstance, (payload) => {
+            console.log('%c📩 [FCM] Message en PREMIER PLAN reçu !', 'font-size:13px;font-weight:bold;color:blue;');
+            console.log('%c📦 Payload complet:', 'font-size:11px;color:gray;', JSON.stringify(payload, null, 2));
 
-        // Afficher une notification même si l'app est ouverte !
-        if (Notification.permission === 'granted') {
-          const notificationTitle = payload.notification?.title || 'Rappel événement';
-          const notificationOptions = {
-            body: payload.notification?.body || 'Ne manquez pas votre événement !',
-            icon: payload.notification?.icon || 'https://furaha-event-831ca.web.app/favicon.ico',
-            badge: 'https://furaha-event-831ca.web.app/favicon.ico',
-            image: payload.notification?.image, // Photo du couple !
-            vibrate: [200, 100, 200],
-            data: {
-              url: payload.data?.url || '/',
-              inviteId: payload.data?.inviteId,
-              guestName: payload.data?.guestName
-            }
-          };
+            // Afficher une notification même si l'app est ouverte !
+            if (Notification.permission === 'granted') {
+                const notificationTitle = payload.notification?.title || payload.data?.title || 'Rappel événement';
+                const notificationBody = payload.notification?.body || payload.data?.body || 'Ne manquez pas votre événement !';
+                
+                console.log('Notification Title:', notificationTitle);
+                console.log('Notification Body:', notificationBody);
+                
+                const notificationOptions = {
+                    body: notificationBody,
+                    icon: 'https://furaha-event-831ca.web.app/favicon.ico',
+                    data: {
+                        url: payload.data?.url || '/',
+                        inviteId: payload.data?.inviteId,
+                        guestName: payload.data?.guestName
+                    }
+                };
 
-          console.log('%c📢 Affichage de la notification en premier plan !', 'font-size:12px;color:purple;');
-          const notification = new Notification(notificationTitle, notificationOptions);
-          
-          // Gérer le clic sur la notification en premier plan
-          notification.onclick = (event) => {
-            console.log('%c👆 Clic sur notification en premier plan !', 'font-size:12px;font-weight:bold;color:cyan;');
-            notification.close();
-            
-            // Rediriger vers l'invitation dynamique !
-            const targetUrl = event.target?.data?.url || '/';
-            if (targetUrl && targetUrl !== '/') {
-              window.location.href = targetUrl;
-            } else {
-              window.focus();
+                console.log('%c📢 Affichage de la notification en premier plan !', 'font-size:12px;color:purple;');
+                const notification = new Notification(notificationTitle, notificationOptions);
+                
+                // Gérer le clic sur la notification en premier plan
+                notification.onclick = (event) => {
+                    console.log('%c👆 Clic sur notification en premier plan !', 'font-size:12px;font-weight:bold;color:cyan;');
+                    notification.close();
+                    
+                    // Rediriger vers l'invitation dynamique !
+                    const targetUrl = event.target?.data?.url || '/';
+                    if (targetUrl && targetUrl !== '/') {
+                        window.location.href = targetUrl;
+                    } else {
+                        window.focus();
+                    }
+                };
             }
-          };
-        }
-      });
-      console.log('✅ Listener de notification en premier plan DYNAMIQUE configuré');
+        });
+        console.log('✅ Listener de notification en premier plan DYNAMIQUE configuré');
     }
 
     console.log('✅ FCM initialized');

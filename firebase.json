@@ -31,6 +31,10 @@
         "function": "shareInvitation"
       },
       {
+        "source": "/invitation/**",
+        "function": "shareInvitation"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

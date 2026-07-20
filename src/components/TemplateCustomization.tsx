@@ -47,6 +47,10 @@ interface TemplateData {
   eventPhoto1?: string;
   eventPhoto2?: string;
   eventPhoto3?: string;
+  invitationTextPhoto?: string;
+  invitationTextPhotoTitle?: string;
+  invitationTextPhotoSubtitle?: string;
+  invitationTitleSubtitle?: string;
   title: string;
   invitationText: string;
   eventDate: string;
@@ -203,7 +207,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             showToast('success', 'Image ajoutée à la galerie');
           } else {
             handleInputChange(field as keyof TemplateData, url);
-            if (user && customTemplate.id && (field === 'eventPhoto1' || field === 'eventPhoto2' || field === 'eventPhoto3')) {
+            if (user && customTemplate.id && (field === 'eventPhoto1' || field === 'eventPhoto2' || field === 'eventPhoto3' || field === 'invitationTextPhoto')) {
               const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
               await setDoc(modelRef, { [field]: url, updatedAt: serverTimestamp() }, { merge: true });
               onSave({ ...customTemplate, [field]: url });
@@ -438,6 +442,18 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
+                Sous-titre au-dessus du titre
+              </label>
+              <input
+                type="text"
+                value={customTemplate.invitationTitleSubtitle || ''}
+                onChange={(e) => handleInputChange('invitationTitleSubtitle', e.target.value)}
+                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                placeholder="Ex: Nous avons le plaisir de vous inviter à"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
                 Titre de l'invitation
               </label>
               <input
@@ -447,6 +463,78 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
                 placeholder="Ex: Mariage de Sophie & Lucas"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Photo dans la zone de texte
+              </label>
+              <div className="space-y-3">
+                {/* Titre de la photo */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Titre de la photo
+                  </label>
+                  <input
+                    type="text"
+                    value={customTemplate.invitationTextPhotoTitle || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhotoTitle', e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="Ex: Motif de pagne"
+                  />
+                </div>
+
+                {/* Sous-titre de la photo */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                    Sous-titre de la photo
+                  </label>
+                  <input
+                    type="text"
+                    value={(customTemplate as any).invitationTextPhotoSubtitle || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhotoSubtitle' as any, e.target.value)}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    placeholder="Ex: Notre tradition"
+                  />
+                </div>
+
+                {/* Aperçu et upload */}
+                <div className="relative h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                  {customTemplate.invitationTextPhoto ? (
+                    <>
+                      <img
+                        src={customTemplate.invitationTextPhoto}
+                        alt="Aperçu photo texte"
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                      <button
+                        onClick={() => handleInputChange('invitationTextPhoto', '')}
+                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        title="Retirer la photo"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Camera className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
+                        <p className="text-neutral-500 text-sm">Aucune photo sélectionnée</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleCloudinaryUpload('invitationTextPhoto')}
+                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Charger une photo
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -880,6 +968,67 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
             </div>
 
+            {/* Section backgrounds */}
+            <div className="border-t border-amber-200 pt-6 mt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                <Palette className="h-5 w-5 text-amber-600" />
+                Fonds par section
+              </h3>
+              <div className="space-y-5">
+                {[
+                  { field: 'headerSectionBackground', label: 'Section Header (Accueil)' },
+                  { field: 'textSectionBackground', label: 'Section Texte d\'invitation' },
+                  { field: 'dateLocationSectionBackground', label: 'Section Date & Lieu' },
+                  { field: 'gallerySectionBackground', label: 'Section Galerie' },
+                  { field: 'rsvpDrinksSectionBackground', label: 'Section RSVP & Boissons' },
+                  { field: 'gamesSectionBackground', label: 'Section Jeux' },
+                  { field: 'qrFooterSectionBackground', label: 'Section QR Code & Footer' },
+                ].map(({ field, label }) => (
+                  <div key={field}>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      {label}
+                    </label>
+                    <div className="space-y-3">
+                      <div className="relative h-20 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                        {(customTemplate as any)[field] ? (
+                          <>
+                            <img
+                              src={(customTemplate as any)[field]}
+                              alt="Background preview"
+                              className="w-full h-full object-cover rounded-xl"
+                            />
+                            <button
+                              onClick={() => handleInputChange(field as keyof TemplateData, '')}
+                              className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              title="Retirer l'image de fond"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-center h-full">
+                            <div className="text-center">
+                              <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
+                              <p className="text-neutral-500 text-xs">Aucune image sélectionnée</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => handleCloudinaryUpload(field as keyof TemplateData)}
+                          className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Charger une image
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
             
           </div>
         );

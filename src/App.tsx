@@ -13,8 +13,9 @@ import BirthdayTemplate from './components/BirthdayTemplate';
 import GraduationTemplate from './components/GraduationTemplate';
 import AuthModal from './components/AuthModal';
 import InvitationPreview from './components/InvitationPreview';
-import { AuthProvider, useAuth } from './components/AuthContext';
+import GuestCheckin from './components/GuestCheckin';
 import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider, useAuth } from './components/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useTheme } from './contexts/ThemeContext';
@@ -191,6 +192,12 @@ function App() {
             <Route path="/invitation/:inviteId" element={<InvitationPreview />} />
             <Route path="/invite/:inviteId" element={<InvitationPreview />} />
             <Route path="/v/:inviteId" element={<InvitationPreview />} />
+            <Route path="/i/:inviteId" element={<InvitationPreview />} />
+            <Route path="/checkin/:userId" element={
+              <ProtectedRoute>
+                <GuestCheckin />
+              </ProtectedRoute>
+            } />
           </Routes>
         </AuthProvider>
       </LanguageProvider>

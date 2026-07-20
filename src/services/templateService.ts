@@ -29,6 +29,10 @@ export interface TemplateData {
   eventPhoto1?: string;
   eventPhoto2?: string;
   eventPhoto3?: string;
+  invitationTextPhoto?: string;
+  invitationTextPhotoTitle?: string;
+  invitationTextPhotoSubtitle?: string;
+  invitationTitleSubtitle?: string;
   title: string;
   invitationText: string;
   eventDate: string;
@@ -48,6 +52,14 @@ export interface TemplateData {
   isDefault?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+  // Section backgrounds
+  headerSectionBackground?: string;
+  textSectionBackground?: string;
+  dateLocationSectionBackground?: string;
+  gallerySectionBackground?: string;
+  rsvpDrinksSectionBackground?: string;
+  gamesSectionBackground?: string;
+  qrFooterSectionBackground?: string;
 }
 
 export interface UserModel extends TemplateData {
@@ -77,6 +89,7 @@ export interface Invite {
   statut?: 'pending' | 'confirmed' | 'declined';
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  userId: string;
 }
 
 export interface GuestCategory {
@@ -94,6 +107,140 @@ export interface Table {
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
+
+// Types de jeux disponibles
+export type GameType = 
+  | 'couple-quiz'        // Quiz sur le couple
+  | 'wish-generator'     // Générateur de vœux
+  | 'photo-challenge'    // Défi photo
+  | 'love-story-timeline'// Chronologie de l'histoire d'amour
+  | 'wedding-trivia'     // Trivia sur le mariage
+  | 'guest-book-prompt'  // Livre d'or avec prompts fun
+  | 'puzzle'             // Puzzle chronométré
+  | 'memory-match';      // Memory Match avec photos de couple
+
+// Question de quiz
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswerIndex?: number;
+}
+
+// Configuration de base d'un jeu
+export interface GameConfig {
+  id: string;
+  type: GameType;
+  title: string;
+  description: string;
+  isEnabled: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Configuration spécifique au quiz
+export interface CoupleQuizConfig extends GameConfig {
+  type: 'couple-quiz';
+  questions: QuizQuestion[];
+  showResultsToGuests: boolean;
+}
+
+// Configuration spécifique au générateur de vœux
+export interface WishGeneratorConfig extends GameConfig {
+  type: 'wish-generator';
+  prompts: string[];
+}
+
+// Configuration spécifique au défi photo
+export interface PhotoChallengeConfig extends GameConfig {
+  type: 'photo-challenge';
+  challenges: string[];
+}
+
+// Configuration spécifique à la chronologie
+export interface LoveStoryTimelineConfig extends GameConfig {
+  type: 'love-story-timeline';
+  events: {
+    date: string;
+    title: string;
+    description: string;
+    photo?: string;
+  }[];
+}
+
+// Configuration spécifique au trivia
+export interface WeddingTriviaConfig extends GameConfig {
+  type: 'wedding-trivia';
+  questions: QuizQuestion[];
+}
+
+// Configuration spécifique au livre d'or
+export interface GuestBookPromptConfig extends GameConfig {
+  type: 'guest-book-prompt';
+  prompts: string[];
+}
+
+// Configuration spécifique au puzzle chronométré
+export interface PuzzleConfig extends GameConfig {
+  type: 'puzzle';
+  imageUrl: string; // Image du puzzle
+  gridSize: 3 | 4 | 5; // Nombre de pièces par côté (3x3, 4x4, 5x5)
+  showLeaderboard: boolean; // Afficher le classement des meilleurs temps
+}
+
+// Configuration spécifique au Memory Match
+export interface MemoryMatchConfig extends GameConfig {
+  type: 'memory-match';
+  imageUrls: string[]; // Photos pour le jeu (minimum 4 pour 2 paires)
+  showLeaderboard: boolean; // Afficher le classement des meilleurs temps
+}
+
+// Union type pour toutes les configurations de jeux
+export type GameConfiguration = 
+  | CoupleQuizConfig
+  | WishGeneratorConfig
+  | PhotoChallengeConfig
+  | LoveStoryTimelineConfig
+  | WeddingTriviaConfig
+  | GuestBookPromptConfig
+  | PuzzleConfig
+  | MemoryMatchConfig;
+
+// Résultat d'un jeu par invité
+export interface GameResult {
+  id: string;
+  gameId: string;
+  gameType: GameType;
+  inviteId: string;
+  guestName: string;
+  data: any; // Données spécifiques au jeu
+  score?: number;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+// Extension de UserModel pour inclure les jeux
+export interface UserModelWithGames extends UserModel {
+  games?: GameConfiguration[];
+}
+
+// Liste des jeux disponibles avec leurs détails par défaut
+export const AVAILABLE_GAMES: {
+  type: GameType;
+  title: string;
+  description: string;
+  icon: string;
+  category: 'wedding' | 'all';
+}[] = [
+  {
+    type: 'memory-match',
+    title: 'Love Memory Match',
+    description: 'Trouvez les paires de photos du couple le plus rapidement possible !',
+    icon: '💝',
+    category: 'wedding'
+  }
+];
+
 // Service pour les templates par défaut
 export class TemplateService {
   private static readonly TEMPLATES_COLLECTION = 'templates';
@@ -342,14 +489,15 @@ export class InviteService {
   }
 
   // Créer un invité
-  static async createInvite(userId: string, inviteData: Omit<Invite, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  static async createInvite(userId: string, inviteData: Omit<Invite, 'id' | 'createdAt' | 'updatedAt' | 'userId'>): Promise<string> {
     try {
       const inviteId = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       console.log('Création de l\'invitation avec ID:', inviteId, 'pour l\'utilisateur:', userId);
       
-      const invite: Invite = {
+      const invite: Omit<Invite, 'createdAt' | 'updatedAt'> = {
         id: inviteId,
         ...inviteData,
+        userId: userId,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp
       };
@@ -1196,6 +1344,8 @@ export class SubscriptionService {
     }
   }
 }
+
+
 // Fonction utilitaire pour initialiser les templates par défaut
 export const initializeDefaultTemplates = async (): Promise<void> => {
   try {
@@ -1374,6 +1524,493 @@ export class GuestCategoryService {
       console.error('Erreur lors de la mise à jour de la catégorie:', error);
       throw new Error('Impossible de mettre à jour la catégorie');
     }
+  }
+}
+
+// Service pour les jeux
+export class GameService {
+  private static readonly USERS_COLLECTION = 'users';
+
+  // Générer une configuration de jeu par défaut selon le type
+  static generateDefaultGameConfig(gameType: GameType): GameConfiguration {
+    const baseConfig: Omit<GameConfig, 'id' | 'createdAt' | 'updatedAt'> = {
+      type: gameType,
+      title: AVAILABLE_GAMES.find(g => g.type === gameType)?.title || 'Jeu',
+      description: AVAILABLE_GAMES.find(g => g.type === gameType)?.description || '',
+      isEnabled: true
+    };
+
+    switch (gameType) {
+      case 'couple-quiz':
+        return {
+          ...baseConfig,
+          type: 'couple-quiz',
+          questions: [
+            { id: 'q1', question: 'Où avons-nous fait notre première rencontre ?', options: ['Paris', 'Lyon', 'Marseille', 'Bordeaux'] },
+            { id: 'q2', question: 'Quel est notre film préféré ?', options: ['Le Parrain', 'Titanic', 'La La Land', 'Intouchables'] },
+            { id: 'q3', question: 'Quelle est notre destination de rêve ?', options: ['Maldives', 'Bali', 'New York', 'Tokyo'] },
+            { id: 'q4', question: 'Quel est le plat que nous aimons cuisiner ensemble ?', options: ['Pâtes', 'Pizza', 'Sushi', 'Tajine'] },
+            { id: 'q5', question: 'Combien de mois avons-nous été en couple avant de nous marier ?', options: ['12', '24', '36', '48'] }
+          ],
+          showResultsToGuests: true,
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as CoupleQuizConfig;
+
+      case 'wish-generator':
+        return {
+          ...baseConfig,
+          type: 'wish-generator',
+          prompts: [
+            'Votre plus beau vœu pour nous ?',
+            'Votre conseil pour un mariage heureux ?',
+            'Votre souvenir préféré avec nous ?',
+            'Un mot pour les mariés ?'
+          ],
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as WishGeneratorConfig;
+
+      case 'photo-challenge':
+        return {
+          ...baseConfig,
+          type: 'photo-challenge',
+          challenges: [
+            'Prendre une photo avec les mariés',
+            'Prendre une photo de groupe',
+            'Prendre une photo amusante',
+            'Prendre une photo romantique',
+            'Prendre une photo avec un selfie stick'
+          ],
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as PhotoChallengeConfig;
+
+      case 'love-story-timeline':
+        return {
+          ...baseConfig,
+          type: 'love-story-timeline',
+          events: [
+            { date: '2020-01-01', title: 'Première rencontre', description: 'Notre premier rendez-vous au café' },
+            { date: '2021-06-15', title: 'Demande en mariage', description: 'Il m\'a demandé en mariage sur la plage' },
+            { date: '2023-06-29', title: 'Notre mariage', description: 'Le grand jour !' }
+          ],
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as LoveStoryTimelineConfig;
+
+      case 'wedding-trivia':
+        return {
+          ...baseConfig,
+          type: 'wedding-trivia',
+          questions: [
+            { id: 't1', question: 'Quel est le symbole traditionnel du mariage ?', options: ['Coeur', 'Anneau', 'Fleur', 'Colombe'] },
+            { id: 't2', question: 'Combien de temps dure le mariage traditionnel en moyenne ?', options: ['20 ans', '30 ans', '40 ans', '50 ans'] },
+            { id: 't3', question: 'Quelle fleur est la plus utilisée dans les mariages ?', options: ['Rose', 'Tulipe', 'Orchidée', 'Lys'] }
+          ],
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as WeddingTriviaConfig;
+
+      case 'guest-book-prompt':
+        return {
+          ...baseConfig,
+          type: 'guest-book-prompt',
+          prompts: [
+            'Votre message pour nous',
+            'Un souvenir inoubliable',
+            'Vos félicitations',
+            'Votre souhait pour l\'avenir'
+          ],
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as GuestBookPromptConfig;
+
+      case 'puzzle':
+        return {
+          ...baseConfig,
+          type: 'puzzle',
+          imageUrl: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800',
+          gridSize: 3,
+          showLeaderboard: true,
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as PuzzleConfig;
+
+      case 'memory-match':
+        return {
+          ...baseConfig,
+          type: 'memory-match',
+          imageUrls: [
+            'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=400',
+            'https://images.pexels.com/photos/1024994/pexels-photo-1024994.jpeg?auto=compress&cs=tinysrgb&w=400',
+            'https://images.pexels.com/photos/1024995/pexels-photo-1024995.jpeg?auto=compress&cs=tinysrgb&w=400',
+            'https://images.pexels.com/photos/1024996/pexels-photo-1024996.jpeg?auto=compress&cs=tinysrgb&w=400'
+          ],
+          showLeaderboard: true,
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as MemoryMatchConfig;
+      default:
+        return {
+          ...baseConfig,
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as GameConfiguration;
+    }
+  }
+
+  // Ajouter un jeu à un modèle
+  static async addGameToModel(userId: string, modelId: string, gameType: GameType): Promise<string> {
+    try {
+      const gameId = `game_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Step 1: Get the current model data first
+      const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+      const modelSnap = await getDoc(modelRef);
+      
+      if (!modelSnap.exists()) {
+        throw new Error('Modèle non trouvé');
+      }
+      const modelData = modelSnap.data();
+      console.log('=== Original modelData:', modelData);
+
+      let gameConfig = this.generateDefaultGameConfig(gameType);
+      gameConfig.id = gameId;
+
+      // Gestion spécifique pour le puzzle (utilise la photo de fond du modèle par défaut)
+      if (gameType === 'puzzle') {
+        const defaultGameData = AVAILABLE_GAMES.find(g => g.type === gameType);
+        gameConfig = {
+          id: gameId,
+          type: 'puzzle',
+          title: defaultGameData?.title || 'Puzzle',
+          description: defaultGameData?.description || 'Résolvez le puzzle le plus vite possible!',
+          isEnabled: true,
+          imageUrl: modelData.backgroundImage || 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800',
+          gridSize: 3,
+          showLeaderboard: true,
+          createdAt: null,
+          updatedAt: null
+        } as any;
+      }
+      
+      // Step 2: Build a plain JS object version of the model without the games array
+      const cleanedModelData: any = {};
+      for (const key in modelData) {
+        if (key !== 'games' && modelData.hasOwnProperty(key)) {
+          cleanedModelData[key] = JSON.parse(JSON.stringify(modelData[key]));
+        }
+      }
+
+      // Step 3: Get and clean existing games
+      const currentGamesRaw = (modelData.games as any[]) || [];
+      const currentGames = currentGamesRaw.map(game => JSON.parse(JSON.stringify(game)));
+      
+      // Step 4: Clean new game config
+      const cleanNewGame = JSON.parse(JSON.stringify({
+        ...gameConfig,
+        createdAt: null,
+        updatedAt: null
+      }));
+      
+      // Step 5: Combine and save, using client-side timestamps for array elements
+      const now = new Date();
+      const updatedGames = [...currentGames, {
+        ...cleanNewGame, createdAt: now, updatedAt: now }];
+      cleanedModelData.games = updatedGames;
+      cleanedModelData.updatedAt = serverTimestamp();
+      
+      console.log('=== Cleaned model data to save:', cleanedModelData);
+
+      // Step 6: Use setDoc instead of updateDoc
+      await setDoc(modelRef, cleanedModelData, { merge: false });
+
+      console.log('Jeu ajouté au modèle:', gameId);
+      return gameId;
+    } catch (error) {
+      console.error('=== FULL ERROR:', error);
+      throw error;
+    }
+  }
+
+  // Mettre à jour une configuration de jeu
+  static async updateGameConfig(userId: string, modelId: string, gameId: string, updates: Partial<GameConfiguration>): Promise<void> {
+    try {
+      const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+      const modelSnap = await getDoc(modelRef);
+      
+      if (!modelSnap.exists()) {
+        throw new Error('Modèle non trouvé');
+      }
+
+      const modelData = modelSnap.data();
+      console.log('=== Original modelData (update):', modelData);
+
+      // Clean the model
+      const cleanedModelData: any = {};
+      for (const key in modelData) {
+        if (key !== 'games' && modelData.hasOwnProperty(key)) {
+          cleanedModelData[key] = JSON.parse(JSON.stringify(modelData[key]));
+        }
+      }
+
+      // Clean existing games, then update
+      const currentGamesRaw = (modelData.games as GameConfiguration[]) || [];
+      const currentGames = currentGamesRaw.map(game => JSON.parse(JSON.stringify(game)));
+      
+      const now = new Date();
+      const updatedGames = currentGames.map(game => {
+        if (game.id === gameId) {
+          const merged = {
+            ...game,
+            ...updates
+          };
+          const cleanMerged = JSON.parse(JSON.stringify(merged));
+          return { ...cleanMerged, updatedAt: now };
+        }
+        return game;
+      });
+
+      cleanedModelData.games = updatedGames;
+      cleanedModelData.updatedAt = serverTimestamp();
+      
+      await setDoc(modelRef, cleanedModelData, { merge: false });
+
+      console.log('Jeu mis à jour:', gameId);
+    } catch (error) {
+      console.error('=== FULL ERROR updating game:', error);
+      throw error;
+    }
+  }
+
+  // Supprimer un jeu d'un modèle
+  static async removeGameFromModel(userId: string, modelId: string, gameId: string): Promise<void> {
+    try {
+      const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+      const modelSnap = await getDoc(modelRef);
+      
+      if (!modelSnap.exists()) {
+        throw new Error('Modèle non trouvé');
+      }
+
+      const modelData = modelSnap.data();
+      
+      const cleanedModelData: any = {};
+      for (const key in modelData) {
+        if (key !== 'games' && modelData.hasOwnProperty(key)) {
+          cleanedModelData[key] = JSON.parse(JSON.stringify(modelData[key]));
+        }
+      }
+
+      const currentGamesRaw = (modelData.games as GameConfiguration[]) || [];
+      const currentGames = currentGamesRaw.map(game => JSON.parse(JSON.stringify(game)));
+      
+      const updatedGames = currentGames.filter(game => game.id !== gameId);
+      
+      cleanedModelData.games = updatedGames;
+      cleanedModelData.updatedAt = serverTimestamp();
+
+      await setDoc(modelRef, cleanedModelData, { merge: false });
+      
+      console.log('Jeu supprimé du modèle:', gameId);
+    } catch (error) {
+      console.error('=== FULL ERROR deleting game:', error);
+      throw error;
+    }
+  }
+
+  // Obtenir les jeux d'un modèle
+  static async getModelGames(userId: string, modelId: string): Promise<GameConfiguration[]> {
+    try {
+      const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+      const modelSnap = await getDoc(modelRef);
+      
+      if (!modelSnap.exists()) {
+        return [];
+      }
+
+      const games = (modelSnap.data().games as GameConfiguration[]) || [];
+      const defaultImageUrl = 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800';
+      return games.map(game => {
+        if (game.type === 'puzzle') {
+          const puzzleGame = game as PuzzleConfig;
+          return {
+            ...puzzleGame,
+            imageUrl: puzzleGame.imageUrl || defaultImageUrl,
+            gridSize: puzzleGame.gridSize || 3,
+            showLeaderboard: puzzleGame.showLeaderboard !== undefined ? puzzleGame.showLeaderboard : true
+          };
+        }
+        return game;
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des jeux:', error);
+      return [];
+    }
+  }
+
+  // Enregistrer un résultat de jeu
+  static async saveGameResult(
+    userId: string,
+    inviteId: string,
+    gameId: string,
+    gameType: GameType,
+    guestName: string,
+    data: any,
+    score?: number
+  ): Promise<string> {
+    try {
+      const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const resultRef = doc(db, this.USERS_COLLECTION, userId, 'gameResults', resultId);
+
+      const result: GameResult = {
+        id: resultId,
+        gameId,
+        gameType,
+        inviteId,
+        guestName,
+        data,
+        score,
+        createdAt: serverTimestamp() as Timestamp,
+        updatedAt: serverTimestamp() as Timestamp
+      };
+
+      await setDoc(resultRef, result);
+      console.log('Résultat de jeu enregistré:', resultId);
+      return resultId;
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du résultat:', error);
+      throw new Error('Impossible d\'enregistrer le résultat');
+    }
+  }
+
+  // Obtenir les résultats d'un jeu
+  static async getGameResults(userId: string, gameId?: string): Promise<GameResult[]> {
+    try {
+      let queryRef = collection(db, this.USERS_COLLECTION, userId, 'gameResults');
+      
+      if (gameId) {
+        queryRef = query(queryRef, where('gameId', '==', gameId), orderBy('createdAt', 'desc')) as any;
+      } else {
+        queryRef = query(queryRef, orderBy('createdAt', 'desc')) as any;
+      }
+
+      const querySnapshot = await getDocs(queryRef);
+      const results: GameResult[] = [];
+
+      querySnapshot.forEach((doc) => {
+        results.push(doc.data() as GameResult);
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des résultats:', error);
+      return [];
+    }
+  }
+
+  // Ajouter un résultat de puzzle
+  static async addPuzzleResult(userId: string, modelId: string, gameId: string, inviteId: string, guestName: string, timeInSeconds: number): Promise<void> {
+    try {
+      const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
+      const resultRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results', resultId);
+      await setDoc(resultRef, {
+        id: resultId,
+        gameId,
+        gameType: 'puzzle',
+        inviteId,
+        guestName,
+        data: { timeInSeconds },
+        score: timeInSeconds, // Plus petit = meilleur score
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Erreur ajout du résultat:', error);
+      throw new Error('Impossible de sauvegarder le résultat');
+    }
+  }
+
+  // Récupérer les résultats du puzzle (classement)
+  static async getPuzzleResults(userId: string, modelId: string, gameId: string): Promise<GameResult[]> {
+    try {
+      const resultsRef = collection(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results');
+      const q = query(resultsRef, orderBy('score', 'asc')); // Meilleurs temps d'abord
+      const snapshot = await getDocs(q);
+      const results: GameResult[] = [];
+      snapshot.forEach(doc => {
+        results.push(doc.data() as GameResult);
+      });
+      return results;
+    } catch (error) {
+      console.error('Erreur chargement des résultats:', error);
+      throw new Error('Impossible de charger les résultats');
+    }
+  }
+
+  // Supprimer un résultat de jeu (pour réinitialiser un joueur)
+  static async deletePuzzleResult(userId: string, modelId: string, gameId: string, resultId: string): Promise<void> {
+    try {
+      const resultRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results', resultId);
+      await deleteDoc(resultRef);
+      console.log('Résultat de jeu supprimé:', resultId);
+    } catch (error) {
+      console.error('Erreur suppression du résultat:', error);
+      throw new Error('Impossible de supprimer le résultat');
+    }
+  }
+
+  // Supprimer tous les résultats d'un invité pour un jeu
+  static async deleteGuestGameResults(userId: string, modelId: string, gameId: string, guestName: string): Promise<void> {
+    try {
+      const resultsRef = collection(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results');
+      const q = query(resultsRef, where('guestName', '==', guestName));
+      const snapshot = await getDocs(q);
+      const batch = writeBatch(db);
+      snapshot.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      console.log('Résultats de', guestName, 'supprimés pour le jeu', gameId);
+    } catch (error) {
+      console.error('Erreur suppression des résultats de l\'invité:', error);
+      throw new Error('Impossible de supprimer les résultats');
+    }
+  }
+
+  // S'abonner aux résultats de jeu
+  static subscribeToGameResults(
+    userId: string,
+    onUpdate: (results: GameResult[]) => void,
+    gameId?: string
+  ): () => void {
+    let queryRef = collection(db, this.USERS_COLLECTION, userId, 'gameResults');
+    
+    if (gameId) {
+      queryRef = query(queryRef, where('gameId', '==', gameId), orderBy('createdAt', 'desc')) as any;
+    } else {
+      queryRef = query(queryRef, orderBy('createdAt', 'desc')) as any;
+    }
+
+    const unsubscribe = onSnapshot(queryRef, (snapshot) => {
+      const results: GameResult[] = [];
+      snapshot.forEach((doc) => {
+        results.push(doc.data() as GameResult);
+      });
+      onUpdate(results);
+    });
+
+    return unsubscribe;
   }
 }
 

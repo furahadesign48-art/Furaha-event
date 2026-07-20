@@ -440,3 +440,20 @@ a:focus {
 @media (max-width: 480px) { .pagne-bg { background-size: 300px 230px; } }
 @media (max-width: 640px) { .pagne-bg { background-size: 360px 300px; } }
 @media (min-width: 768px) { .pagne-bg { background-size: auto; } }
+
+/* Memory Match Card Flip Styles */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}

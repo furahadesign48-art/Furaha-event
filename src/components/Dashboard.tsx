@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   Calendar, 
-  BarChart3, 
   Settings, 
   Plus, 
   Eye, 
@@ -29,8 +28,15 @@ import {
   Tag,
   Check,
   FileSpreadsheet,
-  Bell
+  Bell,
+  Gamepad2,
+  Trophy,
+  Save,
+  Image as ImageIcon,
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
+import { GameService, AVAILABLE_GAMES, GameConfiguration, PuzzleConfig, MemoryMatchConfig } from '../services/templateService';
 import UserProfile from './UserProfile';
 import TableManagement from './TableManagement';
 import TemplateCustomization from './TemplateCustomization';
@@ -38,6 +44,7 @@ import UpgradeModal from './UpgradeModal';
 import ConfirmationModal from './ConfirmationModal';
 import DashboardSettings from './DashboardSettings';
 import { useTemplates } from '../hooks/useTemplates';
+import { useAuth } from './AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 import { useNotifications } from '../hooks/useNotifications';
 import { UserData } from '../hooks/useAuth';
@@ -101,7 +108,11 @@ interface DashboardProps {
   onBackToHome?: () => void;
 }
 
-const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: DashboardProps) => {
+const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackToHome }: DashboardProps) => {
+  const { user: authUser } = useAuth();
+  console.log('=== Dashboard rendering, authUser:', authUser);
+  // Use auth user first, then prop user
+  const userData = authUser || propUserData;
   const { 
     userModels, 
     userInvites, 
@@ -143,6 +154,10 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [categorySearchInput, setCategorySearchInput] = useState('');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [tableSearchInput, setTableSearchInput] = useState('');
+  const [showTableDropdown, setShowTableDropdown] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [openGuestActionsId, setOpenGuestActionsId] = useState<string | null>(null);
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
@@ -164,6 +179,17 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
   const [guestFilterTable, setGuestFilterTable] = useState<string>('all');
   const [selectedGuestIds, setSelectedGuestIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
+
+  // États pour la gestion des jeux
+  const [selectedModelForGames, setSelectedModelForGames] = useState<string | null>(null);
+  const [games, setGames] = useState<GameConfiguration[]>([]);
+  const [editingGame, setEditingGame] = useState<GameConfiguration | null>(null);
+  const [isLoadingGames, setIsLoadingGames] = useState(false);
+  const [isAddingGame, setIsAddingGame] = useState(false);
+  const [showAddGameModal, setShowAddGameModal] = useState(false);
+  const [isUploadingPuzzle, setIsUploadingPuzzle] = useState(false);
+  const [gameResults, setGameResults] = useState<Record<string, any[]>>({}); // key is gameId, value is list of results
+  const [selectedGameForResults, setSelectedGameForResults] = useState<string | null>(null);
 
   // Extraire toutes les catégories uniques présentes dans la liste des invités (pour inclure celles d'Excel)
   const availableCategories = useMemo(() => {
@@ -268,6 +294,780 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
     }
   }, [userData?.uid]);
 
+  // Initialiser le modèle sélectionné pour les jeux
+  useEffect(() => {
+    if (userModels.length > 0 && !selectedModelForGames) {
+      setSelectedModelForGames(userModels[0].id);
+    }
+  }, [userModels]);
+
+  // Charger les jeux et leurs résultats quand le modèle sélectionné change
+  const loadGames = async (modelId: string) => {
+    const userId = userData?.id;
+    console.log('=== loadGames userId:', userId);
+    if (!userId) return;
+    setIsLoadingGames(true);
+    try {
+      console.log('=== loadGames called for modelId:', modelId);
+      const loadedGames = await GameService.getModelGames(userId, modelId);
+      console.log('=== loadedGames:', loadedGames);
+      setGames(loadedGames);
+      
+      // Load results for each game
+      const resultsMap: Record<string, any[]> = {};
+      for (const game of loadedGames) {
+        if (game.type === 'puzzle' || game.type === 'memory-match') {
+          try {
+            const results = await GameService.getPuzzleResults(userId, modelId, game.id);
+            resultsMap[game.id] = results;
+          } catch (err) {
+            console.error(`Error loading results for game ${game.id}`, err);
+            resultsMap[game.id] = [];
+          }
+        }
+      }
+      setGameResults(resultsMap);
+      
+      // Auto add puzzle game if no games are present
+      if (loadedGames.length === 0) {
+        console.log('=== No games, adding puzzle...');
+        await GameService.addGameToModel(userId, modelId, 'puzzle');
+        const updatedGames = await GameService.getModelGames(userId, modelId);
+        console.log('=== updatedGames:', updatedGames);
+        setGames(updatedGames);
+        
+        // Load results for the new puzzle game
+        if (updatedGames.length > 0) {
+          const newResults = await GameService.getPuzzleResults(userId, modelId, updatedGames[0].id);
+          setGameResults({ [updatedGames[0].id]: newResults });
+        }
+      }
+    } catch (error) {
+      console.error('Erreur chargement des jeux:', error);
+    } finally {
+      setIsLoadingGames(false);
+    }
+  };
+
+  // Auto-select first model when user models are available
+  useEffect(() => {
+    console.log('=== selectedModelForGames useEffect, userModels:', userModels, 'selectedModelForGames:', selectedModelForGames);
+    if (userModels.length > 0 && !selectedModelForGames) {
+      console.log('=== Setting selectedModelForGames to:', userModels[0].id);
+      setSelectedModelForGames(userModels[0].id);
+    }
+  }, [userModels]);
+
+  useEffect(() => {
+    console.log('=== loadGames useEffect, selectedModelForGames:', selectedModelForGames, 'userData?.id:', userData?.id);
+    if (selectedModelForGames && userData?.id) {
+      console.log('=== Calling loadGames...');
+      loadGames(selectedModelForGames);
+    }
+  }, [selectedModelForGames, userData?.id]);
+
+  // Gestion des jeux
+  const handleAddGame = async (gameType: any) => {
+    const userId = userData?.id;
+    if (!userId || !selectedModelForGames) return;
+    setIsAddingGame(true);
+    try {
+      await GameService.addGameToModel(userId, selectedModelForGames, gameType);
+      await loadGames(selectedModelForGames);
+      await refreshUserData();
+      showToast('success', 'Jeu ajouté avec succès');
+      setShowAddGameModal(false);
+    } catch (error: any) {
+      console.error('Erreur ajout jeu:', error);
+      showToast('error', `Erreur: ${error.message}`);
+    } finally {
+      setIsAddingGame(false);
+    }
+  };
+
+  const handleUpdateGame = async (updates: Partial<GameConfiguration>) => {
+    const userId = userData?.id;
+    if (!userId || !selectedModelForGames || !editingGame) return;
+    try {
+      await GameService.updateGameConfig(userId, selectedModelForGames, editingGame.id, updates);
+      await loadGames(selectedModelForGames);
+      setEditingGame(null);
+      showToast('success', 'Jeu mis à jour avec succès');
+    } catch (error) {
+      console.error('Erreur mise à jour:', error);
+      showToast('error', 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleDeleteGame = async (gameId: string) => {
+    const userId = userData?.id;
+    if (!userId || !selectedModelForGames) return;
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer ce jeu ?')) {
+      try {
+        await GameService.removeGameFromModel(userId, selectedModelForGames, gameId);
+        await loadGames(selectedModelForGames);
+        await refreshUserData();
+        showToast('success', 'Jeu supprimé avec succès');
+      } catch (error) {
+        console.error('Erreur suppression:', error);
+        showToast('error', 'Erreur lors de la suppression');
+      }
+    }
+  };
+  
+  const refreshGameResults = async (gameId: string) => {
+    const userId = userData?.id;
+    if (!userId || !selectedModelForGames) return;
+    try {
+      const results = await GameService.getPuzzleResults(userId, selectedModelForGames, gameId);
+      setGameResults(prev => ({ ...prev, [gameId]: results }));
+      showToast('success', 'Classement mis à jour');
+    } catch (err) {
+      console.error('Erreur lors du rafraîchissement:', err);
+      showToast('error', 'Erreur lors du rafraîchissement');
+    }
+  };
+
+  const renderGames = () => {
+    console.log('=== renderGames games:', games);
+    const memoryMatchGame = games.find(g => g.type === 'memory-match');
+    console.log('=== renderGames memoryMatchGame:', memoryMatchGame);
+    
+    return (
+      <div className="animate-fade-in space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              Configuration des Jeux
+            </h3>
+            <p className="text-slate-600 mt-1">Configurez les jeux pour vos invités</p>
+          </div>
+        </div>
+
+        {/* Sélection du modèle */}
+        <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Gamepad2 className="h-5 w-5 text-amber-600" />
+            </div>
+            <h4 className="font-semibold text-slate-900">Modèle sélectionné</h4>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {userModels.map((model) => (
+              <button
+                key={model.id}
+                onClick={() => {
+                  console.log('=== Model button clicked:', model.id);
+                  setSelectedModelForGames(model.id);
+                }}
+                className={`px-4 py-2 rounded-xl border-2 transition-all duration-300 font-medium text-sm ${
+                  selectedModelForGames === model.id
+                    ? 'border-amber-500 bg-amber-50 text-amber-700'
+                    : 'border-neutral-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50'
+                }`}
+              >
+                {model.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isLoadingGames ? (
+          <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 flex items-center justify-center py-12">
+            <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Puzzle Game */}
+            {(() => {
+              const puzzleGame = games.find(g => g.type === 'puzzle');
+              if (!puzzleGame) return null;
+              return (
+                <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                      <Gamepad2 className="h-5 w-5 text-amber-600" />
+                      Puzzle
+                    </h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setSelectedGameForResults(selectedGameForResults === puzzleGame.id ? null : puzzleGame.id)}
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                      >
+                        <Trophy className="h-4 w-4" />
+                        {selectedGameForResults === puzzleGame.id ? 'Cacher Classement' : 'Voir Classement'}
+                      </button>
+                      <button
+                        onClick={() => setEditingGame(puzzleGame)}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        Configurer
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGame(puzzleGame.id)}
+                        className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl border border-neutral-200/50 p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h5 className="font-semibold text-slate-900">
+                            {puzzleGame.title}
+                          </h5>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            puzzleGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
+                          }`}>
+                            {puzzleGame.isEnabled ? 'Activé' : 'Désactivé'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-3">{puzzleGame.description}</p>
+                        {(puzzleGame as PuzzleConfig).imageUrl && (
+                          <div className="mt-2 rounded-xl overflow-hidden border border-neutral-200">
+                            <img 
+                              src={(puzzleGame as PuzzleConfig).imageUrl} 
+                              alt="Puzzle Preview" 
+                              className="w-full h-32 object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Leaderboard section */}
+                  {selectedGameForResults === puzzleGame.id && (
+                    <div className="mt-6 border-t border-neutral-200 pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <h5 className="font-semibold text-slate-900 flex items-center gap-2">
+                          <Trophy className="h-5 w-5 text-amber-600" />
+                          Classement des joueurs
+                        </h5>
+                        <button
+                          onClick={() => refreshGameResults(puzzleGame.id)}
+                          className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span className="text-xs font-semibold">Rafraîchir</span>
+                        </button>
+                      </div>
+                      {gameResults[puzzleGame.id] && gameResults[puzzleGame.id].length > 0 ? (
+                        <div className="space-y-2">
+                          {gameResults[puzzleGame.id].sort((a, b) => (a.score || 0) - (b.score || 0)).map((result, index) => (
+                            <div 
+                              key={result.id} 
+                              className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-200"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                                  index === 0 ? 'bg-yellow-400 text-yellow-900' : 
+                                  index === 1 ? 'bg-gray-400 text-gray-900' : 
+                                  index === 2 ? 'bg-orange-400 text-orange-900' : 
+                                  'bg-slate-300 text-slate-700'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                                <span className="font-semibold text-slate-800 text-sm">
+                                  {result.guestName}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-slate-700 text-sm">
+                                  {(() => {
+                                    const seconds = result.score || 0;
+                                    const mins = Math.floor(seconds / 60);
+                                    const secs = Math.floor(seconds % 60);
+                                    return `${mins}:${secs.toString().padStart(2, '0')}`;
+                                  })()}
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    if (!userData?.id || !selectedModelForGames) return;
+                                    try {
+                                      await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, puzzleGame.id, result.guestName);
+                                      await loadGames(selectedModelForGames);
+                                      showToast('success', 'Résultat de l\'invité réinitialisé');
+                                    } catch (err) {
+                                      console.error('Erreur lors de la réinitialisation:', err);
+                                      showToast('error', 'Erreur lors de la réinitialisation');
+                                    }
+                                  }}
+                                  className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-slate-500 text-sm text-center py-4">
+                          Aucun joueur n'a encore terminé ce jeu.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Memory Match Game */}
+            {memoryMatchGame ? (
+              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="font-semibold text-slate-900 flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-pink-600 fill-pink-600" />
+                    Love Memory Match
+                  </h4>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedGameForResults(selectedGameForResults === memoryMatchGame.id ? null : memoryMatchGame.id)}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                    >
+                      <Trophy className="h-4 w-4" />
+                      {selectedGameForResults === memoryMatchGame.id ? 'Cacher Classement' : 'Voir Classement'}
+                    </button>
+                    <button
+                      onClick={() => setEditingGame(memoryMatchGame)}
+                      className="bg-gradient-to-r from-pink-500 to-rose-600 text-white px-4 py-2 rounded-xl hover:from-pink-600 hover:to-rose-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      Configurer
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGame(memoryMatchGame.id)}
+                      className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-r from-neutral-50 to-pink-50/30 rounded-xl border border-neutral-200/50 p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h5 className="font-semibold text-slate-900">
+                          {memoryMatchGame.title}
+                        </h5>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          memoryMatchGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
+                        }`}>
+                          {memoryMatchGame.isEnabled ? 'Activé' : 'Désactivé'}
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-600 mb-3">{memoryMatchGame.description}</p>
+                      {(memoryMatchGame as MemoryMatchConfig).imageUrls && (memoryMatchGame as MemoryMatchConfig).imageUrls.length > 0 && (
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          {(memoryMatchGame as MemoryMatchConfig).imageUrls.slice(0, 4).map((url, i) => (
+                            <img 
+                              key={i}
+                              src={url} 
+                              alt={`Memory ${i+1}`} 
+                              className="w-full h-12 object-cover rounded-lg border border-neutral-200"
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Leaderboard section */}
+                {selectedGameForResults === memoryMatchGame.id && (
+                  <div className="mt-6 border-t border-neutral-200 pt-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-semibold text-slate-900 flex items-center gap-2">
+                        <Trophy className="h-5 w-5 text-amber-600" />
+                        Classement des joueurs
+                      </h5>
+                      <button
+                        onClick={() => refreshGameResults(memoryMatchGame.id)}
+                        className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        <span className="text-xs font-semibold">Rafraîchir</span>
+                      </button>
+                    </div>
+                    {gameResults[memoryMatchGame.id] && gameResults[memoryMatchGame.id].length > 0 ? (
+                      <div className="space-y-2">
+                        {gameResults[memoryMatchGame.id].sort((a, b) => (a.score || 0) - (b.score || 0)).map((result, index) => (
+                          <div 
+                            key={result.id} 
+                            className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-200"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                                index === 0 ? 'bg-yellow-400 text-yellow-900' : 
+                                index === 1 ? 'bg-gray-400 text-gray-900' : 
+                                index === 2 ? 'bg-orange-400 text-orange-900' : 
+                                'bg-slate-300 text-slate-700'
+                              }`}>
+                                {index + 1}
+                              </div>
+                              <span className="font-semibold text-slate-800 text-sm">
+                                {result.guestName}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-700 text-sm">
+                                {(() => {
+                                  const seconds = result.score || 0;
+                                  const mins = Math.floor(seconds / 60);
+                                  const secs = Math.floor(seconds % 60);
+                                  return `${mins}:${secs.toString().padStart(2, '0')}`;
+                                })()}
+                              </span>
+                              <button
+                                onClick={async () => {
+                                  if (!userData?.id || !selectedModelForGames) return;
+                                  try {
+                                    await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, memoryMatchGame.id, result.guestName);
+                                    await loadGames(selectedModelForGames);
+                                    showToast('success', 'Résultat de l\'invité réinitialisé');
+                                  } catch (err) {
+                                    console.error('Erreur lors de la réinitialisation:', err);
+                                    showToast('error', 'Erreur lors de la réinitialisation');
+                                  }
+                                }}
+                                className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-sm text-center py-4">
+                        Aucun joueur n'a encore terminé ce jeu.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 text-center">
+                <div className="text-2xl text-neutral-400 mb-3">💝</div>
+                <h4 className="font-semibold text-neutral-700 mb-2">Love Memory Match</h4>
+                <p className="text-neutral-500 mb-4">Ajoutez le jeu de memory match à votre modèle</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const userId = userData?.id;
+                      if (!userId || !selectedModelForGames) {
+                        return;
+                      }
+                      await GameService.addGameToModel(userId, selectedModelForGames, 'memory-match');
+                      await loadGames(selectedModelForGames);
+                    } catch (error) {
+                      console.error('=== Error adding memory match:', error);
+                      alert('Erreur lors de l\'ajout du memory match : ' + (error as Error).message);
+                    }
+                  }}
+                  className="bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-3 rounded-xl hover:from-pink-600 hover:to-rose-700 transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Ajouter Memory Match
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal d'édition de jeu */}
+        {editingGame && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-white rounded-2xl shadow-luxury max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up">
+              <div className={`p-6 border-b border-neutral-200/50 flex justify-between items-center ${
+                editingGame.type === 'memory-match' 
+                  ? 'bg-gradient-to-r from-neutral-50 to-pink-50/30' 
+                  : 'bg-gradient-to-r from-neutral-50 to-amber-50/30'
+              }`}>
+                <h3 className="text-xl font-bold text-slate-900">
+                  {editingGame.type === 'memory-match' ? 'Configurer Memory Match' : 'Configurer le Puzzle'}
+                </h3>
+                <button onClick={() => setEditingGame(null)} className="p-2 hover:bg-neutral-100 rounded-lg">
+                  <X className="h-5 w-5 text-neutral-500" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingGame.title}
+                    onChange={(e) => setEditingGame({ ...editingGame, title: e.target.value })}
+                    className={`w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 ${
+                      editingGame.type === 'memory-match' ? 'focus:ring-pink-500' : 'focus:ring-amber-500'
+                    }`}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+                  <textarea
+                    value={editingGame.description}
+                    onChange={(e) => setEditingGame({ ...editingGame, description: e.target.value })}
+                    className={`w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 ${
+                      editingGame.type === 'memory-match' ? 'focus:ring-pink-500' : 'focus:ring-amber-500'
+                    } min-h-[100px]`}
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="game-enabled"
+                    checked={editingGame.isEnabled}
+                    onChange={(e) => setEditingGame({ ...editingGame, isEnabled: e.target.checked })}
+                    className={`w-5 h-5 rounded border-neutral-300 focus:ring-2 ${
+                      editingGame.type === 'memory-match' ? 'text-pink-600 focus:ring-pink-500' : 'text-amber-600 focus:ring-amber-500'
+                    }`}
+                  />
+                  <label htmlFor="game-enabled" className="text-sm font-medium text-slate-700">Activer le jeu</label>
+                </div>
+
+                {/* Config spécifique au jeu */}
+                <div className="space-y-4 pt-4 border-t border-neutral-200">
+                  {editingGame.type === 'puzzle' ? (
+                    <>
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <ImageIcon className="h-5 w-5" />
+                        Configuration du Puzzle
+                      </h4>
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Image du Puzzle</label>
+                        <div className="flex gap-3">
+                          <label className={`flex-1 px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 font-semibold border ${isUploadingPuzzle ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300' : 'bg-amber-100 text-amber-700 cursor-pointer hover:bg-amber-200 border-amber-300'}`}>
+                            {isUploadingPuzzle ? (
+                              <>
+                                <svg className="animate-spin h-5 w-5 text-amber-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Envoi en cours...
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="h-5 w-5" />
+                                Importer une image
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={isUploadingPuzzle}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (file && userData?.id && !isUploadingPuzzle) {
+                                  setIsUploadingPuzzle(true);
+                                  try {
+                                    // Créer une référence dans Firebase Storage
+                                    const storageRef = ref(storage, `users/${userData.id}/puzzles/${Date.now()}-${file.name}`);
+                                    
+                                    // Lire le fichier en data URL pour l'upload
+                                    const reader = new FileReader();
+                                    reader.onload = async (event) => {
+                                      const dataUrl = event.target?.result as string;
+                                      
+                                      try {
+                                        // Upload vers Firebase Storage
+                                        await uploadString(storageRef, dataUrl, 'data_url');
+                                        
+                                        // Récupérer l'URL de téléchargement
+                                        const downloadUrl = await getDownloadURL(storageRef);
+                                        
+                                        // Mettre à jour la configuration du jeu avec l'URL Storage
+                                        setEditingGame({ ...editingGame, imageUrl: downloadUrl } as PuzzleConfig);
+                                      } catch (uploadError) {
+                                        console.error('Erreur lors de l\'upload (règles Storage):', uploadError);
+                                        alert('Impossible d\'uploader l\'image (règles de sécurité). Utilisation de l\'image par défaut.');
+                                        // Fallback vers l'image par défaut du puzzle
+                                        setEditingGame({ 
+                                          ...editingGame, 
+                                          imageUrl: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800' 
+                                        } as PuzzleConfig);
+                                      } finally {
+                                        setIsUploadingPuzzle(false);
+                                      }
+                                    };
+                                    reader.readAsDataURL(file);
+                                  } catch (error) {
+                                    console.error('Erreur lors de l\'upload de l\'image:', error);
+                                    alert('Erreur lors de l\'upload de l\'image.');
+                                    setIsUploadingPuzzle(false);
+                                  }
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {(editingGame as PuzzleConfig).imageUrl && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-neutral-200">
+                            <img 
+                              src={(editingGame as PuzzleConfig).imageUrl} 
+                              alt="Preview" 
+                              className="w-full h-40 object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Taille de la grille</label>
+                        <select
+                          value={(editingGame as PuzzleConfig).gridSize}
+                          onChange={(e) => setEditingGame({ ...editingGame, gridSize: Number(e.target.value) as 3 | 4 | 5 } as PuzzleConfig)}
+                          className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500"
+                        >
+                          <option value={3}>3x3 (Facile)</option>
+                          <option value={4}>4x4 (Moyen)</option>
+                          <option value={5}>5x5 (Difficile)</option>
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <Heart className="h-5 w-5" />
+                        Configuration Memory Match
+                      </h4>
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Images du jeu (ajoutez au moins 4)</label>
+                        <div className="grid grid-cols-4 gap-2 mb-3">
+                          {(editingGame as MemoryMatchConfig).imageUrls?.map((url, i) => (
+                            <div key={i} className="relative">
+                              <img src={url} alt={`Image ${i+1}`} className="w-full h-16 object-cover rounded-lg border border-neutral-200" />
+                              <button
+                                onClick={() => {
+                                  const newUrls = [...(editingGame as MemoryMatchConfig).imageUrls];
+                                  newUrls.splice(i, 1);
+                                  setEditingGame({ ...editingGame, imageUrls: newUrls } as MemoryMatchConfig);
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs hover:bg-red-600"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <label className={`flex-1 px-4 py-3 rounded-xl transition-all flex items-center justify-center gap-2 font-semibold border ${isUploadingPuzzle ? 'bg-gray-200 text-gray-500 cursor-not-allowed border-gray-300' : 'bg-pink-100 text-pink-700 cursor-pointer hover:bg-pink-200 border-pink-300'}`}>
+                          {isUploadingPuzzle ? (
+                            <>
+                              <svg className="animate-spin h-5 w-5 text-pink-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Envoi en cours...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-5 w-5" />
+                              Ajouter une image
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            disabled={isUploadingPuzzle}
+                            onChange={async (e) => {
+                              const files = e.target.files;
+                              if (!files || files.length === 0 || !userData?.id) return;
+                              
+                              setIsUploadingPuzzle(true);
+                              const currentUrls = [...((editingGame as MemoryMatchConfig).imageUrls || [])];
+                              
+                              try {
+                                for (let i = 0; i < files.length; i++) {
+                                  const file = files[i];
+                                  const storageRef = ref(storage, `users/${userData.id}/memory/${Date.now()}-${file.name}`);
+                                  
+                                  const reader = new FileReader();
+                                  const dataUrl = await new Promise<string>((resolve, reject) => {
+                                    reader.onload = (event) => resolve(event.target?.result as string);
+                                    reader.onerror = reject;
+                                    reader.readAsDataURL(file);
+                                  });
+                                  
+                                  await uploadString(storageRef, dataUrl, 'data_url');
+                                  const downloadUrl = await getDownloadURL(storageRef);
+                                  currentUrls.push(downloadUrl);
+                                }
+                                
+                                setEditingGame({ ...editingGame, imageUrls: currentUrls } as MemoryMatchConfig);
+                              } catch (uploadError) {
+                                console.error('Erreur lors de l\'upload:', uploadError);
+                                alert('Erreur lors de l\'upload des images.');
+                              } finally {
+                                setIsUploadingPuzzle(false);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Show Leaderboard pour les deux jeux */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="show-leaderboard"
+                      checked={
+                        editingGame.type === 'puzzle' 
+                          ? (editingGame as PuzzleConfig).showLeaderboard 
+                          : (editingGame as MemoryMatchConfig).showLeaderboard
+                      }
+                      onChange={(e) => {
+                        if (editingGame.type === 'puzzle') {
+                          setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as PuzzleConfig);
+                        } else {
+                          setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as MemoryMatchConfig);
+                        }
+                      }}
+                      className={`w-5 h-5 rounded border-neutral-300 focus:ring-2 ${
+                        editingGame.type === 'memory-match' ? 'text-pink-600 focus:ring-pink-500' : 'text-amber-600 focus:ring-amber-500'
+                      }`}
+                    />
+                    <label htmlFor="show-leaderboard" className="text-sm font-medium text-slate-700">Afficher le classement</label>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => setEditingGame(null)}
+                    className="px-4 py-2 rounded-xl border border-neutral-300 text-slate-700 hover:bg-neutral-50"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => handleUpdateGame(editingGame)}
+                    className={`px-6 py-2 rounded-xl text-white hover:opacity-90 font-semibold flex items-center gap-2 ${
+                      editingGame.type === 'memory-match' 
+                        ? 'bg-gradient-to-r from-pink-500 to-rose-600' 
+                        : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                    }`}
+                  >
+                    <Save className="h-4 w-4" />
+                    Enregistrer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleAddGuest = async () => {
     // Vérifier si un invité avec le même nom existe déjà (sauf si c'est l'invité en cours de modification)
     const normalizedNewName = newGuest.nom.trim().toLowerCase();
@@ -300,7 +1100,7 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
         
         const newGuestSeats = newGuest.etat === 'couple' ? 2 : 1;
         
-        if (currentOccupiedSeats + newGuestSeats > Number(targetTable.seats)) {
+        if (Number(targetTable.seats) > 0 && currentOccupiedSeats + newGuestSeats > Number(targetTable.seats)) {
           showToast('error', `Table "${newGuest.table}" complète (${currentOccupiedSeats}/${targetTable.seats}). Ajout impossible.`, 5000);
           return;
         }
@@ -355,6 +1155,8 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
   const openAddGuestModal = () => {
     setNewGuest({ nom: '', table: '', etat: 'simple', category: '' });
     setEditingGuestId(null);
+    setCategorySearchInput('');
+    setTableSearchInput('');
     setShowAddGuestModal(true);
   };
 
@@ -366,6 +1168,8 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
       category: guest.category || ''
     });
     setEditingGuestId(guest.id);
+    setCategorySearchInput(guest.category || '');
+    setTableSearchInput(guest.table || '');
     setShowAddGuestModal(true);
   };
 
@@ -631,6 +1435,8 @@ const Dashboard = ({ selectedTemplate, userData, onLogout, onBackToHome }: Dashb
       }
     }
   };
+
+
 
   const handleEditTemplate = (template: TemplateData) => {
     setEditingTemplate(template);
@@ -994,8 +1800,11 @@ Découvrez nos services : https://furaha-event.com`;
     { id: 'templates', label: 'Design', icon: Sparkles },
     { id: 'guests', label: 'Invités', icon: Users },
     { id: 'tables', label: 'Tables', icon: Table },
-    { id: 'messages', label: 'Messages', icon: MessageCircle }
+    { id: 'messages', label: 'Messages', icon: MessageCircle },
+    { id: 'games', label: 'Jeux', icon: Gamepad2 }
   ];
+
+
 
 const renderOverview = () => {
   // renvoie le nombre de personnes pour un invité donné
@@ -1098,7 +1907,7 @@ const renderOverview = () => {
           <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-4 md:mb-6">
             Actions rapides
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             <button
               onClick={openAddGuestModal}
               className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-3 md:p-4 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-glow-amber transform hover:scale-105 text-sm md:text-base"
@@ -1124,23 +1933,15 @@ const renderOverview = () => {
             </button>
 
             <button
-              onClick={async () => {
-                const confirmedGuests = guests.filter(g => g.confirmed);
-                if (confirmedGuests.length === 0) {
-                  showToast('info', 'Aucun invité confirmé pour envoyer un rappel.');
-                  return;
-                }
-                if (window.confirm(`Envoyer un rappel de date à tous les ${confirmedGuests.length} invités confirmés ?`)) {
-                  showToast('success', `Rappel envoyé aux ${confirmedGuests.length} invités !`);
-                  await notificationService.sendNotification({
-                    type: 'reminder',
-                    recipientId: userData?.uid || '',
-                    senderName: 'Système',
-                    title: 'Rappel envoyé',
-                    body: `Vous avez envoyé un rappel à ${confirmedGuests.length} invités.`,
-                  });
-                }
-              }}
+              onClick={() => window.open(`/checkin/${userData?.id}`, '_blank')}
+              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-3 md:p-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
+            >
+              <Check className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
+              <span>Check-in</span>
+            </button>
+
+            <button
+              onClick={() => setShowReminderModal(true)}
               className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-3 md:p-4 rounded-xl hover:from-teal-600 hover:to-emerald-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
             >
               <Calendar className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
@@ -1735,6 +2536,8 @@ const renderOverview = () => {
     </div>
   );
 
+
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -1758,6 +2561,8 @@ const renderOverview = () => {
             </div>
           </div>
         );
+      case 'games':
+        return renderGames();
       default:
         return renderOverview();
     }
@@ -2005,28 +2810,64 @@ const renderOverview = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Catégorie
                   </label>
-                  <div className="flex gap-2">
-                    <select
-                      value={newGuest.category}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={categorySearchInput}
                       onChange={(e) => {
-                        if (e.target.value === 'new_category') {
-                          setShowCategoryManager(true);
-                        } else {
-                          setNewGuest({ ...newGuest, category: e.target.value });
-                        }
+                        setCategorySearchInput(e.target.value);
+                        setShowCategoryDropdown(true);
                       }}
+                      onFocus={() => setShowCategoryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
                       className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                    >
-                      <option value="">Aucune catégorie</option>
-                      {availableCategories.map((catName) => (
-                        <option key={catName} value={catName}>
-                          {catName}
-                        </option>
-                      ))}
-                      <option value="new_category" className="font-semibold text-amber-600">
-                        + Ajouter une catégorie...
-                      </option>
-                    </select>
+                      placeholder="Rechercher ou ajouter une catégorie..."
+                    />
+                    {showCategoryDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-neutral-200 max-h-60 overflow-y-auto">
+                        <button
+                          key="no-category"
+                          onClick={() => {
+                            setNewGuest({ ...newGuest, category: '' });
+                            setCategorySearchInput('');
+                            setShowCategoryDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                        >
+                          Aucune catégorie
+                        </button>
+                        {availableCategories
+                          .filter(cat => cat.toLowerCase().includes(categorySearchInput.toLowerCase()))
+                          .map((catName) => (
+                            <button
+                              key={catName}
+                              onClick={() => {
+                                setNewGuest({ ...newGuest, category: catName });
+                                setCategorySearchInput(catName);
+                                setShowCategoryDropdown(false);
+                              }}
+                              className={`w-full text-left px-4 py-2 transition-colors ${newGuest.category === catName ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50 text-slate-700'}`}
+                            >
+                              {catName}
+                            </button>
+                          ))}
+                        {categorySearchInput.trim() && !availableCategories.includes(categorySearchInput.trim()) && (
+                          <button
+                            key="add-category"
+                            onClick={async () => {
+                              const newCat = categorySearchInput.trim();
+                              await createGuestCategory(newCat);
+                              setNewGuest({ ...newGuest, category: newCat });
+                              setCategorySearchInput(newCat);
+                              setShowCategoryDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-amber-100 transition-colors text-amber-600 font-semibold"
+                          >
+                            + Ajouter "{categorySearchInput.trim()}"
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -2034,32 +2875,89 @@ const renderOverview = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Table
                   </label>
-                  <select
-                    value={newGuest.table}
-                    onChange={(e) => setNewGuest({ ...newGuest, table: e.target.value })}
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-                  >
-                    <option value="">Sélectionner une table</option>
-                    <option value="Non assigné">Non assigné</option>
-                    {availableTables.map((table) => {
-                      const tableGuests = guests.filter(g => {
-                        const isSameTable = g.table === table.name;
-                        const isNotEditingGuest = editingGuestId ? String(g.id) !== String(editingGuestId) : true;
-                        return isSameTable && isNotEditingGuest;
-                      });
-                      const currentOccupiedSeats = tableGuests.reduce((total, guest) => {
-                        return total + (guest.etat === 'couple' ? 2 : 1);
-                      }, 0);
-                      
-                      const remainingSeats = table.seats > 0 ? Math.max(Number(table.seats) - currentOccupiedSeats, 0) : null;
-                      
-                      return (
-                        <option key={table.id} value={table.name}>
-                          {table.name} {remainingSeats !== null ? `(${remainingSeats} restantes)` : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={tableSearchInput}
+                      onChange={(e) => {
+                        setTableSearchInput(e.target.value);
+                        setShowTableDropdown(true);
+                      }}
+                      onFocus={() => setShowTableDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowTableDropdown(false), 200)}
+                      className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      placeholder="Rechercher ou ajouter une table..."
+                    />
+                    {showTableDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-neutral-200 max-h-60 overflow-y-auto">
+                        <button
+                          key="select-table"
+                          onClick={() => {
+                            setNewGuest({ ...newGuest, table: '' });
+                            setTableSearchInput('');
+                            setShowTableDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                        >
+                          Sélectionner une table
+                        </button>
+                        <button
+                          key="no-table"
+                          onClick={() => {
+                            setNewGuest({ ...newGuest, table: 'Non assigné' });
+                            setTableSearchInput('Non assigné');
+                            setShowTableDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                        >
+                          Non assigné
+                        </button>
+                        {availableTables
+                          .filter(table => table.name.toLowerCase().includes(tableSearchInput.toLowerCase()))
+                          .map((table) => {
+                            const tableGuests = guests.filter(g => {
+                              const isSameTable = g.table === table.name;
+                              const isNotEditingGuest = editingGuestId ? String(g.id) !== String(editingGuestId) : true;
+                              return isSameTable && isNotEditingGuest;
+                            });
+                            const currentOccupiedSeats = tableGuests.reduce((total, guest) => {
+                              return total + (guest.etat === 'couple' ? 2 : 1);
+                            }, 0);
+                            
+                            const remainingSeats = table.seats > 0 ? Math.max(Number(table.seats) - currentOccupiedSeats, 0) : null;
+
+                            return (
+                              <button
+                                key={table.id}
+                                onClick={() => {
+                                  setNewGuest({ ...newGuest, table: table.name });
+                                  setTableSearchInput(table.name);
+                                  setShowTableDropdown(false);
+                                }}
+                                className={`w-full text-left px-4 py-2 transition-colors ${newGuest.table === table.name ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50 text-slate-700'}`}
+                              >
+                                {table.name} {remainingSeats !== null ? `(${remainingSeats} restantes)` : ''}
+                              </button>
+                            );
+                          })}
+                        {tableSearchInput.trim() && !availableTables.find(t => t.name === tableSearchInput.trim()) && tableSearchInput.trim() !== 'Non assigné' && (
+                          <button
+                            key="add-table"
+                            onClick={async () => {
+                              const newTableName = tableSearchInput.trim();
+                              await createTable({ name: newTableName, seats: 10 }); // Set default to 10 seats
+                              setNewGuest({ ...newGuest, table: newTableName });
+                              setTableSearchInput(newTableName);
+                              setShowTableDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-amber-100 transition-colors text-amber-600 font-semibold"
+                          >
+                            + Ajouter "{tableSearchInput.trim()}"
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
