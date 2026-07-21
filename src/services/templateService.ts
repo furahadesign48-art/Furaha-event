@@ -896,6 +896,24 @@ export class InviteService {
     }
   }
 
+  static async updateGuestMessage(
+    userId: string,
+    inviteId: string,
+    messageId: string,
+    newContent: string
+  ): Promise<void> {
+    try {
+      const messageRef = doc(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'guestMessages', messageId);
+      await updateDoc(messageRef, {
+        content: newContent,
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du message:', error);
+      throw new Error('Impossible de mettre à jour le message');
+    }
+  }
+
   static async replyToLegacyGuestMessage(
     userId: string,
     inviteId: string,

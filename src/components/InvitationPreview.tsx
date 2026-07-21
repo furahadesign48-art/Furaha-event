@@ -693,6 +693,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
   const [isSubmittingMessage, setIsSubmittingMessage] = useState(false);
   const [showGuestBook, setShowGuestBook] = useState(false);
   const [guestBookMessages, setGuestBookMessages] = useState<any[]>([]);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ isOpen: boolean; message: any | null }>({ isOpen: false, message: null });
   const [showToastModal, setShowToastModal] = useState<{ isOpen: boolean; type: 'drink' | 'confirmation' | 'cancellation'; drink?: string }>({
     isOpen: false,
     type: 'drink'
@@ -1220,6 +1223,57 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     }
   };
 
+  const handleEditMessage = (msg: any) => {
+    if (msg.inviteId !== inviteId) return;
+    setEditingMessageId(msg.id);
+    setEditingText(msg.message);
+  };
+
+  const handleSaveEdit = async (msg: any) => {
+    if (!inviteId || !invite || !editingText.trim() || msg.inviteId !== inviteId) return;
+    setIsSubmittingMessage(true);
+    try {
+      await InviteService.updateGuestMessage(invite.userId, inviteId, msg.id, editingText);
+      setEditingMessageId(null);
+      setEditingText('');
+      // Notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-10 left-1/2 -translate-x-1/2 z-[200] bg-blue-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold animate-bounce';
+      notification.innerText = 'Message modifié !';
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmittingMessage(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msg: any) => {
+    if (!inviteId || !invite || msg.inviteId !== inviteId) return;
+    setShowDeleteConfirm({ isOpen: true, message: msg });
+  };
+
+  const confirmDelete = async () => {
+    const msg = showDeleteConfirm.message;
+    if (!inviteId || !invite || !msg) return;
+    setIsSubmittingMessage(true);
+    try {
+      await InviteService.deleteGuestMessage(invite.userId, inviteId, msg.id);
+      // Notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-10 left-1/2 -translate-x-1/2 z-[200] bg-red-500 text-white px-6 py-3 rounded-full shadow-2xl font-bold animate-bounce';
+      notification.innerText = 'Message supprimé !';
+      document.body.appendChild(notification);
+      setTimeout(() => notification.remove(), 3000);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmittingMessage(false);
+      setShowDeleteConfirm({ isOpen: false, message: null });
+    }
+  };
+
   // --- LOGIQUE DE PARSING DE DATE ROBUSTE ---
   const parsedDate = useMemo(() => {
     if (!safeUserModel.eventDate) return { day: '00', month: '00', year: '00', fullDate: new Date() };
@@ -1439,7 +1493,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
         {/* Text Section Background */}
         {optimizedTextSectionBg && (
-          <div className="absolute left-0 right-0 top-[calc(92vh-8rem)] bottom-0 z-0 transition-all duration-700 ease-in-out">
+          <div className="absolute left-0 right-0 top-[calc(92vh-4rem)] bottom-0 z-0 transition-all duration-700 ease-in-out">
             <img 
               src={optimizedTextSectionBg} 
               alt="Background" 
@@ -1566,7 +1620,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative z-10 flex justify-center mt-8 px-4 py-12 flex items-center snap-start overflow-hidden"
+        className="relative z-10 w-full mt-4 px-0 min-h-screen flex items-center justify-center snap-start overflow-hidden"
       >
         {/* Section Background */}
             {optimizedDateLocationSectionBg && (
@@ -1583,12 +1637,12 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         <FallingDots colors={colors} />
         {/* Main 3D Card Container with manual tilt effect */}
         <motion.div 
-          className="w-full max-w-lg"
+          className="w-full max-w-lg px-4"
           whileHover={{ scale: 1.02 }}
           transition={{ duration: 0.3 }}
         >
           <div 
-            className="w-full bg-black/50 backdrop-blur-2xl border-2 p-6 shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_60px_rgba(0,0,0,0.4)] flex flex-col items-center rounded-[40px] relative overflow-hidden"
+            className="w-full bg-black/50 backdrop-blur-2xl border-2 p-4 shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_60px_rgba(0,0,0,0.4)] flex flex-col items-center rounded-[30px] relative overflow-hidden"
             style={{ 
               borderColor: `${colors.primary}80`,
               background: `linear-gradient(145deg, rgba(0,0,0,0.6), rgba(0,0,0,0.3))`
@@ -1598,14 +1652,14 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: colors.primary, opacity: 0.15 }}></div>
             <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: colors.secondary, opacity: 0.15 }}></div>
 
-            <div className="w-full space-y-6 relative z-10">
+            <div className="w-full space-y-4 relative z-10">
               
               {/* Countdown Circles */}
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="space-y-3"
+                className="space-y-2"
               >
                 <h2 
                   className="text-center font-luxury tracking-[0.8em] text-xs uppercase"
@@ -1618,7 +1672,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               </motion.div>
 
               {/* 3 Photos with JJ, MM, AA (Compact 3D Style) */}
-              <RevealOnScroll className="grid grid-cols-3 gap-3 w-full">
+              <RevealOnScroll className="grid grid-cols-3 gap-2 w-full">
                 {[
                   { img: safeUserModel.eventPhoto1 || photoCouple, val: eventDay },
                   { img: safeUserModel.eventPhoto2 || photoCouple, val: eventMonth },
@@ -1630,7 +1684,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     whileInView={{ y: 0, opacity: 1, rotate: 0 }}
                     viewport={{ once: false }}
                     transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-                    className="relative aspect-[3/4] overflow-hidden shadow-2xl border-2 rounded-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group"
+                    className="relative aspect-[3/4] overflow-hidden shadow-2xl border-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group"
                     style={{
                       borderColor: `${colors.primary}60`
                     }}
@@ -1650,7 +1704,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                         whileInView={{ scale: 1 }}
                         viewport={{ once: false }}
                         transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
-                        className="text-3xl md:text-4xl font-luxury text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]"
+                        className="text-4xl md:text-5xl font-luxury text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]"
                       >
                         {item.val}
                       </motion.span>
@@ -1660,7 +1714,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               </RevealOnScroll>
 
               {/* MAPS & LOCATION - Enhanced 3D Style */}
-              <RevealOnScroll className="space-y-3 pt-0">
+              <RevealOnScroll className="space-y-2 pt-0">
                 <div className="flex flex-col items-center space-y-2">
                   {/* Enhanced Floating Location Icon */}
                   <motion.div 
@@ -1677,44 +1731,18 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       window.open(url, '_blank');
                     }}
                   >
-                    {/* Enhanced Ripple animation layers */}
-                    <motion.div 
-                      animate={{ 
-                        scale: [1, 1.5, 1],
-                        opacity: [0.3, 0, 0.3]
-                      }}
-                      transition={{ 
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                      className="absolute -inset-6 bg-white/20 blur-xl rounded-full"
-                    ></motion.div>
-                    <motion.div 
-                      animate={{ 
-                        scale: [1, 1.3, 1],
-                        opacity: [0.4, 0, 0.4]
-                      }}
-                      transition={{ 
-                        duration: 2,
-                        repeat: Infinity,
-                        delay: 0.5,
-                        ease: "easeInOut"
-                      }}
-                      className="absolute -inset-4 bg-white/30 blur-lg rounded-full"
-                    ></motion.div>
                     {/* Premium Location Pin */}
                     <motion.div 
                       whileHover={{ scale: 1.2, rotate: 5 }}
                       whileTap={{ scale: 0.95 }}
-                      className="w-16 h-16 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-4 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-500 mx-auto"
+                      className="w-12 h-12 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-3 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-500 mx-auto"
                       style={{ 
                         borderColor: colors.primary,
                         boxShadow: `0 0 40px ${colors.primary}60`
                       }}
                     >
-                      <div className="absolute inset-2 rounded-full bg-gradient-to-br" style={{ background: `linear-gradient(145deg, ${colors.primary}, ${colors.secondary})` }}></div>
-                      <MapPin className="h-7 w-7 relative z-10 text-white drop-shadow-lg" />
+                      <div className="absolute inset-1.5 rounded-full bg-gradient-to-br" style={{ background: `linear-gradient(145deg, ${colors.primary}, ${colors.secondary})` }}></div>
+                      <MapPin className="h-5 w-5 relative z-10 text-white drop-shadow-lg" />
                     </motion.div>
                     {/* CTA text below pin */}
                     <motion.div 
@@ -1722,10 +1750,10 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: false }}
                       transition={{ duration: 0.5, delay: 0.5 }}
-                      className="mt-3 text-center"
+                      className="mt-2 text-center"
                     >
-                      <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.primary }}>
-                        ✨ Ouvrir dans Maps ✨
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.primary }}>
+                        Ouvrir dans Maps
                       </p>
                     </motion.div>
                   </motion.div>
@@ -1745,32 +1773,24 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       window.open(url, '_blank');
                     }}
                   >
-                    <div className="relative overflow-hidden text-center p-5 w-full rounded-[30px] border-2 transition-all duration-500 group-hover:scale-[1.02] shadow-[0_0_50px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_80px_rgba(255,255,255,0.2)]"
+                    <div className="relative overflow-hidden text-center p-3 w-full rounded-[20px] border-2 transition-all duration-500 group-hover:scale-[1.02] shadow-[0_0_50px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_80px_rgba(255,255,255,0.2)]"
                          style={{ 
                            borderColor: `${colors.primary}40`,
                            background: `linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))`
                          }}>
                        {/* Animated Shine effect */}
                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1500 pointer-events-none z-10"></div>
-                       <h3 className="text-lg font-bold tracking-tight uppercase mb-2" style={{ color: colors.primary }}>
+                       <h3 className="text-sm font-bold tracking-tight uppercase mb-1" style={{ color: colors.primary }}>
                          📍 Lieu de réception
                        </h3>
-                       <p className="text-lg text-white font-semibold mb-1 drop-shadow-lg">{safeUserModel.eventLocation}</p>
+                       <p className="text-base text-white font-semibold mb-0.5 drop-shadow-lg">{safeUserModel.eventLocation}</p>
                        {safeUserModel.eventAddress && (
-                         <p className="text-sm text-white/80 font-medium mb-3">{safeUserModel.eventAddress}</p>
+                         <p className="text-xs text-white/80 font-medium mb-2 leading-tight">{safeUserModel.eventAddress}</p>
                        )}
-                       <div className="inline-flex items-center justify-center space-x-2 mb-2" style={{ color: colors.primary }}>
-                         <Clock className="h-5 w-5" />
-                         <p className="font-bold text-xl drop-shadow-lg">{safeUserModel.eventTime || '18h30'}</p>
+                       <div className="inline-flex items-center justify-center space-x-1.5 mb-1" style={{ color: colors.primary }}>
+                         <Clock className="h-4 w-4" />
+                         <p className="font-bold text-sm drop-shadow-lg">{safeUserModel.eventTime || '18h30'}</p>
                        </div>
-                       {/* Interactive CTA */}
-                       <motion.div 
-                         whileHover={{ scale: 1.1 }}
-                         className="text-xs font-bold uppercase tracking-widest opacity-80 group-hover:opacity-100 transition-opacity duration-300"
-                         style={{ color: colors.primary }}
-                       >
-                         🔍 Cliquez pour naviguer
-                       </motion.div>
                      </div>
                   </motion.div>
                 </div>
@@ -1787,7 +1807,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-        className="relative z-10 w-full mt-8 px-0 min-h-screen flex items-center snap-start overflow-hidden"
+        className="relative z-10 w-full mt-0 px-0 min-h-screen flex items-center justify-start pt-0 snap-start overflow-hidden"
       >
         {/* Section Background */}
         {optimizedGallerySectionBg && (
@@ -1808,7 +1828,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           
           {/* Contenu de la galerie */}
           <div className="relative z-10 w-full h-full">
-            <div className="text-center mb-2 pt-4 px-4">
+            <div className="text-center mb-2 pt-0 px-4">
               <h2 className="text-xl font-bold text-white mb-1" style={{ color: colors.primary }}>Nos Moments Précieux</h2>
               <p className="text-white/60 text-xs">Faites glisser pour explorer notre galerie</p>
             </div>
@@ -1988,10 +2008,25 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </div>
 
                 <div className="text-center relative z-10">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4 shadow-lg" style={{ boxShadow: `0 10px 30px rgba(0,0,0,0.2)` }}>
+                  <motion.div 
+                    animate={{ 
+                      rotate: [0, -10, 10, 0], 
+                      scale: [1, 1.15, 1],
+                      y: [0, -5, 0]
+                    }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4 shadow-lg" 
+                    style={{ boxShadow: `0 10px 30px rgba(0,0,0,0.2)` }}
+                  >
                     <Gamepad2 className="w-8 h-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl md:text-3xl font-luxury text-white mb-3 drop-shadow-lg">Jeux & Fun</h2>
+                  </motion.div>
+                  <motion.h2 
+                    animate={{ scale: [1, 1.03, 1] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                    className="text-2xl md:text-3xl font-luxury text-white mb-3 drop-shadow-lg"
+                  >
+                    Jeux & Fun
+                  </motion.h2>
                   <p className="text-white/90 text-sm font-medium">
                     Ajoutez une touche de magie à cette journée
                   </p>
@@ -2005,49 +2040,70 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     return (
                       <motion.div 
                         key={game.id}
-                        initial={{ opacity: 0, y: 20, scale: 0.9, rotate: -2 }}
+                        initial={{ opacity: 0, y: 30, scale: 0.8, rotate: -3 }}
                         whileInView={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        whileHover={{ scale: 1.02, y: -5, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}
+                        whileHover={{ scale: 1.03, y: -8, boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.6)' }}
                         viewport={{ once: false }}
-                        transition={{ duration: 0.4, delay: 0.15 * index, ease: "easeOut" }}
+                        transition={{ duration: 0.5, delay: 0.1 * index, ease: "easeOut" }}
                         className="bg-white/10 backdrop-blur-xl rounded-[30px] overflow-hidden border border-white/10 shadow-xl transition-all duration-500 hover:shadow-2xl hover:bg-white/15 group"
                       >
                         <button
                           onClick={() => setCurrentGameId(game.id)}
-                          className="w-full px-6 py-5 flex items-center justify-between text-left"
+                          className="w-full px-6 py-5"
                         >
                           <div className="flex items-center gap-5">
                             <motion.div 
-                              animate={{ rotate: [0, -5, 5, 0], scale: [1, 1.1, 1] }}
-                              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
-                              className="w-14 h-14 bg-white/25 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-110 transition-transform duration-300"
+                              animate={{ 
+                                rotate: [0, -8, 8, 0], 
+                                scale: [1, 1.12, 1],
+                                y: [0, -3, 0]
+                              }}
+                              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: index * 0.3 }}
+                              className="w-14 h-14 bg-white/25 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-115 transition-transform duration-300 flex-shrink-0"
                             >
                               {gameInfo?.icon || '🎮'}
                             </motion.div>
-                            <div className="flex-1">
-                              <h3 className="text-white font-bold text-lg">{game.title}</h3>
-                              <p className="text-white/80 text-sm mt-1">{game.description}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            {isCompleted && (
-                              <motion.div 
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                                className="flex items-center gap-2 bg-emerald-400/25 px-3 py-1.5 rounded-full border border-emerald-300/30"
+                            <div className="flex-1 text-center px-2">
+                              <motion.h3 
+                                animate={{ color: [undefined, colors.primary, undefined] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
+                                className="text-white font-bold text-base md:text-lg mb-2 break-words"
                               >
-                                <Check className="text-emerald-300 w-5 h-5" />
-                                <span className="text-emerald-200 text-xs font-bold">Terminé</span>
-                              </motion.div>
-                            )}
+                                {game.title}
+                              </motion.h3>
+                              <p className="text-white/80 text-xs md:text-sm line-clamp-2">{game.description}</p>
+                            </div>
                             <motion.div 
-                              animate={{ x: [0, 3, 0] }}
-                              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                              className="w-10 h-10 bg-white/25 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:bg-white/35 transition-all duration-300"
+                              animate={{ 
+                                x: [0, 6, 0], 
+                                scale: [1, 1.1, 1]
+                              }}
+                              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                              className="w-10 h-10 bg-white/25 rounded-full flex items-center justify-center shadow-lg group-hover:scale-120 group-hover:bg-white/40 transition-all duration-300 flex-shrink-0"
                             >
                               <ChevronRight className="text-white w-6 h-6" />
                             </motion.div>
                           </div>
+                          {isCompleted && (
+                            <div className="mt-4 flex justify-center">
+                              <motion.div 
+                                animate={{ 
+                                  scale: [1, 1.08, 1], 
+                                  boxShadow: ['0 0 0 rgba(16, 185, 129, 0)', '0 0 15px rgba(16, 185, 129, 0.5)', '0 0 0 rgba(16, 185, 129, 0)']
+                                }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                className="inline-flex items-center gap-2 bg-emerald-400/30 px-5 py-2 rounded-full border border-emerald-300/40"
+                              >
+                                <motion.div 
+                                  animate={{ rotate: 360 }}
+                                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
+                                >
+                                  <Check className="text-emerald-200 w-5 h-5" />
+                                </motion.div>
+                                <span className="text-emerald-100 text-xs font-bold uppercase tracking-widest">Terminé</span>
+                              </motion.div>
+                            </div>
+                          )}
                         </button>
                       </motion.div>
                     );
@@ -2272,10 +2328,10 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               </div>
             </div>
 
-            {/* Premium Message Area with Texture */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 no-scrollbar relative bg-[#faf9f6]">
-              {/* Subtle texture overlay */}
-              <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url(${motif1})`, backgroundSize: '200px' }}></div>
+            {/* Premium Message Area with Romantic Texture */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 no-scrollbar relative bg-gradient-to-br from-[#fdf4f4] via-[#fef9f0] to-[#fdf5f9]">
+              {/* Subtle romantic texture overlay */}
+              <div className="absolute inset-0 opacity-[0.08] pointer-events-none" style={{ backgroundImage: `url(${ornement5})`, backgroundSize: '300px', backgroundRepeat: 'repeat', opacity: 0.15 }}></div>
               
               {guestBookMessages && guestBookMessages.length > 0 ? (
                 <div className="relative z-10 pb-4">
@@ -2284,8 +2340,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       const initials = (msg.nom || 'Inconnu').split(' ').map((n: any) => n ? n[0] : '').join('').substring(0, 2).toUpperCase();
                       
                       const cardStyles = [
-                        { bg: colors.primary, text: '#ffffff', accent: colors.primary, border: colors.secondary }, // Primary theme color
-                        { bg: colors.secondary, text: '#ffffff', accent: colors.secondary, border: colors.primary }, // Secondary theme color
+                        { bg: '#ffeef0', text: '#8b3a42', accent: '#ff9a9e', border: '#ffcdd2' }, // Soft pink
+                        { bg: '#fdf2f8', text: '#7a2048', accent: '#f78fb3', border: '#fce4ec' }, // Light mauve
+                        { bg: '#fff4e6', text: '#9a4c2a', accent: '#ffb199', border: '#ffe0b2' }, // Warm peach
                       ];
                       
                       const style = cardStyles[index % cardStyles.length];
@@ -2293,71 +2350,138 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       return (
                         <div 
                           key={msg.id || index} 
-                          className={`flex items-start space-x-4 mb-8 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} animate-slide-up`}
+                          className={`flex items-start space-x-3 mb-6 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'} animate-slide-up`}
                           style={{ animationDelay: `${index * 0.1}s` }}
                         >
-                          {/* Premium Avatar with Wax Seal effect */}
-                          <div className="flex-shrink-0 mt-2 relative">
+                          {/* Romantic Avatar with Heart Accent */}
+                          <div className="flex-shrink-0 mt-1 relative">
                             <div 
-                              className={`w-12 h-12 rounded-full flex items-center justify-center text-[10px] font-black shadow-[0_5px_15px_rgba(0,0,0,0.2)] border-2 border-white relative z-10 transform transition-all group-hover:scale-110`}
+                              className={`w-10 h-10 rounded-full flex items-center justify-center text-[9px] font-black shadow-lg border-2 relative z-10 transform transition-all group-hover:scale-110`}
                               style={{ 
-                                background: isMe ? `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` : `linear-gradient(135deg, ${style.bg}, ${style.border})`,
-                                color: '#ffffff',
+                                background: isMe 
+                                  ? `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` 
+                                  : `linear-gradient(135deg, ${style.accent}, ${style.bg})`,
+                                color: isMe ? '#ffffff' : style.text,
+                                borderColor: isMe ? colors.primary : style.border,
                               }}
                             >
                               {initials || '?'}
                             </div>
-                            {/* Decorative ring around avatar */}
-                            <div className="absolute inset-[-4px] rounded-full border border-dashed opacity-30 animate-spin-slow" style={{ borderColor: isMe ? colors.primary : style.accent }}></div>
+                            {/* Floating heart decoration */}
+                            <div className="absolute -top-1 -right-1 text-pink-400 animate-pulse">
+                              <Heart className="h-3 w-3 fill-current" />
+                            </div>
                           </div>
 
                           <div 
-                            className={`flex-1 p-7 relative group transition-all duration-500 hover:shadow-2xl ${
-                              isMe ? 'rounded-[30px] rounded-tr-none' : 'rounded-[30px] rounded-tl-none'
+                            className={`flex-1 p-5 relative group transition-all duration-500 hover:shadow-xl hover:scale-[1.02] ${
+                              isMe ? 'rounded-2xl rounded-tr-sm' : 'rounded-2xl rounded-tl-sm'
                             }`}
                             style={{
                               background: isMe 
-                                ? `linear-gradient(135deg, ${colors.primary}dd, ${colors.secondary}dd)` 
-                                : `linear-gradient(135deg, ${style.bg}dd, ${style.border}dd)`,
-                              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.15)',
-                              border: `2px solid ${isMe ? colors.primary + '60' : style.border + '60'}`,
-                              color: '#ffffff'
+                                ? `linear-gradient(135deg, ${colors.primary}ee, ${colors.secondary}ee)` 
+                                : `linear-gradient(135deg, ${style.bg}, ${style.bg}dd)`,
+                              boxShadow: '0 4px 20px -6px rgba(0,0,0,0.1)',
+                              border: `1px solid ${isMe ? colors.primary + '40' : style.border}`,
+                              color: isMe ? '#ffffff' : style.text,
                             }}
                           >
-                            {/* Decorative Corner Element */}
-                            <div className="absolute top-0 right-0 p-2 opacity-20">
-                              <Feather className="h-8 w-8" style={{ color: 'white' }} />
+                            {/* Romantic Decorative Elements */}
+                            <div className={`absolute ${isMe ? 'top-1 left-1' : 'top-1 right-1'} opacity-40`}>
+                              <Sparkles className="h-4 w-4" style={{ color: isMe ? '#fff' : style.accent }} />
+                            </div>
+                            <div className={`absolute ${isMe ? 'bottom-1 right-1' : 'bottom-1 left-1'} opacity-30`}>
+                              <Heart className="h-3 w-3 fill-current" style={{ color: isMe ? '#fff' : style.accent }} />
                             </div>
 
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex justify-between items-center mb-3">
                               <div className="flex flex-col">
                                 {!isMe && (
                                   <span 
-                                    className="text-[11px] font-black uppercase tracking-[0.2em] mb-1"
-                                    style={{ color: '#ffffff' }}
+                                    className="text-[10px] font-bold uppercase tracking-[0.15em] mb-0.5"
+                                    style={{ color: isMe ? '#ffffffcc' : style.accent }}
                                   >
-                                    {msg.nom || 'Invité de marque'}
+                                    {msg.nom || 'Invité spécial(e)'}
                                   </span>
                                 )}
-                                <div className="flex items-center space-x-2 text-[9px] font-bold text-white/70">
-                                  <Clock className="h-2.5 w-2.5" />
+                                <div className="flex items-center space-x-1.5 text-[8px] font-medium opacity-70">
+                                  <Clock className="h-2 w-2" />
                                   <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '--:--'}</span>
                                 </div>
                               </div>
-                              {/* Wax Seal style icon for sender */}
-                              <div className="w-6 h-6 rounded-full flex items-center justify-center opacity-40" style={{ backgroundColor: 'rgba(255,255,255,0.3)' }}>
-                                <Heart className="h-3 w-3 fill-current" style={{ color: 'white' }} />
-                              </div>
+                              {/* Edit/Delete buttons for own messages */}
+                              {isMe && (
+                                <div className="flex items-center space-x-2">
+                                  {editingMessageId === msg.id ? (
+                                    <>
+                                      <button 
+                                        onClick={() => handleSaveEdit(msg)}
+                                        disabled={isSubmittingMessage || !editingText.trim()}
+                                        className="p-1.5 rounded-full hover:bg-white/20 transition-all disabled:opacity-30"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                        </svg>
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          setEditingMessageId(null);
+                                          setEditingText('');
+                                        }}
+                                        className="p-1.5 rounded-full hover:bg-white/20 transition-all"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button 
+                                        onClick={() => handleEditMessage(msg)}
+                                        className="p-1.5 rounded-full hover:bg-white/20 transition-all"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteMessage(msg)}
+                                        className="p-1.5 rounded-full hover:bg-white/20 transition-all"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )}
+                              {!isMe && (
+                                <div className="flex-shrink-0">
+                                  <Heart className="h-4 w-4 fill-current opacity-50" style={{ color: isMe ? '#fff' : style.accent }} />
+                                </div>
+                              )}
                             </div>
                             
-                            <p className="text-[15px] font-medium leading-relaxed italic font-serif text-white">
-                              "{msg.message}"
-                            </p>
+                            {editingMessageId === msg.id ? (
+                              <textarea
+                                value={editingText}
+                                onChange={(e) => setEditingText(e.target.value)}
+                                className="w-full bg-transparent border-none p-0 focus:ring-0 text-[14px] leading-relaxed italic font-serif resize-none"
+                                style={{ color: isMe ? '#fff' : style.text }}
+                                autoFocus
+                              />
+                            ) : (
+                              <p className="text-[14px] leading-relaxed italic font-serif">
+                                "{msg.message}"
+                              </p>
+                            )}
                             
-                            {/* Subtle accent line at the bottom */}
+                            {/* Romantic accent line */}
                             <div 
-                              className="absolute bottom-0 left-8 right-8 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-700"
-                              style={{ background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.8), transparent)' }}
+                              className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-16 h-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                              style={{ background: `linear-gradient(to right, transparent, ${isMe ? 'rgba(255,255,255,0.6)' : style.accent}, transparent)` }}
                             ></div>
                           </div>
                         </div>
@@ -2366,12 +2490,12 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     <div ref={messagesEndRef} className="h-4" />
                 </div>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 relative z-10">
-                  <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-xl mb-8 border border-slate-50 relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-slate-50/50 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                    <BookOpen className="h-16 w-16 opacity-10" />
+                <div className="h-full flex flex-col items-center justify-center relative z-10">
+                  <div className="w-28 h-28 bg-gradient-to-br from-white to-pink-50 rounded-full flex items-center justify-center shadow-xl mb-6 border border-pink-100 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-pink-50/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                    <BookOpen className="h-12 w-12 text-pink-200" />
                   </div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-40 text-center px-12 leading-loose">Écrivez un mot précieux pour les futurs mariés</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-pink-300 text-center px-8 leading-relaxed">Écrivez un mot d'amour pour les mariés</p>
                 </div>
               )}
             </div>
@@ -2410,6 +2534,42 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm.isOpen && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs overflow-hidden animate-slide-up">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
+                <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-1.5">Supprimer le message ?</h3>
+              <p className="text-slate-500 text-xs leading-relaxed">Cette action est irréversible. Votre message sera définitivement supprimé.</p>
+            </div>
+            <div className="flex border-t border-slate-100">
+              <button 
+                onClick={() => setShowDeleteConfirm({ isOpen: false, message: null })}
+                className="flex-1 py-3 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={confirmDelete}
+                disabled={isSubmittingMessage}
+                className="flex-1 py-3 bg-gradient-to-r from-red-500 to-rose-500 text-white font-medium text-sm hover:from-red-600 hover:to-rose-600 transition-all disabled:opacity-50"
+              >
+                {isSubmittingMessage ? (
+                  <div className="w-4 h-4 mx-auto border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  'Supprimer'
+                )}
+              </button>
             </div>
           </div>
         </div>
