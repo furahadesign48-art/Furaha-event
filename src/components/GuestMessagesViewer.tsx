@@ -452,27 +452,27 @@ const GuestMessagesViewer = () => {
   }, [filteredMessages]);
 
   const filtersNode = (
-    <div className="p-4 md:p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-      <div className="flex flex-col gap-4">
+    <div className="p-3 md:p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
+      <div className="flex flex-col gap-3 md:gap-4">
         <div className="flex-1">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 md:h-5 md:w-5 text-neutral-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Rechercher..."
-              className="w-full pl-10 pr-4 py-2.5 md:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+              className="w-full pl-9 pr-3 py-2 md:py-3 border border-neutral-300 rounded-lg md:rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs md:text-sm"
             />
           </div>
         </div>
         
         {/* Filtres défilables sur mobile */}
-        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as 'all' | 'confirmed' | 'pending')}
-            className="flex-shrink-0 px-3 py-2 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-xs font-medium"
+            className="flex-shrink-0 px-2.5 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-[10px] font-medium"
           >
             <option value="all">Tous statuts</option>
             <option value="confirmed">Confirmés</option>
@@ -481,7 +481,7 @@ const GuestMessagesViewer = () => {
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as any)}
-            className="flex-shrink-0 px-3 py-2 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-xs font-medium"
+            className="flex-shrink-0 px-2.5 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-[10px] font-medium"
           >
             <option value="date_desc">Récents</option>
             <option value="date_asc">Anciens</option>
@@ -490,7 +490,7 @@ const GuestMessagesViewer = () => {
           <select
             value={sortByDrink}
             onChange={(e) => setSortByDrink(e.target.value)}
-            className="flex-shrink-0 px-3 py-2 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-xs font-medium"
+            className="flex-shrink-0 px-2.5 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-[10px] font-medium"
           >
             <option value="all">Toutes boissons</option>
             {getUniqueDrinks().map((drink) => (
@@ -500,7 +500,7 @@ const GuestMessagesViewer = () => {
           <select
             value={sortByTable}
             onChange={(e) => setSortByTable(e.target.value)}
-            className="flex-shrink-0 px-3 py-2 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-xs font-medium"
+            className="flex-shrink-0 px-2.5 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 bg-white text-[10px] font-medium"
           >
             <option value="all">Toutes tables</option>
             {getUniqueTables().map((table) => (
@@ -509,84 +509,84 @@ const GuestMessagesViewer = () => {
           </select>
         </div>
 
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-1.5 md:gap-3">
           <button
             onClick={() => setShowPdfOptions(v => !v)}
-            className="flex-1 md:flex-none px-4 py-2.5 rounded-xl border-2 border-neutral-200 text-slate-700 hover:border-amber-300 transition-all duration-200 text-xs md:text-sm font-bold"
+            className="flex-1 md:flex-none px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg md:rounded-xl border-2 border-neutral-200 text-slate-700 hover:border-amber-300 transition-all duration-200 text-[10px] md:text-sm font-bold"
           >
             {showPdfOptions ? 'Masquer PDF' : 'Options PDF'}
           </button>
           <button
             onClick={exportMessagesToPDF}
-            className="flex-1 md:flex-none bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 py-2.5 rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-bold flex items-center justify-center shadow-lg text-xs md:text-sm"
+            className="flex-1 md:flex-none bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-3 py-1.5 md:px-4 md:py-2.5 rounded-lg md:rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-bold flex items-center justify-center shadow-lg text-[10px] md:text-sm"
           >
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1 md:mr-2" />
             PDF
           </button>
         </div>
         {showPdfOptions ? (
-          <div className="mt-4 space-y-4">
+          <div className="mt-3 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">Orientation</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3">Orientation</label>
+              <div className="grid grid-cols-2 gap-2 md:gap-3">
                 <button
                   onClick={() => setPdfOrientation('portrait')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${
                     pdfOrientation === 'portrait'
                       ? 'border-amber-400 bg-amber-50 text-amber-700'
                       : 'border-neutral-200 hover:border-amber-300 text-slate-600'
                   }`}
                 >
-                  <FileText className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">Portrait</div>
-                  <div className="text-xs opacity-75">Page verticale</div>
+                  <FileText className="h-6 md:h-8 w-6 md:w-8 mx-auto mb-1.5 md:mb-2" />
+                  <div className="text-xs md:text-sm font-medium">Portrait</div>
+                  <div className="text-[10px] md:text-xs opacity-75">Page verticale</div>
                 </button>
                 <button
                   onClick={() => setPdfOrientation('landscape')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${
                     pdfOrientation === 'landscape'
                       ? 'border-amber-400 bg-amber-50 text-amber-700'
                       : 'border-neutral-200 hover:border-amber-300 text-slate-600'
                   }`}
                 >
-                  <FileText className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">Paysage</div>
-                  <div className="text-xs opacity-75">Page horizontale</div>
+                  <FileText className="h-6 md:h-8 w-6 md:w-8 mx-auto mb-1.5 md:mb-2" />
+                  <div className="text-xs md:text-sm font-medium">Paysage</div>
+                  <div className="text-[10px] md:text-xs opacity-75">Page horizontale</div>
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">Densité du tableau</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3">Densité du tableau</label>
+              <div className="grid grid-cols-2 gap-2 md:gap-3">
                 <button
                   onClick={() => setPdfDensity('normal')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${
                     pdfDensity === 'normal'
                       ? 'border-amber-400 bg-amber-50 text-amber-700'
                       : 'border-neutral-200 hover:border-amber-300 text-slate-600'
                   }`}
                 >
-                  <Table className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">Normal</div>
-                  <div className="text-xs opacity-75">Lisible, espacement standard</div>
+                  <Table className="h-6 md:h-8 w-6 md:w-8 mx-auto mb-1.5 md:mb-2" />
+                  <div className="text-xs md:text-sm font-medium">Normal</div>
+                  <div className="text-[10px] md:text-xs opacity-75">Lisible, espacement standard</div>
                 </button>
                 <button
                   onClick={() => setPdfDensity('compact')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
+                  className={`p-3 md:p-4 rounded-lg md:rounded-xl border-2 transition-all duration-300 ${
                     pdfDensity === 'compact'
                       ? 'border-amber-400 bg-amber-50 text-amber-700'
                       : 'border-neutral-200 hover:border-amber-300 text-slate-600'
                   }`}
                 >
-                  <Table className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">Compact</div>
-                  <div className="text-xs opacity-75">Plus d'invités par page</div>
+                  <Table className="h-6 md:h-8 w-6 md:w-8 mx-auto mb-1.5 md:mb-2" />
+                  <div className="text-xs md:text-sm font-medium">Compact</div>
+                  <div className="text-[10px] md:text-xs opacity-75">Plus d'invités par page</div>
                 </button>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">Taille de police</label>
-              <div className="flex items-center gap-3">
+              <label className="block text-xs md:text-sm font-medium text-slate-700 mb-2 md:mb-3">Taille de police</label>
+              <div className="flex items-center gap-2 md:gap-3">
                 <input
                   type="range"
                   min={7}
@@ -596,7 +596,7 @@ const GuestMessagesViewer = () => {
                   onChange={(e) => setPdfFontSize(Number(e.target.value))}
                   className="flex-1 accent-amber-500"
                 />
-                <span className="text-sm text-slate-700 w-10 text-right">{pdfFontSize}pt</span>
+                <span className="text-xs md:text-sm text-slate-700 w-8 md:w-10 text-right">{pdfFontSize}pt</span>
               </div>
             </div>
           </div>
@@ -681,23 +681,23 @@ const GuestMessagesViewer = () => {
         </div>
 
           {filtersNode}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        <div className="p-3 md:p-6 overflow-y-auto max-h-[60vh]">
           {isLoading ? (
-            <div className="text-center py-12">
-              <div className="flex items-center justify-center space-x-2 mb-4">
-                <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-3 h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="text-center py-8 md:py-12">
+              <div className="flex items-center justify-center space-x-1.5 mb-3 md:mb-4">
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-amber-500 rounded-full animate-bounce"></div>
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2.5 h-2.5 md:w-3 md:h-3 bg-amber-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
               </div>
-              <p className="text-slate-600 font-medium">Chargement des messages...</p>
+              <p className="text-xs md:text-sm text-slate-600 font-medium">Chargement des messages...</p>
             </div>
           ) : filteredMessages.length === 0 ? (
-            <div className="text-center py-12">
-              <MessageCircle className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-neutral-500 mb-2">
+            <div className="text-center py-8 md:py-12">
+              <MessageCircle className="h-12 md:h-16 w-12 md:w-16 text-neutral-300 mx-auto mb-3 md:mb-4" />
+              <h3 className="text-sm md:text-lg font-medium text-neutral-500 mb-1.5 md:mb-2">
                 {messages.length === 0 ? 'Aucun message reçu' : 'Aucun résultat'}
               </h3>
-              <p className="text-neutral-400">
+              <p className="text-[10px] md:text-sm text-neutral-400">
                 {messages.length === 0 
                   ? 'Vos invités n\'ont pas encore envoyé de messages'
                   : 'Essayez de modifier vos critères de recherche'
@@ -705,18 +705,18 @@ const GuestMessagesViewer = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2.5 md:space-y-4">
               {Object.values(groupedMessages).slice(0, visibleCount).map((group, index) => {
                 const head = group[0];
                 return (
                   <div
                     key={head.inviteId}
-                    className="bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl p-4 md:p-6 border border-neutral-200/50 hover:shadow-lg transition-all duration-300 animate-slide-up"
+                    className="bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-lg md:rounded-xl p-3 md:p-6 border border-neutral-200/50 hover:shadow-lg transition-all duration-300 animate-slide-up"
                     style={{ animationDelay: `${index * 0.08}s` }}
                   >
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                      <div className="flex items-start space-x-3 md:space-x-4 flex-1">
-                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-white font-bold shadow-lg flex-shrink-0 ${
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2.5 md:gap-4">
+                      <div className="flex items-start space-x-2.5 md:space-x-4 flex-1">
+                        <div className={`w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base shadow-lg flex-shrink-0 ${
                           head.guestType === 'couple' 
                             ? 'bg-gradient-to-r from-pink-500 to-purple-500' 
                             : 'bg-gradient-to-r from-amber-500 to-orange-500'
@@ -724,53 +724,53 @@ const GuestMessagesViewer = () => {
                           {head.guestName.split(' ').map(n => n[0]).join('').substring(0, 2)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-2">
-                            <h3 className="font-semibold text-slate-900 text-base md:text-lg truncate">{head.guestName}</h3>
-                            <div className="flex gap-1.5">
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                            <h3 className="font-semibold text-slate-900 text-sm md:text-base md:text-lg truncate">{head.guestName}</h3>
+                            <div className="flex gap-1">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium ${
                                 head.confirmed 
                                   ? 'bg-emerald-100 text-emerald-800' 
                                   : 'bg-amber-100 text-amber-800'
                               }`}>
-                                {head.confirmed ? 'Confirmé' : 'En attente'}
+                                {head.confirmed ? '✓' : '…'}
                               </span>
                             </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs md:text-sm text-slate-600 mb-3">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] md:text-xs md:text-sm text-slate-600 mb-2 md:mb-3">
                             <div className="flex items-center">
-                              <User className="h-3.5 w-3.5 mr-1" />
+                              <User className="h-3 w-3 md:h-3.5 md:w-3.5 mr-0.5 md:mr-1" />
                               <span>Table: {head.table}</span>
                             </div>
                             {head.selectedDrink && (
                               <div className="flex items-center">
-                                <Wine className="h-3.5 w-3.5 mr-1 text-purple-600" />
+                                <Wine className="h-3 w-3 md:h-3.5 md:w-3.5 mr-0.5 md:mr-1 text-purple-600" />
                                 <span className="font-medium text-purple-700">{head.selectedDrink}</span>
                               </div>
                             )}
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2 md:space-y-3">
                             {group.map((m) => (
-                              <div key={m.id} className="bg-white rounded-lg p-3 md:p-4 border border-neutral-200/50 shadow-sm">
-                                <div className="flex items-center justify-between mb-2">
+                              <div key={m.id} className="bg-white rounded-lg p-2.5 md:p-3 md:p-4 border border-neutral-200/50 shadow-sm">
+                                <div className="flex items-center justify-between mb-1.5 md:mb-2">
                                   <div className="flex items-center">
-                                    <MessageCircle className={`h-3.5 w-3.5 mr-1.5 ${colors.text}`} />
-                                    <span className="text-[10px] text-slate-500">
+                                    <MessageCircle className={`h-3 w-3 md:h-3.5 md:w-3.5 mr-1 md:mr-1.5 ${colors.text}`} />
+                                    <span className="text-[9px] md:text-[10px] text-slate-500">
                                       {new Date(m.timestamp).toLocaleDateString('fr-FR', {
                                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                       })}
                                     </span>
                                   </div>
                                   <div className="flex items-center text-rose-600">
-                                    <Heart className="h-3.5 w-3.5 mr-1" />
-                                    <span className="text-xs font-medium">{m.likes.length}</span>
+                                    <Heart className="h-3 w-3 md:h-3.5 md:w-3.5 mr-0.5 md:mr-1" />
+                                    <span className="text-[10px] md:text-xs font-medium">{m.likes.length}</span>
                                   </div>
                                 </div>
-                                <p className="text-sm text-slate-800 leading-relaxed line-clamp-3 md:line-clamp-none">
+                                <p className="text-xs md:text-sm text-slate-800 leading-relaxed line-clamp-2 md:line-clamp-3 md:line-clamp-none">
                                   {m.message}
                                 </p>
                                 <button
                                   onClick={() => openMessageModal(m)}
-                                  className={`mt-2 text-xs ${colors.text} hover:underline font-bold block`}
+                                  className={`mt-1.5 md:mt-2 text-[10px] md:text-xs ${colors.text} hover:underline font-bold block`}
                                 >
                                   Répondre / Voir tout
                                 </button>
@@ -787,14 +787,14 @@ const GuestMessagesViewer = () => {
           )}
         </div>
 
-        <div className="p-4 md:p-6 border-t border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-xs md:text-sm text-slate-600 order-2 sm:order-1">
+        <div className="p-3 md:p-4 md:p-6 border-t border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2.5 md:gap-4">
+            <div className="text-[10px] md:text-xs md:text-sm text-slate-600 order-2 sm:order-1">
               {filteredMessages.length} résultat{filteredMessages.length > 1 ? 's' : ''} 
               {filteredMessages.length !== messages.length && ` sur ${messages.length}`}
             </div>
             
-            <div className="flex w-full sm:w-auto space-x-2 md:space-x-3 order-1 sm:order-2">
+            <div className="flex w-full sm:w-auto space-x-1.5 md:space-x-2 md:space-x-3 order-1 sm:order-2">
               <button
                 onClick={() => {
                   setSearchTerm('');
@@ -802,13 +802,13 @@ const GuestMessagesViewer = () => {
                   setSortByDrink('all');
                   setSortByTable('all');
                 }}
-                className="flex-1 sm:flex-none px-3 md:px-4 py-2 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all duration-200 text-xs md:text-sm font-bold"
+                className="flex-1 sm:flex-none px-2.5 md:px-3 md:px-4 py-1.5 md:py-2 border border-neutral-300 text-neutral-700 rounded-lg md:rounded-xl hover:bg-neutral-50 transition-all duration-200 text-[10px] md:text-xs md:text-sm font-bold"
               >
                 Réinitialiser
               </button>
               <button
                 onClick={() => setVisibleCount((c) => c + 20)}
-                className="flex-1 sm:flex-none px-3 md:px-4 py-2 border border-amber-300 text-amber-700 rounded-xl hover:bg-amber-50 transition-all duration-200 text-xs md:text-sm font-bold"
+                className="flex-1 sm:flex-none px-2.5 md:px-3 md:px-4 py-1.5 md:py-2 border border-amber-300 text-amber-700 rounded-lg md:rounded-xl hover:bg-amber-50 transition-all duration-200 text-[10px] md:text-xs md:text-sm font-bold"
               >
                 Charger plus
               </button>

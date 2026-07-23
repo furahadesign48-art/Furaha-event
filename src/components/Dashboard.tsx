@@ -434,25 +434,25 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     console.log('=== renderGames memoryMatchGame:', memoryMatchGame);
     
     return (
-      <div className="animate-fade-in space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="animate-fade-in space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
           <div>
-            <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h3 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
               Configuration des Jeux
             </h3>
-            <p className="text-slate-600 mt-1">Configurez les jeux pour vos invités</p>
+            <p className="text-xs md:text-sm text-slate-600 mt-1">Configurez les jeux pour vos invités</p>
           </div>
         </div>
 
         {/* Sélection du modèle */}
-        <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <Gamepad2 className="h-5 w-5 text-amber-600" />
+        <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6">
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
+            <div className="p-1.5 md:p-2 bg-amber-100 rounded-lg">
+              <Gamepad2 className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
             </div>
-            <h4 className="font-semibold text-slate-900">Modèle sélectionné</h4>
+            <h4 className="font-semibold text-slate-900 text-sm md:text-base">Modèle sélectionné</h4>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 md:gap-2">
             {userModels.map((model) => (
               <button
                 key={model.id}
@@ -460,7 +460,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                   console.log('=== Model button clicked:', model.id);
                   setSelectedModelForGames(model.id);
                 }}
-                className={`px-4 py-2 rounded-xl border-2 transition-all duration-300 font-medium text-sm ${
+                className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 transition-all duration-300 font-medium text-xs md:text-sm ${
                   selectedModelForGames === model.id
                     ? 'border-amber-500 bg-amber-50 text-amber-700'
                     : 'border-neutral-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50'
@@ -473,65 +473,65 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
         </div>
 
         {isLoadingGames ? (
-          <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 flex items-center justify-center py-12">
-            <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6 flex items-center justify-center py-8 md:py-12">
+            <div className="w-8 md:w-10 h-8 md:h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Love Quiz Game */}
             {(() => {
               const loveQuizGame = games.find(g => g.type === 'love-quiz');
               if (!loveQuizGame) return null;
               return (
-                <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                      <Heart className="h-5 w-5 text-rose-600 fill-rose-600" />
+                <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-2 md:gap-0 mb-4 md:mb-6">
+                    <h4 className="font-semibold text-slate-900 flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                      <Heart className="h-4 md:h-5 w-4 md:w-5 text-rose-600 fill-rose-600" />
                       Love Quiz
                     </h4>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
                       <button
                         onClick={() => setSelectedGameForResults(selectedGameForResults === loveQuizGame.id ? null : loveQuizGame.id)}
-                        className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                        className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
                       >
-                        <Trophy className="h-4 w-4" />
-                        {selectedGameForResults === loveQuizGame.id ? 'Cacher Classement' : 'Voir Classement'}
+                        <Trophy className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        {selectedGameForResults === loveQuizGame.id ? 'Cacher' : 'Classement'}
                       </button>
                       <button
                         onClick={() => setEditingGame(loveQuizGame)}
-                        className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                        className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
                       >
-                        <Edit className="h-4 w-4" />
-                        Configurer
+                        <Edit className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        Config
                       </button>
                       <button
                         onClick={() => handleDeleteGame(loveQuizGame.id)}
-                        className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-2"
+                        className="bg-red-500 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Supprimer
+                        <Trash2 className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        Suppr
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-neutral-50 to-rose-50/30 rounded-xl border border-neutral-200/50 p-4">
+                  <div className="bg-gradient-to-r from-neutral-50 to-rose-50/30 rounded-lg md:rounded-xl border border-neutral-200/50 p-3 md:p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h5 className="font-semibold text-slate-900">
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
+                          <h5 className="font-semibold text-slate-900 text-sm md:text-base">
                             {loveQuizGame.title}
                           </h5>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          <span className={`px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-xs font-medium ${
                             loveQuizGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
                           }`}>
-                            {loveQuizGame.isEnabled ? 'Activé' : 'Désactivé'}
+                            {loveQuizGame.isEnabled ? '✓' : '✗'}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-600 mb-3">{loveQuizGame.description}</p>
+                        <p className="text-xs md:text-sm text-slate-600 mb-2 md:mb-3">{loveQuizGame.description}</p>
                         {(loveQuizGame as LoveQuizConfig).questions && (loveQuizGame as LoveQuizConfig).questions.length > 0 && (
-                          <div className="mt-2 space-y-2">
-                            {(loveQuizGame as LoveQuizConfig).questions.slice(0, 3).map((q, i) => (
-                              <div key={i} className="p-2 rounded-lg bg-white border border-neutral-200 text-sm text-slate-700">
+                          <div className="mt-1.5 md:mt-2 space-y-1.5 md:space-y-2">
+                            {(loveQuizGame as LoveQuizConfig).questions.slice(0, 2).map((q, i) => (
+                              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-white border border-neutral-200 text-xs md:text-sm text-slate-700">
                                 {i+1}. {q.question}
                               </div>
                             ))}
@@ -543,29 +543,29 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
                   {/* Leaderboard section */}
                   {selectedGameForResults === loveQuizGame.id && (
-                    <div className="mt-6 border-t border-neutral-200 pt-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <h5 className="font-semibold text-slate-900 flex items-center gap-2">
-                          <Trophy className="h-5 w-5 text-amber-600" />
-                          Classement des joueurs
+                    <div className="mt-4 md:mt-6 border-t border-neutral-200 pt-3 md:pt-4">
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <h5 className="font-semibold text-slate-900 flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                          <Trophy className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
+                          Classement
                         </h5>
                         <button
                           onClick={() => refreshGameResults(loveQuizGame.id)}
-                          className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                          className="p-1.5 md:p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
                         >
-                          <RefreshCw className="h-4 w-4" />
-                          <span className="text-xs font-semibold">Rafraîchir</span>
+                          <RefreshCw className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                          <span className="hidden sm:inline text-xs font-semibold">Rafraîchir</span>
                         </button>
                       </div>
                       {gameResults[loveQuizGame.id] && gameResults[loveQuizGame.id].length > 0 ? (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5 md:space-y-2">
                           {gameResults[loveQuizGame.id].sort((a, b) => (b.score || 0) - (a.score || 0)).map((result, index) => (
                             <div 
                               key={result.id} 
-                              className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-200"
+                              className="flex items-center justify-between p-2 md:p-3 rounded-lg md:rounded-xl bg-neutral-50 border border-neutral-200"
                             >
-                              <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <div className={`w-6 md:w-8 h-6 md:h-8 rounded-full flex items-center justify-center font-bold text-[10px] md:text-xs ${
                                   index === 0 ? 'bg-yellow-400 text-yellow-900' : 
                                   index === 1 ? 'bg-gray-400 text-gray-900' : 
                                   index === 2 ? 'bg-orange-400 text-orange-900' : 
@@ -573,12 +573,12 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                                 }`}>
                                   {index + 1}
                                 </div>
-                                <span className="font-semibold text-slate-800 text-sm">
+                                <span className="font-semibold text-slate-800 text-xs md:text-sm">
                                   {result.guestName}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-slate-700 text-sm">
+                              <div className="flex items-center gap-1.5 md:gap-2">
+                                <span className="font-semibold text-slate-700 text-xs md:text-sm">
                                   {result.score || 0}/{(loveQuizGame as LoveQuizConfig).questions.length}
                                 </span>
                                 <button
@@ -593,16 +593,16 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                                       showToast('error', 'Erreur lors de la réinitialisation');
                                     }
                                   }}
-                                  className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+                                  className="p-1 md:p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="h-3 md:h-3.5 w-3 md:w-3.5" />
                                 </button>
                               </div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-slate-500 text-sm text-center py-4">
+                        <p className="text-slate-500 text-xs md:text-sm text-center py-3 md:py-4">
                           Aucun joueur n'a encore terminé ce jeu.
                         </p>
                       )}
@@ -2486,69 +2486,70 @@ const renderOverview = () => {
       )}
 
       {/* Formulaire d'ajout d'invité */}
-      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <h4 className="text-lg font-semibold text-slate-900">
+          <h4 className="text-base sm:text-lg font-semibold text-slate-900">
             Liste des invités ({filteredGuests.length} / {guests.length})
           </h4>
-          <p className="text-slate-600 text-sm">Gérez vos invités et leurs confirmations</p>
+          <p className="text-slate-600 text-xs sm:text-sm">Gérez vos invités et leurs confirmations</p>
         </div>
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap gap-2 md:gap-3 w-full lg:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap gap-1.5 sm:gap-2 md:gap-3 w-full lg:w-auto">
           <button
             onClick={() => setShowCategoryManager(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-3 md:px-4 py-2.5 md:py-3 rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-xs md:text-sm"
+            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
           >
-            <Tag className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
+            <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Catégories
           </button>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-3 md:px-4 py-2.5 md:py-3 rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-xs md:text-sm"
+            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
           >
-            <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
+            <FileSpreadsheet className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Importer
           </button>
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-3 md:px-4 py-2.5 md:py-3 rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-xs md:text-sm"
+            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
           >
-            <Download className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
+            <Download className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Exporter
           </button>
           <button
             onClick={() => setShowReminderModal(true)}
-            className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 md:px-4 py-2.5 md:py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-purple text-xs md:text-sm"
+            className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-purple-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-purple text-[10px] sm:text-xs md:text-sm"
           >
-            <Bell className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
+            <Bell className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Rappel
           </button>
           <button
             onClick={openAddGuestModal}
-            className="col-span-2 sm:flex-none bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-amber transform hover:scale-105 text-xs md:text-sm"
+            className="col-span-2 sm:flex-none bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 sm:px-4 md:px-6 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-amber transform hover:scale-105 text-[10px] sm:text-xs md:text-sm"
           >
-            <Plus className="h-4 w-4 md:h-5 md:w-5 mr-1.5 md:mr-2" />
-            Ajouter un invité
+            <Plus className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
+            Ajouter invité
           </button>
         </div>
       </div>
 
       {/* Liste des invités */}
       <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 overflow-hidden">
-        <div className="p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30 flex items-center justify-between">
-          <h4 className="text-lg font-semibold text-slate-900">Liste des invités</h4>
+        <div className="px-3 py-2 sm:p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30 flex items-center justify-between">
+          <h4 className="text-sm sm:text-lg font-semibold text-slate-900">Liste des invités</h4>
           {filteredGuests.length > 0 && (
             <button
               onClick={() => toggleSelectAll(filteredGuests)}
-              className="text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors flex items-center"
+              className="text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors flex items-center"
             >
-              <div className={`w-4 h-4 rounded border-2 mr-2 flex items-center justify-center transition-all ${
+              <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-2 mr-1.5 sm:mr-2 flex items-center justify-center transition-all ${
                 selectedGuestIds.length === filteredGuests.length 
                   ? 'bg-amber-500 border-amber-500' 
                   : 'border-neutral-300'
               }`}>
-                {selectedGuestIds.length === filteredGuests.length && <Check className="h-3 w-3 text-white" />}
+                {selectedGuestIds.length === filteredGuests.length && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />}
               </div>
-              {selectedGuestIds.length === filteredGuests.length ? 'Tout désélectionner' : 'Tout sélectionner'}
+              <span className="hidden sm:inline">{selectedGuestIds.length === filteredGuests.length ? 'Tout désélectionner' : 'Tout sélectionner'}</span>
+              <span className="sm:hidden">{selectedGuestIds.length === filteredGuests.length ? 'Tout' : 'Tout'}</span>
             </button>
           )}
         </div>
@@ -2557,7 +2558,7 @@ const renderOverview = () => {
           {filteredGuests.map((guest, index) => (
             <div
               key={guest.id}
-              className={`p-6 transition-all duration-300 animate-slide-up flex items-center ${
+              className={`px-3 py-2 sm:p-6 transition-all duration-300 animate-slide-up flex items-center ${
                 selectedGuestIds.includes(guest.id) 
                   ? 'bg-amber-50/50' 
                   : 'hover:bg-gradient-to-r hover:from-neutral-50/50 hover:to-amber-50/30'
@@ -2567,64 +2568,64 @@ const renderOverview = () => {
               {/* Checkbox de sélection */}
               <button
                 onClick={() => toggleGuestSelection(guest.id)}
-                className="mr-4 flex-shrink-0"
+                className="mr-2 sm:mr-4 flex-shrink-0"
               >
-                <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                <div className={`w-4 h-4 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                   selectedGuestIds.includes(guest.id) 
                     ? 'bg-amber-500 border-amber-500 shadow-glow-amber' 
                     : 'border-neutral-300 hover:border-amber-400'
                 }`}>
-                  {selectedGuestIds.includes(guest.id) && <Check className="h-4 w-4 text-white" />}
+                  {selectedGuestIds.includes(guest.id) && <Check className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-white" />}
                 </div>
               </button>
 
-              <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                 <div className="flex items-center">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-lg ${
+                  <div className={`w-7 h-7 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-lg text-[10px] sm:text-base ${
                     guest.etat === 'couple' 
                       ? 'bg-gradient-to-r from-pink-500 to-purple-500' 
                       : 'bg-gradient-to-r from-amber-500 to-orange-500'
                   }`}>
                     {guest.nom.split(' ').map(n => n[0]).join('').substring(0, 2)}
                   </div>
-                  <div className="ml-4">
-                    <h5 className="font-semibold text-slate-900 text-lg">{guest.nom}</h5>
-                    <div className="flex items-center space-x-4 text-sm text-slate-600">
+                  <div className="ml-2 sm:ml-4">
+                    <h5 className="font-semibold text-slate-900 text-sm sm:text-lg truncate max-w-[150px] sm:max-w-none">{guest.nom}</h5>
+                    <div className="flex items-center flex-wrap gap-1 sm:gap-4 text-[10px] sm:text-sm text-slate-600">
                       <span>Table: {guest.table}</span>
                       {guest.category && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          <Tag className="h-3 w-3 mr-1" />
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-medium bg-purple-100 text-purple-800">
+                          <Tag className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                           {guest.category}
                         </span>
                       )}
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-medium ${
                         guest.etat === 'couple' 
                           ? 'bg-pink-100 text-pink-800' 
                           : 'bg-blue-100 text-blue-800'
                       }`}>
-                        {guest.etat === 'couple' ? 'Couple (2 places)' : 'Simple (1 place)'}
+                        {guest.etat === 'couple' ? 'Couple' : 'Simple'}
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="mt-3 sm:mt-0 flex items-center sm:flex-shrink-0 flex-wrap gap-2">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                <div className="flex items-center sm:flex-shrink-0 flex-wrap gap-1.5 sm:gap-2">
+                  <span className={`inline-flex items-center px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-sm font-medium ${
                     guest.confirmed 
                       ? 'bg-emerald-100 text-emerald-800' 
                       : 'bg-amber-100 text-amber-800'
                   }`}>
-                    {guest.confirmed ? 'Confirmé' : 'En attente'}
+                    {guest.confirmed ? '✓' : '!'}
                   </span>
                   
                   {/* Bouton Copier sorti de l'action pour accès rapide sur mobile */}
                   <button
                     onClick={() => copyInvitationWithPreview(guest)}
-                    className="p-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-all duration-200 shadow-sm"
+                    className="p-1.5 sm:p-2.5 bg-slate-100 text-slate-700 rounded-lg sm:rounded-xl hover:bg-slate-200 transition-all duration-200 shadow-sm"
                     aria-label="Copier le message"
                     title="Copier le message"
                   >
-                    <Copy className="h-5 w-5" />
+                    <Copy className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                   </button>
 
                   <div className={`relative ${openGuestActionsId === guest.id ? 'z-[60]' : 'z-10'}`}>
@@ -2634,42 +2635,41 @@ const renderOverview = () => {
                         e.stopPropagation();
                         setOpenGuestActionsId(openGuestActionsId === guest.id ? null : guest.id);
                       }}
-                      className="p-2.5 bg-amber-100 text-amber-700 rounded-xl hover:bg-amber-200 transition-all duration-200 shadow-sm flex items-center"
+                      className="p-1.5 sm:p-2.5 bg-amber-100 text-amber-700 rounded-lg sm:rounded-xl hover:bg-amber-200 transition-all duration-200 shadow-sm flex items-center"
                     >
-                      <span className="text-xs font-bold mr-1">Actions</span>
-                      <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${openGuestActionsId === guest.id ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-300 ${openGuestActionsId === guest.id ? 'rotate-180' : ''}`} />
                     </button>
 
                     {/* Menu Actions repositionné et stylisé */}
                     {openGuestActionsId === guest.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-[100] overflow-hidden animate-fade-in py-2">
+                      <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-[100] overflow-hidden animate-fade-in py-2">
                         <button
                           onClick={() => { handleShareInvitation(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-green-600 hover:bg-green-50 flex items-center transition-colors"
+                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-green-600 hover:bg-green-50 flex items-center transition-colors"
                         >
-                          <MessageSquare className="h-4 w-4 mr-3" />
+                          <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                           WhatsApp
                         </button>
                         <button
                           onClick={() => { sendEmailInvitation(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-blue-600 hover:bg-blue-50 flex items-center transition-colors"
+                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 flex items-center transition-colors"
                         >
-                          <Mail className="h-4 w-4 mr-3" />
+                          <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                           Email
                         </button>
                         <div className="h-[1px] bg-neutral-100 my-1 mx-2"></div>
                         <button
                           onClick={() => { openEditGuestModal(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-amber-600 hover:bg-amber-50 flex items-center transition-colors"
+                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-amber-600 hover:bg-amber-50 flex items-center transition-colors"
                         >
-                          <Edit className="h-4 w-4 mr-3" />
+                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                           Modifier
                         </button>
                         <button
                           onClick={() => { handleDeleteGuest(guest.id); setOpenGuestActionsId(null); }}
-                          className="w-full px-4 py-2.5 text-left text-sm font-medium text-rose-600 hover:bg-rose-50 flex items-center transition-colors"
+                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-rose-600 hover:bg-rose-50 flex items-center transition-colors"
                         >
-                          <Trash2 className="h-4 w-4 mr-3" />
+                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                           Supprimer
                         </button>
                       </div>

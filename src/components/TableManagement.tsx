@@ -437,52 +437,52 @@ Découvrez nos services : https://furaha-event.com`;
   return (
     <div className="animate-fade-in">
       {/* En-tête avec statistiques */}
-      <div className="mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200/50 shadow-lg">
+      <div className="mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-3 sm:p-6 border border-amber-200/50 shadow-lg">
             <div className="flex items-center">
-              <div className="p-3 bg-amber-500 rounded-xl shadow-glow-amber">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-amber-500 rounded-lg sm:rounded-xl shadow-glow-amber">
+                <Users className="h-4 sm:h-6 w-4 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-amber-700 text-sm font-medium">Total Tables</p>
-                <p className="text-2xl font-bold text-amber-900">{totalTables}</p>
+              <div className="ml-2 sm:ml-4">
+                <p className="text-amber-700 text-xs sm:text-sm font-medium">Total Tables</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-900">{totalTables}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200/50 shadow-lg">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-3 sm:p-6 border border-purple-200/50 shadow-lg">
             <div className="flex items-center">
-              <div className="p-3 bg-purple-500 rounded-xl shadow-glow-purple">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-purple-500 rounded-lg sm:rounded-xl shadow-glow-purple">
+                <Users className="h-4 sm:h-6 w-4 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-purple-700 text-sm font-medium">Total Places</p>
-                <p className="text-2xl font-bold text-purple-900">{totalSeats}</p>
+              <div className="ml-2 sm:ml-4">
+                <p className="text-purple-700 text-xs sm:text-sm font-medium">Total Places</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-900">{totalSeats}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-6 border border-emerald-200/50 shadow-lg">
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-3 sm:p-6 border border-emerald-200/50 shadow-lg">
             <div className="flex items-center">
-              <div className="p-3 bg-emerald-500 rounded-xl">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-emerald-500 rounded-lg sm:rounded-xl">
+                <Users className="h-4 sm:h-6 w-4 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-emerald-700 text-sm font-medium">Invités Assignés</p>
-                <p className="text-2xl font-bold text-emerald-900">{totalAssignedGuests}</p>
+              <div className="ml-2 sm:ml-4">
+                <p className="text-emerald-700 text-xs sm:text-sm font-medium">Invités Assignés</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-900">{totalAssignedGuests}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-2xl p-6 border border-rose-200/50 shadow-lg">
+          <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-2xl p-3 sm:p-6 border border-rose-200/50 shadow-lg">
             <div className="flex items-center">
-              <div className="p-3 bg-rose-500 rounded-xl">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 sm:p-3 bg-rose-500 rounded-lg sm:rounded-xl">
+                <Users className="h-4 sm:h-6 w-4 sm:w-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-rose-700 text-sm font-medium">Places Occupées</p>
-                <p className="text-2xl font-bold text-rose-900">{totalOccupiedSeats}</p>
+              <div className="ml-2 sm:ml-4">
+                <p className="text-rose-700 text-xs sm:text-sm font-medium">Places Occupées</p>
+                <p className="text-xl sm:text-2xl font-bold text-rose-900">{totalOccupiedSeats}</p>
               </div>
             </div>
           </div>
@@ -490,54 +490,56 @@ Découvrez nos services : https://furaha-event.com`;
       </div>
 
       {/* En-tête avec bouton d'ajout */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-4">
         <div>
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          <h3 className="text-lg sm:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
             Gestion des Tables
           </h3>
-          <p className="text-slate-600 mt-1">Organisez les places de vos invités</p>
+          <p className="text-slate-600 text-xs sm:text-sm mt-1">Organisez les places de vos invités</p>
         </div>
         
+        <div className="flex flex-wrap gap-2 sm:gap-3">
         <button
           onClick={() => openModal()}
-          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-6 py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center shadow-glow-amber hover:shadow-luxury transform hover:scale-105"
+          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center shadow-glow-amber hover:shadow-luxury transform hover:scale-105 text-xs sm:text-sm"
         >
-          <Plus className="h-5 w-5 mr-2" />
+          <Plus className="h-4 sm:h-5 w-4 sm:w-5 mr-1 sm:mr-2" />
           Ajouter une table
         </button>
         
         <button
           onClick={() => setIsExportModalOpen(true)}
-          className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-semibold flex items-center shadow-lg hover:shadow-luxury transform hover:scale-105"
+          className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-semibold flex items-center shadow-lg hover:shadow-luxury transform hover:scale-105 text-xs sm:text-sm"
         >
-          <Download className="h-5 w-5 mr-2" />
-          Exporter les invités
+          <Download className="h-4 sm:h-5 w-4 sm:w-5 mr-1 sm:mr-2" />
+          Exporter
         </button>
+        </div>
       </div>
 
       {/* Search and Sort Controls */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-neutral-200/50 mb-6 flex flex-col sm:flex-row gap-4">
+      <div className="bg-white p-3 sm:p-4 rounded-lg sm:rounded-xl shadow-sm border border-neutral-200/50 mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" />
           <input
             type="text"
             placeholder="Rechercher une table..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
           />
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Filter className="h-5 w-5 text-neutral-400" />
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <Filter className="h-4 sm:h-5 w-4 sm:w-5 text-neutral-400" />
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+            className="px-3 sm:px-4 py-2 border border-neutral-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
           >
-            <option value="name">Trier par nom</option>
-            <option value="seats">Trier par places (décroissant)</option>
-            <option value="occupancy">Trier par occupation (décroissant)</option>
+            <option value="name">Nom</option>
+            <option value="seats">Places</option>
+            <option value="occupancy">Occupation</option>
           </select>
         </div>
       </div>
@@ -669,28 +671,28 @@ Découvrez nos services : https://furaha-event.com`;
               </div>
 
               {/* Version Mobile */}
-              <div className="md:hidden p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h5 className="font-bold text-slate-900 text-lg flex items-center">
+              <div className="md:hidden px-3 py-2">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1">
+                    <h5 className="font-bold text-slate-900 text-sm flex items-center">
                       {table.name}
                       {(table as any).isImported && (
-                        <span className="ml-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800">
+                        <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 text-amber-800">
                           Importée
                         </span>
                       )}
                     </h5>
-                    <div className="flex flex-wrap gap-2 mt-2">
+                    <div className="flex flex-wrap gap-1 mt-1">
                       {(table as any).isImported ? (
-                        <span className="px-2 py-1 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-100">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-50 text-amber-700 border border-amber-100">
                           Capacité non définie
                         </span>
                       ) : (
-                        <span className="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-800">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800">
                           {table.seats} places
                         </span>
                       )}
-                      <span className={`px-2 py-1 rounded-full text-xs ${
+                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
                         !(table as any).isImported && occupiedSeats > table.seats 
                           ? 'bg-rose-100 text-rose-800' 
                           : 'bg-purple-100 text-purple-800'
@@ -699,54 +701,54 @@ Découvrez nos services : https://furaha-event.com`;
                       </span>
                     </div>
                   </div>
-                  <div className="flex space-x-2">
+                  <div className="flex space-x-1">
                     <button
                       onClick={() => openGuestModal(table)}
-                      className="p-2 bg-purple-100 text-purple-600 rounded-xl"
+                      className="p-1.5 bg-purple-100 text-purple-600 rounded-lg"
                     >
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-2 gap-1.5 mt-2">
                   <button
                     onClick={() => sendTableInvitations(table)}
-                    className="flex items-center justify-center p-3 bg-green-50 text-green-700 rounded-xl border border-green-100 font-medium text-sm"
+                    className="flex items-center justify-center p-2 bg-green-50 text-green-700 rounded-lg border border-green-100 font-medium text-xs"
                   >
-                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <MessageSquare className="h-3.5 w-3.5 mr-1" />
                     WhatsApp
                   </button>
                   <button
                     onClick={() => sendTableEmailInvitations(table)}
-                    className="flex items-center justify-center p-3 bg-blue-50 text-blue-700 rounded-xl border border-blue-100 font-medium text-sm"
+                    className="flex items-center justify-center p-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-100 font-medium text-xs"
                   >
-                    <Mail className="h-4 w-4 mr-2" />
+                    <Mail className="h-3.5 w-3.5 mr-1" />
                     Email
                   </button>
                   {!(table as any).isImported ? (
                     <>
                       <button
                         onClick={() => openModal(table)}
-                        className="flex items-center justify-center p-3 bg-amber-50 text-amber-700 rounded-xl border border-amber-100 font-medium text-sm"
+                        className="flex items-center justify-center p-2 bg-amber-50 text-amber-700 rounded-lg border border-amber-100 font-medium text-xs"
                       >
-                        <Edit className="h-4 w-4 mr-2" />
+                        <Edit className="h-3.5 w-3.5 mr-1" />
                         Modifier
                       </button>
                       <button
                         onClick={() => handleDelete(table.id)}
-                        className="flex items-center justify-center p-3 bg-rose-50 text-rose-700 rounded-xl border border-rose-100 font-medium text-sm"
+                        className="flex items-center justify-center p-2 bg-rose-50 text-rose-700 rounded-lg border border-rose-100 font-medium text-xs"
                       >
-                        <Trash2 className="h-4 w-4 mr-2" />
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
                         Supprimer
                       </button>
                     </>
                   ) : (
                     <button
                       onClick={() => openModal({ ...table, seats: 8, isImported: false } as any)}
-                      className="col-span-2 flex items-center justify-center p-3 bg-amber-500 text-white rounded-xl font-medium text-sm shadow-glow-amber"
+                      className="col-span-2 flex items-center justify-center p-2 bg-amber-500 text-white rounded-lg font-medium text-xs shadow-glow-amber"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
+                      <Plus className="h-3.5 w-3.5 mr-1" />
                       Enregistrer la table
                     </button>
                   )}
@@ -874,48 +876,48 @@ Découvrez nos services : https://furaha-event.com`;
               </div>
             </div>
 
-            <div className="p-6 overflow-y-auto max-h-96">
+            <div className="p-3 sm:p-6 overflow-y-auto max-h-96">
               {selectedTable && getGuestsForTable(selectedTable.name).length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {getGuestsForTable(selectedTable.name).map((guest, index) => (
                     <>
                     <div
                       key={guest.id}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl border border-neutral-200/50 hover:shadow-md transition-all duration-200 animate-slide-up"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 sm:p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-lg sm:rounded-xl border border-neutral-200/50 hover:shadow-md transition-all duration-200 animate-slide-up"
                       style={{ animationDelay: `${index * 0.1}s` }}
                     >
                       <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg ${
+                        <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-semibold text-[10px] sm:text-sm shadow-lg ${
                           guest.etat === 'couple' 
                             ? 'bg-gradient-to-r from-pink-500 to-purple-500' 
                             : 'bg-gradient-to-r from-amber-500 to-orange-500'
                         }`}>
                           {guest.nom.split(' ').map(n => n[0]).join('').substring(0, 2)}
                         </div>
-                        <div className="ml-3">
-                          <p className="font-medium text-slate-900">{guest.nom}</p>
-                          <div className="flex items-center space-x-2">
-                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        <div className="ml-2 sm:ml-3">
+                          <p className="font-medium text-slate-900 text-sm">{guest.nom}</p>
+                          <div className="flex items-center space-x-1 sm:space-x-2">
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-medium ${
                               guest.etat === 'couple' 
                                 ? 'bg-pink-100 text-pink-800' 
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {guest.etat === 'couple' ? 'Couple (2 places)' : 'Simple (1 place)'}
+                              {guest.etat === 'couple' ? 'Couple' : 'Simple'}
                             </span>
                           </div>
                         </div>
                       </div>
-                      <div className="mt-3 sm:mt-0 flex items-center sm:flex-shrink-0 flex-wrap">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      <div className="mt-2 sm:mt-0 flex items-center sm:flex-shrink-0 flex-wrap gap-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-sm font-medium ${
                           guest.confirmed 
                             ? 'bg-emerald-100 text-emerald-800' 
                             : 'bg-amber-100 text-amber-800'
                         }`}>
-                          {guest.confirmed ? 'Confirmé' : 'En attente'}
+                          {guest.confirmed ? '✓' : '…'}
                         </span>
                         <button
                           onClick={() => setOpenTableGuestActionsId(openTableGuestActionsId === String(guest.id) ? null : String(guest.id))}
-                          className="sm:hidden px-3 py-2 bg-neutral-100 text-slate-700 rounded-lg hover:bg-neutral-200 transition-all duration-200 font-medium ml-2"
+                          className="sm:hidden px-2 py-1.5 bg-neutral-100 text-slate-700 rounded-lg hover:bg-neutral-200 transition-all duration-200 font-medium ml-1 text-xs"
                         >
                           Actions
                         </button>
@@ -946,28 +948,28 @@ Découvrez nos services : https://furaha-event.com`;
                       </div>
                     </div>
                     {openTableGuestActionsId === String(guest.id) && (
-                      <div className="sm:hidden mt-2 grid grid-cols-2 gap-2">
+                      <div className="sm:hidden mt-1 grid grid-cols-2 gap-1.5">
                         <button
                           onClick={() => sendWhatsAppInvitation({ id: String(guest.id), nom: guest.nom, table: selectedTable!.name })}
-                          className="bg-green-100 text-green-700 px-3 py-2 rounded-lg hover:bg-green-200 transition-all duration-200 font-medium text-sm"
+                          className="bg-green-100 text-green-700 px-2 py-1.5 rounded-lg hover:bg-green-200 transition-all duration-200 font-medium text-xs"
                         >
                           WhatsApp
                         </button>
                         <button
                           onClick={() => copyInvitationMessage({ id: String(guest.id), nom: guest.nom, table: selectedTable!.name })}
-                          className="bg-slate-100 text-slate-700 px-3 py-2 rounded-lg hover:bg-slate-200 transition-all duration-200 font-medium text-sm"
+                          className="bg-slate-100 text-slate-700 px-2 py-1.5 rounded-lg hover:bg-slate-200 transition-all duration-200 font-medium text-xs"
                         >
                           Copier
                         </button>
                         <button
                           onClick={() => sendEmailInvitation({ id: String(guest.id), nom: guest.nom, table: selectedTable!.name })}
-                          className="bg-blue-100 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-200 transition-all duration-200 font-medium text-sm"
+                          className="bg-blue-100 text-blue-700 px-2 py-1.5 rounded-lg hover:bg-blue-200 transition-all duration-200 font-medium text-xs"
                         >
                           Email
                         </button>
                         <button
                           onClick={() => {}}
-                          className="bg-neutral-100 text-slate-700 px-3 py-2 rounded-lg hover:bg-neutral-200 transition-all duration-200 font-medium text-sm"
+                          className="bg-neutral-100 text-slate-700 px-2 py-1.5 rounded-lg hover:bg-neutral-200 transition-all duration-200 font-medium text-xs"
                         >
                           Fermer
                         </button>

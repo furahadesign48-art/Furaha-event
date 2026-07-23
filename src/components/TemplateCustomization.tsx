@@ -439,67 +439,67 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     switch (activeTab) {
       case 'general':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Sous-titre au-dessus du titre
               </label>
               <input
                 type="text"
                 value={customTemplate.invitationTitleSubtitle || ''}
                 onChange={(e) => handleInputChange('invitationTitleSubtitle', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 placeholder="Ex: Nous avons le plaisir de vous inviter à"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Titre de l'invitation
               </label>
               <input
                 type="text"
                 value={customTemplate.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 placeholder="Ex: Mariage de Sophie & Lucas"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Photo dans la zone de texte
               </label>
-              <div className="space-y-3">
+              <div className="space-y-2.5 sm:space-y-3">
                 {/* Titre de la photo */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                  <label className="block text-xs font-medium text-slate-500 mb-0.5 sm:mb-1">
                     Titre de la photo
                   </label>
                   <input
                     type="text"
                     value={customTemplate.invitationTextPhotoTitle || ''}
                     onChange={(e) => handleInputChange('invitationTextPhotoTitle', e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-neutral-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                     placeholder="Ex: Motif de pagne"
                   />
                 </div>
 
                 {/* Sous-titre de la photo */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                  <label className="block text-xs font-medium text-slate-500 mb-0.5 sm:mb-1">
                     Sous-titre de la photo
                   </label>
                   <input
                     type="text"
                     value={(customTemplate as any).invitationTextPhotoSubtitle || ''}
                     onChange={(e) => handleInputChange('invitationTextPhotoSubtitle' as any, e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-neutral-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                     placeholder="Ex: Notre tradition"
                   />
                 </div>
 
                 {/* Aperçu et upload */}
-                <div className="relative h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                <div className="relative h-20 sm:h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
                   {customTemplate.invitationTextPhoto ? (
                     <>
                       <img
@@ -509,17 +509,17 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       />
                       <button
                         onClick={() => handleInputChange('invitationTextPhoto', '')}
-                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         title="Retirer la photo"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                     </>
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <Camera className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
-                        <p className="text-neutral-500 text-sm">Aucune photo sélectionnée</p>
+                        <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-neutral-400 mx-auto mb-1.5 sm:mb-2" />
+                        <p className="text-neutral-500 text-xs sm:text-sm">Aucune photo sélectionnée</p>
                       </div>
                     </div>
                   )}
@@ -528,9 +528,9 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('invitationTextPhoto')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
                   >
-                    <Upload className="h-4 w-4 mr-2" />
+                    <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                     Charger une photo
                   </button>
                 </div>
@@ -538,35 +538,35 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Texte d'invitation
               </label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                <button type="button" onClick={() => wrapSelection('[b]', '[/b]')} className="px-3 py-1 rounded-lg border text-sm">Gras</button>
-                <button type="button" onClick={() => wrapSelection('[i]', '[/i]')} className="px-3 py-1 rounded-lg border text-sm">Italique</button>
-                <input type="color" value={selectedTextColor} onChange={(e) => setSelectedTextColor(e.target.value)} className="h-9 w-12 p-1 border rounded-lg" />
-                <button type="button" onClick={() => wrapSelection(`[color=${selectedTextColor}]`, '[/color]')} className="px-3 py-1 rounded-lg border text-sm">Appliquer couleur</button>
-                <button type="button" onClick={clearFormatting} className="ml-auto px-3 py-1 rounded-lg border text-sm">Supprimer formats</button>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                <button type="button" onClick={() => wrapSelection('[b]', '[/b]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Gras</button>
+                <button type="button" onClick={() => wrapSelection('[i]', '[/i]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Italique</button>
+                <input type="color" value={selectedTextColor} onChange={(e) => setSelectedTextColor(e.target.value)} className="h-7 w-9 sm:h-9 sm:w-12 p-0.5 border rounded-lg" />
+                <button type="button" onClick={() => wrapSelection(`[color=${selectedTextColor}]`, '[/color]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Couleur</button>
+                <button type="button" onClick={clearFormatting} className="ml-auto px-2 py-1 rounded-lg border text-xs sm:text-sm">Réinitialiser</button>
               </div>
               <textarea
                 value={customTemplate.invitationText}
                 onChange={(e) => handleInputChange('invitationText', e.target.value)}
-                rows={6}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 resize-none"
+                rows={5}
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 resize-none text-sm"
                 placeholder="Rédigez votre message d'invitation..."
                 ref={textAreaRef}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Nom du template
               </label>
               <input
                 type="text"
                 value={customTemplate.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 placeholder="Nom de votre template personnalisé"
               />
             </div>
@@ -575,13 +575,13 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       case 'design':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Image de fond
               </label>
-              <div className="space-y-3">
-                <div className="relative h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="relative h-20 sm:h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
                   {customTemplate.backgroundImage ? (
                     <>
                       <img
@@ -1035,88 +1035,88 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       case 'colors':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-4">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
                 Couleur principale
               </label>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <input
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-16 h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
                 />
                 <input
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
                   placeholder="#f59e0b"
                 />
               </div>
-              <p className="text-sm text-slate-500 mt-2">Couleur utilisée pour les éléments principaux et les boutons</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur utilisée pour les éléments principaux et les boutons</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-4">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
                 Couleur secondaire
               </label>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <input
                   type="color"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="w-16 h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
                 />
                 <input
                   type="text"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
                   placeholder="#d97706"
                 />
               </div>
-              <p className="text-sm text-slate-500 mt-2">Couleur pour les effets de survol et les accents</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur pour les effets de survol et les accents</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-4">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
                 Couleur d'accent
               </label>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <input
                   type="color"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-16 h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
                 />
                 <input
                   type="text"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
                   placeholder="#f43f5e"
                 />
               </div>
-              <p className="text-sm text-slate-500 mt-2">Couleur pour les éléments décoratifs et les icônes</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur pour les éléments décoratifs et les icônes</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
               <button
                 onClick={() => {
                   setPrimaryColor('#f59e0b');
                   setSecondaryColor('#d97706');
                   setAccentColor('#f43f5e');
                 }}
-                className="p-4 rounded-xl border-2 border-neutral-200 hover:border-amber-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-amber-400 transition-all duration-300 group"
               >
-                <div className="flex space-x-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-amber-500"></div>
-                  <div className="w-6 h-6 rounded-full bg-amber-600"></div>
-                  <div className="w-6 h-6 rounded-full bg-rose-500"></div>
+                <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-amber-500"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-amber-600"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-rose-500"></div>
                 </div>
-                <p className="text-sm font-medium text-slate-700 group-hover:text-amber-700">Doré & Rose</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-amber-700">Doré & Rose</p>
               </button>
 
               <button
@@ -1125,14 +1125,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   setSecondaryColor('#7c3aed');
                   setAccentColor('#ec4899');
                 }}
-                className="p-4 rounded-xl border-2 border-neutral-200 hover:border-purple-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-purple-400 transition-all duration-300 group"
               >
-                <div className="flex space-x-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-violet-500"></div>
-                  <div className="w-6 h-6 rounded-full bg-violet-600"></div>
-                  <div className="w-6 h-6 rounded-full bg-pink-500"></div>
+                <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-violet-500"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-violet-600"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-pink-500"></div>
                 </div>
-                <p className="text-sm font-medium text-slate-700 group-hover:text-purple-700">Violet & Rose</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-purple-700">Violet & Rose</p>
               </button>
 
               <button
@@ -1141,23 +1141,23 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   setSecondaryColor('#059669');
                   setAccentColor('#3b82f6');
                 }}
-                className="p-4 rounded-xl border-2 border-neutral-200 hover:border-emerald-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-emerald-400 transition-all duration-300 group"
               >
-                <div className="flex space-x-2 mb-2">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500"></div>
-                  <div className="w-6 h-6 rounded-full bg-emerald-600"></div>
-                  <div className="w-6 h-6 rounded-full bg-blue-500"></div>
+                <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-emerald-500"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-emerald-600"></div>
+                  <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-blue-500"></div>
                 </div>
-                <p className="text-sm font-medium text-slate-700 group-hover:text-emerald-700">Émeraude & Bleu</p>
+                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-emerald-700">Émeraude & Bleu</p>
               </button>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200/50">
-              <div className="flex items-center mb-4">
-                <Palette className="h-5 w-5 text-purple-600 mr-2" />
-                <h3 className="text-lg font-semibold text-purple-800">Personnalisation des couleurs</h3>
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-3 sm:p-6 border border-purple-200/50">
+              <div className="flex items-center mb-2 sm:mb-4">
+                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 mr-1.5 sm:mr-2" />
+                <h3 className="text-base sm:text-lg font-semibold text-purple-800">Personnalisation des couleurs</h3>
               </div>
-              <p className="text-purple-700 text-sm">
+              <p className="text-purple-700 text-xs sm:text-sm">
                 Personnalisez les couleurs de votre invitation pour qu'elle corresponde parfaitement à votre thème.
                 Les modifications s'appliquent en temps réel dans l'aperçu.
               </p>
@@ -1167,10 +1167,10 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       case 'event':
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Date de l'événement
                 </label>
                 <input
@@ -1199,109 +1199,109 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     });
                     handleInputChange('eventDate', formattedDate);
                   }}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Heure de l'événement
                 </label>
                 <input
                   type="time"
                   value={customTemplate.eventTime ? customTemplate.eventTime.replace('h', ':') : ''}
                   onChange={(e) => handleInputChange('eventTime', e.target.value.replace(':', 'h'))}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Lieu de l'événement
               </label>
               <input
                 type="text"
                 value={customTemplate.eventLocation}
                 onChange={(e) => handleInputChange('eventLocation', e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
                 placeholder="Nom du lieu (ex: Château de la Loire)"
               />
-              <div className="mt-3">
-                <label className="block text-xs font-medium text-slate-700 mb-1">Adresse de l'événement</label>
+              <div className="mt-2.5 sm:mt-3">
+                <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Adresse de l'événement</label>
                 <input
                   type="text"
                   value={customTemplate.eventAddress || ''}
                   onChange={(e) => handleInputChange('eventAddress', e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
                   placeholder="Adresse complète (ex: 123 Rue de la Paix, 75001 Paris)"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Latitude (optionnel)</label>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Latitude (optionnel)</label>
                   <input
                     type="number"
                     value={customTemplate.eventLat ?? ''}
                     onChange={(e) => handleInputChange('eventLat', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                     step="0.000001"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
                     placeholder="Ex: -4.3251"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">Longitude (optionnel)</label>
+                  <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Longitude (optionnel)</label>
                   <input
                     type="number"
                     value={customTemplate.eventLng ?? ''}
                     onChange={(e) => handleInputChange('eventLng', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                     step="0.000001"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
                     placeholder="Ex: 15.3136"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200/50">
-              <div className="flex items-center mb-4">
-                <MapPin className="h-5 w-5 text-amber-600 mr-2" />
-                <h3 className="text-lg font-semibold text-amber-800">Informations du lieu</h3>
+            <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-2xl p-3 sm:p-6 border border-amber-200/50">
+              <div className="flex items-center mb-2 sm:mb-4">
+                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-1.5 sm:mr-2" />
+                <h3 className="text-base sm:text-lg font-semibold text-amber-800">Informations du lieu</h3>
               </div>
-              <p className="text-amber-700 text-sm">
+              <p className="text-amber-700 text-xs sm:text-sm">
                 Assurez-vous que l'adresse est complète et précise pour faciliter l'accès de vos invités.
                 Vous pouvez inclure des indications supplémentaires dans le texte d'invitation.
               </p>
             </div>
 
-            <div className="mt-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+            <div className="mt-4 sm:mt-6">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Photos sous la date
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
                 {[0,1,2].map((idx) => {
                   const field = (idx === 0 ? 'eventPhoto1' : idx === 1 ? 'eventPhoto2' : 'eventPhoto3') as keyof TemplateData;
                   const previewSrc = (customTemplate[field] as string) || customTemplate.eventPhotos?.[idx] || customTemplate.invitationPhoto || customTemplate.backgroundImage;
                   return (
-                    <div key={idx} className="space-y-2">
-                      <div className="relative h-20 rounded-xl border-2 border-dashed border-neutral-300 bg-gradient-to-br from-neutral-100 to-amber-50 flex items-center justify-center overflow-hidden">
+                    <div key={idx} className="space-y-1.5 sm:space-y-2">
+                      <div className="relative h-16 sm:h-20 rounded-xl border-2 border-dashed border-neutral-300 bg-gradient-to-br from-neutral-100 to-amber-50 flex items-center justify-center overflow-hidden">
                         {previewSrc ? (
-                          <img src={previewSrc} alt={`Aperçu ${idx+1}`} className="h-16 w-24 object-cover rounded-lg shadow" />
+                          <img src={previewSrc} alt={`Aperçu ${idx+1}`} className="h-12 w-20 sm:h-16 sm:w-24 object-cover rounded-lg shadow" />
                         ) : (
                           <div className="text-center">
-                            <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                            <p className="text-neutral-500 text-xs">Aucune image</p>
+                            <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-neutral-400 mx-auto mb-0.5 sm:mb-1" />
+                            <p className="text-neutral-500 text-[10px] sm:text-xs">Aucune image</p>
                           </div>
                         )}
                         <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ boxShadow: 'inset 0 0 0 2px rgba(245, 158, 11, 0.15)' }} />
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1.5 sm:space-x-2">
                         <button
                           type="button"
                           onClick={() => handleCloudinaryUpload(field)}
-                          className="w-full bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                          className="w-full bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
                         >
-                          <Upload className="h-4 w-4 mr-2" />
+                          <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                           Charger photo {idx + 1}
                         </button>
                       </div>
@@ -1311,36 +1311,36 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
               </div>
 
-              <div className="mt-6">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+              <div className="mt-4 sm:mt-6">
+                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                   Galerie du couple
                 </label>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                   {(customTemplate.eventPhotos || []).map((src, idx) => (
                     <div key={`${src}-${idx}`} className="relative rounded-xl overflow-hidden border">
-                      <img src={src} alt={`Galerie ${idx+1}`} className="w-full h-24 object-cover" />
+                      <img src={src} alt={`Galerie ${idx+1}`} className="w-full h-20 sm:h-24 object-cover" />
                       <button
                         type="button"
                         onClick={() => removeGalleryPhoto(idx)}
-                        className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white text-rose-600 shadow"
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-white/80 hover:bg-white text-rose-600 shadow"
                         title="Retirer"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </button>
                     </div>
                   ))}
                   {!(customTemplate.eventPhotos || []).length && (
-                    <div className="text-sm text-slate-500">Aucune photo dans la galerie pour le moment</div>
+                    <div className="text-xs sm:text-sm text-slate-500">Aucune photo dans la galerie pour le moment</div>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => handleCloudinaryUpload('gallery')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center gap-2"
+                    className="bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center gap-1.5 sm:gap-2"
                   >
-                    <Upload className="h-4 w-4" />
+                    <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Ajouter des photos à la galerie
                   </button>
                 </div>
@@ -1351,56 +1351,56 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       case 'options':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-4">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
                 Options de boissons
               </label>
               
-              <div className="space-y-3 mb-4">
+              <div className="space-y-2.5 sm:space-y-3 mb-3 sm:mb-4">
                 {customTemplate.drinkOptions.map((drink, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl p-4 border border-neutral-200/50"
+                    className="flex items-center justify-between bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl p-3 sm:p-4 border border-neutral-200/50"
                   >
                     <div className="flex items-center">
-                      <Wine className="h-4 w-4 text-amber-600 mr-3" />
-                      <span className="text-slate-700 font-medium">{drink}</span>
+                      <Wine className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 mr-2.5 sm:mr-3" />
+                      <span className="text-slate-700 font-medium text-xs sm:text-sm">{drink}</span>
                     </div>
                     <button
                       onClick={() => removeDrinkOption(index)}
-                      className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200"
+                      className="p-1.5 sm:p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                   </div>
                 ))}
               </div>
 
-              <div className="flex space-x-3">
+              <div className="flex space-x-2.5 sm:space-x-3">
                 <input
                   type="text"
                   value={newDrink}
                   onChange={(e) => setNewDrink(e.target.value)}
                   placeholder="Nouvelle option de boisson"
-                  className="flex-1 px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
                   onKeyPress={(e) => e.key === 'Enter' && addDrinkOption()}
                 />
                 <button
                   onClick={addDrinkOption}
-                  className="bg-amber-500 text-white px-6 py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold"
+                  className="bg-amber-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold text-xs sm:text-sm"
                 >
                   Ajouter
                 </button>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-6 border border-purple-200/50">
-              <div className="flex items-center mb-4">
-                <Wine className="h-5 w-5 text-purple-600 mr-2" />
-                <h3 className="text-lg font-semibold text-purple-800">Gestion des boissons</h3>
+            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-3 sm:p-6 border border-purple-200/50">
+              <div className="flex items-center mb-2 sm:mb-4">
+                <Wine className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 mr-1.5 sm:mr-2" />
+                <h3 className="text-base sm:text-lg font-semibold text-purple-800">Gestion des boissons</h3>
               </div>
-              <p className="text-purple-700 text-sm">
+              <p className="text-purple-700 text-xs sm:text-sm">
                 Personnalisez les options de boissons selon vos préférences. Vos invités pourront 
                 sélectionner leur choix directement depuis l'invitation.
               </p>
@@ -1410,46 +1410,46 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       case 'music':
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
                 Musique de fond (Lien direct MP3)
               </label>
-              <div className="flex space-x-3 mb-4">
+              <div className="flex space-x-2.5 sm:space-x-3 mb-3 sm:mb-4">
                 <input
                   type="text"
                   value={customTemplate.backgroundMusic || ''}
                   onChange={(e) => handleInputChange('backgroundMusic', e.target.value)}
                   placeholder="https://exemple.com/musique.mp3"
-                  className="flex-1 px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
                 />
                 {customTemplate.backgroundMusic && (
                   <button
                     onClick={() => handleInputChange('backgroundMusic', '')}
-                    className="p-3 text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all"
+                    className="p-2.5 sm:p-3 text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 )}
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <button
                   onClick={() => handleCloudinaryUpload('backgroundMusic' as any)}
-                  className="flex-1 bg-amber-500 text-white px-4 py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center shadow-md"
+                  className="flex-1 bg-amber-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center shadow-md text-xs sm:text-sm"
                 >
-                  <Upload className="h-5 w-5 mr-2" />
+                  <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
                   Télécharger une musique
                 </button>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200/50">
-              <div className="flex items-center mb-4">
-                <Music className="h-5 w-5 text-blue-600 mr-2" />
-                <h3 className="text-lg font-semibold text-blue-800">Conseils Musique</h3>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-3 sm:p-6 border border-blue-200/50">
+              <div className="flex items-center mb-2 sm:mb-4">
+                <Music className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mr-1.5 sm:mr-2" />
+                <h3 className="text-base sm:text-lg font-semibold text-blue-800">Conseils Musique</h3>
               </div>
-              <div className="space-y-2 text-blue-700 text-sm">
+              <div className="space-y-1.5 sm:space-y-2 text-blue-700 text-xs sm:text-sm">
                 <p>• Utilisez des fichiers MP3 légers pour un chargement rapide.</p>
                 <p>• La musique se lancera automatiquement dès que l'invité commencera à défiler la page.</p>
                 <p>• Un bouton de contrôle du son sera visible pour l'invité.</p>
@@ -1457,9 +1457,9 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             {customTemplate.backgroundMusic && (
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">Aperçu Audio</p>
-                <audio controls src={customTemplate.backgroundMusic} className="w-full h-10" />
+              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <p className="text-[10px] sm:text-xs font-bold text-slate-500 mb-1.5 sm:mb-2 uppercase tracking-widest">Aperçu Audio</p>
+                <audio controls src={customTemplate.backgroundMusic} className="w-full h-8 sm:h-10" />
               </div>
             )}
           </div>
@@ -1511,20 +1511,20 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     };
     return (
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl shadow-luxury border border-amber-500/30 overflow-hidden sticky top-8">
-        <div className="p-4">
-          <div className="text-center mb-4">
-            <h3 className="text-lg font-semibold text-amber-400 mb-2">Aperçu en temps réel</h3>
-            <p className="text-neutral-300 text-sm">Vos modifications apparaissent instantanément</p>
+        <div className="p-3 sm:p-4">
+          <div className="text-center mb-3 sm:mb-4">
+            <h3 className="text-base sm:text-lg font-semibold text-amber-400 mb-1.5 sm:mb-2">Aperçu en temps réel</h3>
+            <p className="text-neutral-300 text-xs sm:text-sm">Vos modifications apparaissent instantanément</p>
           </div>
           <div className="flex justify-center">
-            <div className="relative w-[400px] h-[820px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-[3rem] p-6 shadow-luxury border border-slate-700">
-              <div className="w-full h-full bg-gradient-to-br from-neutral-50 to-amber-50/30 rounded-[2rem] overflow-y-auto no-scrollbar relative shadow-inner">
-                <div className="sticky top-0 z-[150] bg-gradient-to-r from-slate-900 to-slate-800 h-6 flex items-center justify-between px-6 text-neutral-50 text-xs rounded-t-[2rem]">
+            <div className="relative w-[300px] sm:w-[400px] h-[615px] sm:h-[820px] bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2.25rem] sm:rounded-[3rem] p-4 sm:p-6 shadow-luxury border border-slate-700">
+              <div className="w-full h-full bg-gradient-to-br from-neutral-50 to-amber-50/30 rounded-[1.5rem] sm:rounded-[2rem] overflow-y-auto no-scrollbar relative shadow-inner">
+                <div className="sticky top-0 z-[150] bg-gradient-to-r from-slate-900 to-slate-800 h-4.5 sm:h-6 flex items-center justify-between px-4 sm:px-6 text-neutral-50 text-[10px] sm:text-xs rounded-t-[1.5rem] sm:rounded-t-[2rem]">
                   <span>9:41</span>
-                  <div className="flex space-x-1">
-                    <div className="w-1 h-1 bg-emerald-400 rounded-full animate-pulse"></div>
-                    <div className="w-1 h-1 bg-amber-400 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                    <div className="w-1 h-1 bg-rose-400 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+                  <div className="flex space-x-0.75 sm:space-x-1">
+                    <div className="w-0.75 h-0.75 sm:w-1 sm:h-1 bg-emerald-400 rounded-full animate-pulse"></div>
+                    <div className="w-0.75 h-0.75 sm:w-1 sm:h-1 bg-amber-400 rounded-full animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                    <div className="w-0.75 h-0.75 sm:w-1 sm:h-1 bg-rose-400 rounded-full animate-pulse" style={{ animationDelay: '0.6s' }}></div>
                   </div>
                 </div>
                 <div className="w-full">
@@ -1541,68 +1541,93 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="flex items-center text-amber-600 hover:text-amber-700 transition-all duration-300 group mr-4"
+            className="flex items-center text-amber-600 hover:text-amber-700 transition-all duration-300 group mr-3"
           >
-            <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform duration-300" />
-            Retour
+            <ArrowLeft className="h-4 w-4 mr-1 group-hover:-translate-x-1 transition-transform duration-300" />
+            <span className="text-sm">Retour</span>
           </button>
           <div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
               Personnalisation du Template
             </h2>
-            <p className="text-slate-600 mt-1">{customTemplate.name}</p>
+            <p className="text-xs sm:text-sm text-slate-600 mt-0.5">{customTemplate.name}</p>
           </div>
         </div>
         
         <button
           onClick={handleSave}
-          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center shadow-glow-amber transform hover:scale-105"
+          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center shadow-glow-amber transform hover:scale-105 text-sm"
         >
-          <Save className="h-4 w-4 mr-2" />
+          <Save className="h-3.5 w-3.5 mr-1.5" />
           Sauvegarder
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sidebar Navigation */}
-        <div className="lg:col-span-1">
+      {/* Mobile Tab Navigation */}
+      <div className="lg:hidden mb-4">
+        <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 overflow-hidden">
+          <nav className="p-2 flex overflow-x-auto gap-1.5">
+            {tabs.map((tab) => {
+              const IconComponent = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-shrink-0 flex items-center px-3 py-1.5 rounded-lg transition-all duration-300 text-xs font-medium ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-glow-amber'
+                      : 'text-slate-600 hover:bg-amber-50 hover:text-amber-700'
+                  }`}
+                >
+                  <IconComponent className="h-3.5 w-3.5 mr-1.5" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        {/* Sidebar Navigation (Desktop only) */}
+        <div className="lg:col-span-1 hidden lg:block">
           <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 overflow-hidden sticky top-8">
-            <div className="p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 border-b border-neutral-200/50">
-              <h3 className="text-base font-semibold text-slate-900">Personnalisation</h3>
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 border-b border-neutral-200/50">
+              <h3 className="text-sm sm:text-base font-semibold text-slate-900">Personnalisation</h3>
               <p className="text-xs text-slate-600 mt-1">Modifiez votre invitation</p>
             </div>
-            <nav className="p-3">
+            <nav className="p-2.5 sm:p-3">
               {tabs.map((tab) => {
                 const IconComponent = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center px-3 py-2 rounded-lg transition-all duration-300 mb-1 text-sm ${
+                    className={`w-full flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-all duration-300 mb-0.5 sm:mb-1 text-xs sm:text-sm ${
                       activeTab === tab.id
                         ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-glow-amber'
                         : 'text-slate-600 hover:bg-amber-50 hover:text-amber-700'
                     }`}
                   >
-                    <IconComponent className="h-4 w-4 mr-2" />
+                    <IconComponent className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                     {tab.label}
                   </button>
                 );
               })}
             </nav>
             
-            {/* Quick Actions */}
-            <div className="p-3 border-t border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-              <div className="grid grid-cols-2 gap-2">
-                <button className="flex items-center justify-center px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all duration-300 text-xs font-medium">
+            {/* Quick Actions (Desktop only) */}
+            <div className="p-2.5 sm:p-3 border-t border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
+              <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                <button className="flex items-center justify-center px-2.5 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all duration-300 text-xs font-medium">
                   <Eye className="h-3 w-3 mr-1" />
                   Aperçu
                 </button>
-                <button className="flex items-center justify-center px-3 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-all duration-300 text-xs font-medium">
+                <button className="flex items-center justify-center px-2.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-all duration-300 text-xs font-medium">
                   <Download className="h-3 w-3 mr-1" />
                   Export
                 </button>
@@ -1613,12 +1638,12 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
         {/* Main Content */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 p-6">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">
+          <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 p-4 sm:p-6">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-0.5 sm:mb-1">
                 {tabs.find(tab => tab.id === activeTab)?.label}
               </h3>
-              <p className="text-sm text-slate-600">
+              <p className="text-xs sm:text-sm text-slate-600">
                 {activeTab === 'general' && 'Modifiez le contenu principal de votre invitation'}
                 {activeTab === 'design' && 'Personnalisez l\'apparence visuelle'}
                 {activeTab === 'colors' && 'Ajustez la palette de couleurs'}
@@ -1637,7 +1662,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         </div>
       </div>
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[1000] px-4 py-3 rounded-xl shadow-glow-amber border ${toast.type === 'success' ? 'bg-white/95 border-emerald-200 text-emerald-700' : toast.type === 'error' ? 'bg-white/95 border-rose-200 text-rose-700' : 'bg-white/95 border-amber-200 text-amber-700'}`}>
+        <div className={`fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] px-3 py-2 sm:px-4 sm:py-3 rounded-xl shadow-glow-amber border text-xs sm:text-sm ${toast.type === 'success' ? 'bg-white/95 border-emerald-200 text-emerald-700' : toast.type === 'error' ? 'bg-white/95 border-rose-200 text-rose-700' : 'bg-white/95 border-amber-200 text-amber-700'}`}>
           <span className="font-semibold">{toast.message}</span>
         </div>
       )}
