@@ -36,7 +36,7 @@ import {
   BarChart3,
   RefreshCw
 } from 'lucide-react';
-import { GameService, AVAILABLE_GAMES, GameConfiguration, PuzzleConfig, MemoryMatchConfig } from '../services/templateService';
+import { GameService, AVAILABLE_GAMES, GameConfiguration, LoveQuizConfig, MemoryMatchConfig } from '../services/templateService';
 import UserProfile from './UserProfile';
 import TableManagement from './TableManagement';
 import TemplateCustomization from './TemplateCustomization';
@@ -316,7 +316,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
       // Load results for each game
       const resultsMap: Record<string, any[]> = {};
       for (const game of loadedGames) {
-        if (game.type === 'puzzle' || game.type === 'memory-match') {
+        if (game.type === 'love-quiz' || game.type === 'memory-match') {
           try {
             const results = await GameService.getPuzzleResults(userId, modelId, game.id);
             resultsMap[game.id] = results;
@@ -328,15 +328,15 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
       }
       setGameResults(resultsMap);
       
-      // Auto add puzzle game if no games are present
+      // Auto add love-quiz game if no games are present
       if (loadedGames.length === 0) {
-        console.log('=== No games, adding puzzle...');
-        await GameService.addGameToModel(userId, modelId, 'puzzle');
+        console.log('=== No games, adding love-quiz...');
+        await GameService.addGameToModel(userId, modelId, 'love-quiz');
         const updatedGames = await GameService.getModelGames(userId, modelId);
         console.log('=== updatedGames:', updatedGames);
         setGames(updatedGames);
         
-        // Load results for the new puzzle game
+        // Load results for the new love-quiz game
         if (updatedGames.length > 0) {
           const newResults = await GameService.getPuzzleResults(userId, modelId, updatedGames[0].id);
           setGameResults({ [updatedGames[0].id]: newResults });
@@ -478,34 +478,34 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Puzzle Game */}
+            {/* Love Quiz Game */}
             {(() => {
-              const puzzleGame = games.find(g => g.type === 'puzzle');
-              if (!puzzleGame) return null;
+              const loveQuizGame = games.find(g => g.type === 'love-quiz');
+              if (!loveQuizGame) return null;
               return (
                 <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                      <Gamepad2 className="h-5 w-5 text-amber-600" />
-                      Puzzle
+                      <Heart className="h-5 w-5 text-rose-600 fill-rose-600" />
+                      Love Quiz
                     </h4>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setSelectedGameForResults(selectedGameForResults === puzzleGame.id ? null : puzzleGame.id)}
+                        onClick={() => setSelectedGameForResults(selectedGameForResults === loveQuizGame.id ? null : loveQuizGame.id)}
                         className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-2"
                       >
                         <Trophy className="h-4 w-4" />
-                        {selectedGameForResults === puzzleGame.id ? 'Cacher Classement' : 'Voir Classement'}
+                        {selectedGameForResults === loveQuizGame.id ? 'Cacher Classement' : 'Voir Classement'}
                       </button>
                       <button
-                        onClick={() => setEditingGame(puzzleGame)}
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-4 py-2 rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                        onClick={() => setEditingGame(loveQuizGame)}
+                        className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-4 py-2 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-2"
                       >
                         <Edit className="h-4 w-4" />
                         Configurer
                       </button>
                       <button
-                        onClick={() => handleDeleteGame(puzzleGame.id)}
+                        onClick={() => handleDeleteGame(loveQuizGame.id)}
                         className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-2"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -514,27 +514,27 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl border border-neutral-200/50 p-4">
+                  <div className="bg-gradient-to-r from-neutral-50 to-rose-50/30 rounded-xl border border-neutral-200/50 p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <h5 className="font-semibold text-slate-900">
-                            {puzzleGame.title}
+                            {loveQuizGame.title}
                           </h5>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            puzzleGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
+                            loveQuizGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
                           }`}>
-                            {puzzleGame.isEnabled ? 'Activé' : 'Désactivé'}
+                            {loveQuizGame.isEnabled ? 'Activé' : 'Désactivé'}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-600 mb-3">{puzzleGame.description}</p>
-                        {(puzzleGame as PuzzleConfig).imageUrl && (
-                          <div className="mt-2 rounded-xl overflow-hidden border border-neutral-200">
-                            <img 
-                              src={(puzzleGame as PuzzleConfig).imageUrl} 
-                              alt="Puzzle Preview" 
-                              className="w-full h-32 object-cover"
-                            />
+                        <p className="text-sm text-slate-600 mb-3">{loveQuizGame.description}</p>
+                        {(loveQuizGame as LoveQuizConfig).questions && (loveQuizGame as LoveQuizConfig).questions.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {(loveQuizGame as LoveQuizConfig).questions.slice(0, 3).map((q, i) => (
+                              <div key={i} className="p-2 rounded-lg bg-white border border-neutral-200 text-sm text-slate-700">
+                                {i+1}. {q.question}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -542,7 +542,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                   </div>
 
                   {/* Leaderboard section */}
-                  {selectedGameForResults === puzzleGame.id && (
+                  {selectedGameForResults === loveQuizGame.id && (
                     <div className="mt-6 border-t border-neutral-200 pt-4">
                       <div className="flex items-center justify-between mb-4">
                         <h5 className="font-semibold text-slate-900 flex items-center gap-2">
@@ -550,16 +550,16 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                           Classement des joueurs
                         </h5>
                         <button
-                          onClick={() => refreshGameResults(puzzleGame.id)}
+                          onClick={() => refreshGameResults(loveQuizGame.id)}
                           className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
                         >
                           <RefreshCw className="h-4 w-4" />
                           <span className="text-xs font-semibold">Rafraîchir</span>
                         </button>
                       </div>
-                      {gameResults[puzzleGame.id] && gameResults[puzzleGame.id].length > 0 ? (
+                      {gameResults[loveQuizGame.id] && gameResults[loveQuizGame.id].length > 0 ? (
                         <div className="space-y-2">
-                          {gameResults[puzzleGame.id].sort((a, b) => (a.score || 0) - (b.score || 0)).map((result, index) => (
+                          {gameResults[loveQuizGame.id].sort((a, b) => (b.score || 0) - (a.score || 0)).map((result, index) => (
                             <div 
                               key={result.id} 
                               className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-200"
@@ -579,18 +579,13 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="font-semibold text-slate-700 text-sm">
-                                  {(() => {
-                                    const seconds = result.score || 0;
-                                    const mins = Math.floor(seconds / 60);
-                                    const secs = Math.floor(seconds % 60);
-                                    return `${mins}:${secs.toString().padStart(2, '0')}`;
-                                  })()}
+                                  {result.score || 0}/{(loveQuizGame as LoveQuizConfig).questions.length}
                                 </span>
                                 <button
                                   onClick={async () => {
                                     if (!userData?.id || !selectedModelForGames) return;
                                     try {
-                                      await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, puzzleGame.id, result.guestName);
+                                      await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, loveQuizGame.id, result.guestName);
                                       await loadGames(selectedModelForGames);
                                       showToast('success', 'Résultat de l\'invité réinitialisé');
                                     } catch (err) {
@@ -616,6 +611,34 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                 </div>
               );
             })()}
+
+            {/* Add Love Quiz button if not present */}
+            {!games.find(g => g.type === 'love-quiz') && (
+              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 text-center">
+                <div className="text-2xl text-neutral-400 mb-3">💕</div>
+                <h4 className="font-semibold text-neutral-700 mb-2">Love Quiz</h4>
+                <p className="text-neutral-500 mb-4">Ajoutez le quiz sur le couple à votre modèle</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const userId = userData?.id;
+                      if (!userId || !selectedModelForGames) {
+                        return;
+                      }
+                      await GameService.addGameToModel(userId, selectedModelForGames, 'love-quiz');
+                      await loadGames(selectedModelForGames);
+                    } catch (error) {
+                      console.error('=== Error adding love quiz:', error);
+                      alert('Erreur lors de l\'ajout du love quiz : ' + (error as Error).message);
+                    }
+                  }}
+                  className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  Ajouter Love Quiz
+                </button>
+              </div>
+            )}
 
             {/* Memory Match Game */}
             {memoryMatchGame ? (
@@ -789,10 +812,14 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
               <div className={`p-6 border-b border-neutral-200/50 flex justify-between items-center ${
                 editingGame.type === 'memory-match' 
                   ? 'bg-gradient-to-r from-neutral-50 to-pink-50/30' 
+                  : editingGame.type === 'love-quiz'
+                  ? 'bg-gradient-to-r from-neutral-50 to-rose-50/30'
                   : 'bg-gradient-to-r from-neutral-50 to-amber-50/30'
               }`}>
                 <h3 className="text-xl font-bold text-slate-900">
-                  {editingGame.type === 'memory-match' ? 'Configurer Memory Match' : 'Configurer le Puzzle'}
+                  {editingGame.type === 'memory-match' ? 'Configurer Memory Match' : 
+                   editingGame.type === 'love-quiz' ? 'Configurer Love Quiz' : 
+                   'Configurer le Puzzle'}
                 </h3>
                 <button onClick={() => setEditingGame(null)} className="p-2 hover:bg-neutral-100 rounded-lg">
                   <X className="h-5 w-5 text-neutral-500" />
@@ -806,7 +833,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     value={editingGame.title}
                     onChange={(e) => setEditingGame({ ...editingGame, title: e.target.value })}
                     className={`w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 ${
-                      editingGame.type === 'memory-match' ? 'focus:ring-pink-500' : 'focus:ring-amber-500'
+                      editingGame.type === 'memory-match' 
+                        ? 'focus:ring-pink-500' 
+                        : editingGame.type === 'love-quiz'
+                          ? 'focus:ring-rose-500'
+                          : 'focus:ring-amber-500'
                     }`}
                   />
                 </div>
@@ -816,7 +847,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     value={editingGame.description}
                     onChange={(e) => setEditingGame({ ...editingGame, description: e.target.value })}
                     className={`w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 ${
-                      editingGame.type === 'memory-match' ? 'focus:ring-pink-500' : 'focus:ring-amber-500'
+                      editingGame.type === 'memory-match' 
+                        ? 'focus:ring-pink-500' 
+                        : editingGame.type === 'love-quiz'
+                          ? 'focus:ring-rose-500'
+                          : 'focus:ring-amber-500'
                     } min-h-[100px]`}
                   />
                 </div>
@@ -827,7 +862,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     checked={editingGame.isEnabled}
                     onChange={(e) => setEditingGame({ ...editingGame, isEnabled: e.target.checked })}
                     className={`w-5 h-5 rounded border-neutral-300 focus:ring-2 ${
-                      editingGame.type === 'memory-match' ? 'text-pink-600 focus:ring-pink-500' : 'text-amber-600 focus:ring-amber-500'
+                      editingGame.type === 'memory-match' 
+                        ? 'text-pink-600 focus:ring-pink-500' 
+                        : editingGame.type === 'love-quiz'
+                          ? 'text-rose-600 focus:ring-rose-500'
+                          : 'text-amber-600 focus:ring-amber-500'
                     }`}
                   />
                   <label htmlFor="game-enabled" className="text-sm font-medium text-slate-700">Activer le jeu</label>
@@ -932,6 +971,162 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         </select>
                       </div>
                     </>
+                  ) : editingGame.type === 'love-quiz' ? (
+                    <>
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <Heart className="h-5 w-5" />
+                        Configuration Love Quiz
+                      </h4>
+                      <div className="space-y-4">
+                        {/* Temps total du jeu */}
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Temps total du jeu (secondes)</label>
+                          <input
+                            type="number"
+                            min="30"
+                            max="300"
+                            value={(editingGame as any).totalGameTime || 60}
+                            onChange={(e) => setEditingGame({ ...editingGame, totalGameTime: Number(e.target.value) } as any)}
+                            className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-rose-500"
+                          />
+                        </div>
+                        {/* Questions */}
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <label className="block text-sm font-medium text-slate-700">Questions</label>
+                            <button
+                              onClick={() => {
+                                const currentQuestions = (editingGame as any).questions || [];
+                                setEditingGame({
+                                  ...editingGame,
+                                  questions: [
+                                    ...currentQuestions,
+                                    {
+                                      id: `q-${Date.now()}`,
+                                      question: '',
+                                      options: ['', ''],
+                                      correctAnswerIndex: 0
+                                    }
+                                  ]
+                                } as any);
+                              }}
+                              className="px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg text-sm font-semibold hover:bg-rose-200 transition-colors flex items-center gap-1"
+                            >
+                              <Plus className="h-4 w-4" />
+                              Ajouter une question
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            {((editingGame as any).questions || []).map((q: any, i: number) => (
+                              <div key={q.id || i} className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 space-y-3">
+                                <div className="flex justify-between items-start">
+                                  <div className="font-semibold text-slate-700 text-sm">Question {i+1}</div>
+                                  <button
+                                    onClick={() => {
+                                      const currentQuestions = (editingGame as any).questions || [];
+                                      setEditingGame({
+                                        ...editingGame,
+                                        questions: currentQuestions.filter((_: any, idx: number) => idx !== i)
+                                      } as any);
+                                    }}
+                                    className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={q.question}
+                                  onChange={(e) => {
+                                    const currentQuestions = (editingGame as any).questions || [];
+                                    const newQuestions = [...currentQuestions];
+                                    newQuestions[i] = { ...q, question: e.target.value };
+                                    setEditingGame({ ...editingGame, questions: newQuestions } as any);
+                                  }}
+                                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-sm"
+                                  placeholder="Entrez la question"
+                                />
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-medium text-slate-500">Réponses</span>
+                                    {q.options.length < 6 && (
+                                      <button
+                                        onClick={() => {
+                                          const currentQuestions = (editingGame as any).questions || [];
+                                          const newQuestions = [...currentQuestions];
+                                          const newOptions = [...q.options, ''];
+                                          newQuestions[i] = { ...q, options: newOptions };
+                                          setEditingGame({ ...editingGame, questions: newQuestions } as any);
+                                        }}
+                                        className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold hover:bg-rose-200 transition-colors flex items-center gap-1"
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                        Ajouter réponse
+                                      </button>
+                                    )}
+                                  </div>
+                                  {q.options.map((opt: string, j: number) => (
+                                    <div key={j} className="flex gap-2 items-center">
+                                      <div className="flex-shrink-0">
+                                        <input
+                                          type="radio"
+                                          name={`correct-${i}`}
+                                          checked={q.correctAnswerIndex === j}
+                                          onChange={() => {
+                                            const currentQuestions = (editingGame as any).questions || [];
+                                            const newQuestions = [...currentQuestions];
+                                            newQuestions[i] = { ...q, correctAnswerIndex: j };
+                                            setEditingGame({ ...editingGame, questions: newQuestions } as any);
+                                          }}
+                                          className="text-rose-600 focus:ring-rose-500"
+                                        />
+                                      </div>
+                                      <input
+                                        type="text"
+                                        value={opt}
+                                        onChange={(e) => {
+                                          const currentQuestions = (editingGame as any).questions || [];
+                                          const newQuestions = [...currentQuestions];
+                                          const newOptions = [...q.options];
+                                          newOptions[j] = e.target.value;
+                                          newQuestions[i] = { ...q, options: newOptions };
+                                          setEditingGame({ ...editingGame, questions: newQuestions } as any);
+                                        }}
+                                        className="flex-1 px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-rose-500 text-sm"
+                                        placeholder={`Option ${String.fromCharCode(65 + j)}`}
+                                      />
+                                      {q.options.length > 2 && (
+                                        <button
+                                          onClick={() => {
+                                            const currentQuestions = (editingGame as any).questions || [];
+                                            const newQuestions = [...currentQuestions];
+                                            const newOptions = [...q.options];
+                                            newOptions.splice(j, 1);
+                                            // Adjust correct answer index if needed
+                                            let newCorrectIndex = q.correctAnswerIndex;
+                                            if (j < q.correctAnswerIndex) {
+                                              newCorrectIndex = q.correctAnswerIndex - 1;
+                                            } else if (j === q.correctAnswerIndex) {
+                                              newCorrectIndex = 0;
+                                            }
+                                            newQuestions[i] = { ...q, options: newOptions, correctAnswerIndex: newCorrectIndex };
+                                            setEditingGame({ ...editingGame, questions: newQuestions } as any);
+                                          }}
+                                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                                        >
+                                          <Trash2 className="h-4 w-4" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <h4 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -1016,7 +1211,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     </>
                   )}
                   
-                  {/* Show Leaderboard pour les deux jeux */}
+                  {/* Show Leaderboard pour les jeux */}
                   <div className="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -1024,17 +1219,25 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                       checked={
                         editingGame.type === 'puzzle' 
                           ? (editingGame as PuzzleConfig).showLeaderboard 
-                          : (editingGame as MemoryMatchConfig).showLeaderboard
+                          : editingGame.type === 'love-quiz'
+                            ? (editingGame as any).showLeaderboard
+                            : (editingGame as MemoryMatchConfig).showLeaderboard
                       }
                       onChange={(e) => {
                         if (editingGame.type === 'puzzle') {
                           setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as PuzzleConfig);
+                        } else if (editingGame.type === 'love-quiz') {
+                          setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as any);
                         } else {
                           setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as MemoryMatchConfig);
                         }
                       }}
                       className={`w-5 h-5 rounded border-neutral-300 focus:ring-2 ${
-                        editingGame.type === 'memory-match' ? 'text-pink-600 focus:ring-pink-500' : 'text-amber-600 focus:ring-amber-500'
+                        editingGame.type === 'memory-match' 
+                          ? 'text-pink-600 focus:ring-pink-500' 
+                          : editingGame.type === 'love-quiz'
+                            ? 'text-rose-600 focus:ring-rose-500'
+                            : 'text-amber-600 focus:ring-amber-500'
                       }`}
                     />
                     <label htmlFor="show-leaderboard" className="text-sm font-medium text-slate-700">Afficher le classement</label>
@@ -1053,7 +1256,9 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     className={`px-6 py-2 rounded-xl text-white hover:opacity-90 font-semibold flex items-center gap-2 ${
                       editingGame.type === 'memory-match' 
                         ? 'bg-gradient-to-r from-pink-500 to-rose-600' 
-                        : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                        : editingGame.type === 'love-quiz'
+                          ? 'bg-gradient-to-r from-rose-500 to-pink-600'
+                          : 'bg-gradient-to-r from-amber-500 to-orange-600'
                     }`}
                   >
                     <Save className="h-4 w-4" />

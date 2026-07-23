@@ -62,6 +62,7 @@ import { ShinyButton } from './ui/shiny-button';
 import { TypewriterWithPen } from './ui/typewriter-pen';
 import { CircularGallery, GalleryItem } from './ui/circular-gallery';
 import MemoryMatchGame from './MemoryMatchGame';
+import LoveQuizGame from './LoveQuizGame';
 
 // Helper for image optimization
 const optimizeImage = (url: string, width: number = 800, quality: number = 70) => {
@@ -800,12 +801,12 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     loadData();
   }, [inviteId, embedded]);
 
-  // Auto-expand puzzle when games modal opens
+  // Auto-expand love quiz when games modal opens
   useEffect(() => {
     if (showGames) {
-      const puzzleGame = games.find(g => g.type === 'puzzle' && g.isEnabled);
-      if (puzzleGame && !completedGames.has(puzzleGame.id)) {
-        setCurrentGameId(puzzleGame.id);
+      const loveQuizGame = games.find(g => g.type === 'love-quiz' && g.isEnabled);
+      if (loveQuizGame && !completedGames.has(loveQuizGame.id)) {
+        setCurrentGameId(loveQuizGame.id);
       }
     }
   }, [showGames, games, completedGames]);
@@ -814,17 +815,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
   useEffect(() => {
     const defaultImageUrl = 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800';
     const processGames = (games: any[]) => {
-      return games.map(game => {
-        if (game.type === 'puzzle') {
-          return {
-            ...game,
-            imageUrl: game.imageUrl || defaultImageUrl,
-            gridSize: game.gridSize || 3,
-            showLeaderboard: game.showLeaderboard !== undefined ? game.showLeaderboard : true
-          };
-        }
-        return game;
-      });
+      return games.filter((g: GameConfiguration) => g.type !== 'puzzle');
     };
 
     const loadGames = async () => {
@@ -840,17 +831,17 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         const loadedGames = await GameService.getModelGames(invite.userId, userModel.id);
         setGames(loadedGames);
 
-        // Now load results for all puzzle and memory match games
+        // Now load results for all memory match and love quiz games
         const resultsMap: Record<string, GameResult[]> = {};
         const completedSet = new Set<string>();
 
         for (const game of loadedGames) {
-          if (game.type === 'puzzle' || game.type === 'memory-match') {
+          if (game.type === 'memory-match' || game.type === 'love-quiz') {
             try {
               const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
               resultsMap[game.id] = results;
-              // Check if current guest has played this game
-              if (results.some(res => res.guestName === invite?.nom)) {
+              // Check if current guest has played this game type
+              if (results.some(res => res.guestName === invite?.nom && res.gameType === game.type)) {
                 completedSet.add(game.id);
               }
             } catch (err) {
@@ -880,13 +871,13 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     if (!currentGameId || !invite?.userId || !userModel?.id) return;
 
     const game = games.find(g => g.id === currentGameId);
-    if (game && (game.type === 'puzzle' || game.type === 'memory-match') && !gameResults[currentGameId]) {
+    if (game && (game.type === 'memory-match' || game.type === 'love-quiz') && !gameResults[currentGameId]) {
       const loadResults = async () => {
         try {
           const results = await GameService.getPuzzleResults(invite.userId, userModel.id, currentGameId);
           setGameResults(prev => ({ ...prev, [currentGameId]: results }));
-          // If current guest has a result, mark game as completed
-          const hasPlayed = results.some(res => res.guestName === invite?.nom);
+          // If current guest has a result of this game type, mark game as completed
+          const hasPlayed = results.some(res => res.guestName === invite?.nom && res.gameType === game.type);
           if (hasPlayed) {
             setCompletedGames(prev => new Set([...prev, game.id]));
           }
@@ -988,7 +979,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
      }));
    }, [galleryPhotos]);
 
-      {/* Souscription aux messages du livre d'or */}
+  // Souscription aux messages du livre d'or
   useEffect(() => {
     const userId = invite?.userId || (userModel as any)?.userId;
     if (userId) {
@@ -1340,9 +1331,67 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white">
-        <div className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="font-poppins animate-pulse">Chargement de votre invitation...</p>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
+        {/* Premium Animated Background */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.primary}30, ${colors.secondary || colors.accent}30)`, animationDelay: '0s' }}></div>
+          <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.secondary || colors.accent}30, ${colors.primary}30)`, animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.accent || colors.primary}20, ${colors.secondary || colors.primary}20)`, animationDelay: '2s' }}></div>
+        </div>
+
+        {/* Loading Content */}
+        <div className="relative z-10 flex flex-col items-center justify-center">
+          {/* Spinning Orbs */}
+          <div className="relative w-48 h-48 mb-6 flex items-center justify-center">
+            {[...Array(6)].map((_, i) => (
+              <div 
+                key={i} 
+                className="absolute w-4 h-4 rounded-full"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary || colors.accent})`,
+                  left: '50%',
+                  top: '50%',
+                  marginLeft: '-8px',
+                  marginTop: '-8px',
+                  transform: `rotate(${i * 60}deg) translateY(-60px) rotate(-${i * 60}deg)`,
+                  animation: `spin 2s linear infinite`,
+                  animationDelay: `${i * 0.1}s`
+                }}
+              ></div>
+            ))}
+            
+            {/* Central Shimmering Circle */}
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20 backdrop-blur-md">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center animate-pulse">
+                <div className="w-8 h-8 rounded-full" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary || colors.accent})` }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Text with Shimmer */}
+          <div className="relative overflow-hidden">
+            <p className="font-poppins text-base font-semibold relative z-10">Chargement de votre invitation...</p>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
+          </div>
+        </div>
+
+        {/* Custom CSS for Animations */}
+        <style>{`
+          @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.5; }
+            50% { transform: translateY(-30px) scale(1.1); opacity: 0.8; }
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg) translateY(-60px) rotate(0deg); }
+            to { transform: rotate(360deg) translateY(-60px) rotate(-360deg); }
+          }
+          @keyframes shimmer {
+            0% { transform: translateX(-100%) skewX(-12deg); }
+            100% { transform: translateX(200%) skewX(-12deg); }
+          }
+          .animate-float { animation: float 6s ease-in-out infinite; }
+          .animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
+        `}</style>
       </div>
     );
   }
@@ -2033,7 +2082,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </div>
                 
                 <div className="space-y-4 relative z-10">
-                  {games.filter((g: GameConfiguration) => g.isEnabled).map((game: GameConfiguration, index) => {
+                  {games.filter((g: GameConfiguration) => g.isEnabled && g.type !== 'puzzle').map((game: GameConfiguration, index) => {
                     const gameInfo = AVAILABLE_GAMES.find(g => g.type === game.type);
                     const isCompleted = completedGames.has(game.id);
 
@@ -2604,28 +2653,30 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           }
         };
 
-        const handlePuzzleComplete = async (timeInSeconds: number) => {
-          setCompletedGames(prev => new Set([...prev, game.id]));
-          if (invite?.userId && userModel?.id) {
-            try {
-              await GameService.addPuzzleResult(invite.userId, userModel.id, game.id, inviteId || '', invite?.nom || 'Invité', timeInSeconds);
-              const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
-              setGameResults(prev => ({ ...prev, [game.id]: results }));
-            } catch (e) {
-              console.error("Error saving puzzle result:", e);
-            }
-          }
-        };
+
 
         const handleMemoryComplete = async (timeInSeconds: number) => {
           setCompletedGames(prev => new Set([...prev, game.id]));
           if (invite?.userId && userModel?.id) {
             try {
-              await GameService.addPuzzleResult(invite.userId, userModel.id, game.id, inviteId || '', invite?.nom || 'Invité', timeInSeconds);
+              await GameService.addPuzzleResult(invite.userId, userModel.id, game.id, inviteId || '', invite?.nom || 'Invité', timeInSeconds, 'memory-match');
               const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
               setGameResults(prev => ({ ...prev, [game.id]: results }));
             } catch (e) {
               console.error("Error saving memory match result:", e);
+            }
+          }
+        };
+
+        const handleLoveQuizComplete = async (score: number) => {
+          setCompletedGames(prev => new Set([...prev, game.id]));
+          if (invite?.userId && userModel?.id) {
+            try {
+              await GameService.addPuzzleResult(invite.userId, userModel.id, game.id, inviteId || '', invite?.nom || 'Invité', score, 'love-quiz');
+              const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
+              setGameResults(prev => ({ ...prev, [game.id]: results }));
+            } catch (e) {
+              console.error("Error saving love quiz result:", e);
             }
           }
         };
@@ -2644,16 +2695,18 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               return <WeddingTriviaGame game={game} colors={colors} onComplete={handleGameComplete} guestName={invite?.nom || 'Invité'} />;
             case 'guest-book-prompt':
               return <GuestBookPromptGame game={game} colors={colors} onComplete={handleGameComplete} guestName={invite?.nom || 'Invité'} />;
-            case 'puzzle':
+            case 'quiz':
+            case 'love-quiz':
               return (
-                <PuzzleGame
+                <LoveQuizGame
                   config={game as any}
                   userId={invite?.userId || ''}
                   modelId={userModel?.id || ''}
                   inviteId={inviteId || ''}
                   guestName={invite?.nom || 'Invité'}
-                  onSaveResult={handlePuzzleComplete}
+                  onSaveResult={handleLoveQuizComplete}
                   leaderboard={currentGameResults}
+                  colors={colors}
                   isCompleted={isCompleted}
                   playerScore={playerScore}
                 />

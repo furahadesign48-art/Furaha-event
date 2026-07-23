@@ -116,7 +116,7 @@ export type GameType =
   | 'love-story-timeline'// Chronologie de l'histoire d'amour
   | 'wedding-trivia'     // Trivia sur le mariage
   | 'guest-book-prompt'  // Livre d'or avec prompts fun
-  | 'puzzle'             // Puzzle chronométré
+  | 'love-quiz'          // Quiz romantique sur le couple
   | 'memory-match';      // Memory Match avec photos de couple
 
 // Question de quiz
@@ -180,12 +180,12 @@ export interface GuestBookPromptConfig extends GameConfig {
   prompts: string[];
 }
 
-// Configuration spécifique au puzzle chronométré
-export interface PuzzleConfig extends GameConfig {
-  type: 'puzzle';
-  imageUrl: string; // Image du puzzle
-  gridSize: 3 | 4 | 5; // Nombre de pièces par côté (3x3, 4x4, 5x5)
-  showLeaderboard: boolean; // Afficher le classement des meilleurs temps
+// Configuration spécifique au Love Quiz
+export interface LoveQuizConfig extends GameConfig {
+  type: 'love-quiz';
+  questions: QuizQuestion[]; // Questions du quiz
+  showLeaderboard: boolean; // Afficher le classement
+  totalGameTime: number; // Temps total du jeu en secondes
 }
 
 // Configuration spécifique au Memory Match
@@ -203,7 +203,7 @@ export type GameConfiguration =
   | LoveStoryTimelineConfig
   | WeddingTriviaConfig
   | GuestBookPromptConfig
-  | PuzzleConfig
+  | LoveQuizConfig
   | MemoryMatchConfig;
 
 // Résultat d'un jeu par invité
@@ -237,6 +237,13 @@ export const AVAILABLE_GAMES: {
     title: 'Love Memory Match',
     description: 'Trouvez les paires de photos du couple le plus rapidement possible !',
     icon: '💝',
+    category: 'wedding'
+  },
+  {
+    type: 'love-quiz',
+    title: 'Love Quiz',
+    description: 'Testez vos connaissances sur le couple avec ce quiz romantique !',
+    icon: '🎮',
     category: 'wedding'
   }
 ];
@@ -1650,17 +1657,22 @@ export class GameService {
           updatedAt: null
         } as GuestBookPromptConfig;
 
-      case 'puzzle':
+      case 'love-quiz':
         return {
           ...baseConfig,
-          type: 'puzzle',
-          imageUrl: 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800',
-          gridSize: 3,
+          type: 'love-quiz',
+          questions: [
+            { id: 'q1', question: 'Où avons-nous fait notre première rencontre ?', options: ['Au café', 'Au cinéma', 'Au parc', 'À la bibliothèque'], correctAnswerIndex: 0 },
+            { id: 'q2', question: 'Quelle est notre chanson préférée ?', options: ['Unchained Melody', 'Perfect', 'I Will Always Love You', 'All of Me'], correctAnswerIndex: 1 },
+            { id: 'q3', question: 'Quel est notre plat préféré à partager ?', options: ['Pizza', 'Sushi', 'Pâtes', 'Tajine'], correctAnswerIndex: 2 },
+            { id: 'q4', question: 'Quel est notre film préféré à regarder ensemble ?', options: ['Le Parfum', 'Notting Hill', 'Titanic', 'Amélie'], correctAnswerIndex: 3 }
+          ],
           showLeaderboard: true,
+          totalGameTime: 60,
           id: '',
           createdAt: null,
           updatedAt: null
-        } as PuzzleConfig;
+        } as LoveQuizConfig;
 
       case 'memory-match':
         return {
@@ -1705,17 +1717,21 @@ export class GameService {
       let gameConfig = this.generateDefaultGameConfig(gameType);
       gameConfig.id = gameId;
 
-      // Gestion spécifique pour le puzzle (utilise la photo de fond du modèle par défaut)
-      if (gameType === 'puzzle') {
+      // Gestion spécifique pour le love-quiz (utilise les questions par défaut)
+      if (gameType === 'love-quiz') {
         const defaultGameData = AVAILABLE_GAMES.find(g => g.type === gameType);
         gameConfig = {
           id: gameId,
-          type: 'puzzle',
-          title: defaultGameData?.title || 'Puzzle',
-          description: defaultGameData?.description || 'Résolvez le puzzle le plus vite possible!',
+          type: 'love-quiz',
+          title: defaultGameData?.title || 'Love Quiz',
+          description: defaultGameData?.description || 'Testez vos connaissances sur le couple!',
           isEnabled: true,
-          imageUrl: modelData.backgroundImage || 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=800',
-          gridSize: 3,
+          questions: [
+            { id: 'q1', question: 'Où avons-nous fait notre première rencontre ?', options: ['Au café', 'Au cinéma', 'Au parc', 'À la bibliothèque'], correctAnswerIndex: 0 },
+            { id: 'q2', question: 'Quelle est notre chanson préférée ?', options: ['Unchained Melody', 'Perfect', 'I Will Always Love You', 'All of Me'], correctAnswerIndex: 1 },
+            { id: 'q3', question: 'Quel est notre plat préféré à partager ?', options: ['Pizza', 'Sushi', 'Pâtes', 'Tajine'], correctAnswerIndex: 2 },
+            { id: 'q4', question: 'Quel est notre film préféré à regarder ensemble ?', options: ['Le Parfum', 'Notting Hill', 'Titanic', 'Amélie'], correctAnswerIndex: 3 }
+          ],
           showLeaderboard: true,
           createdAt: null,
           updatedAt: null
@@ -1937,19 +1953,19 @@ export class GameService {
     }
   }
 
-  // Ajouter un résultat de puzzle
-  static async addPuzzleResult(userId: string, modelId: string, gameId: string, inviteId: string, guestName: string, timeInSeconds: number): Promise<void> {
+  // Ajouter un résultat de puzzle ou love-quiz
+  static async addPuzzleResult(userId: string, modelId: string, gameId: string, inviteId: string, guestName: string, score: number, gameType: 'puzzle' | 'memory-match' | 'love-quiz' = 'puzzle'): Promise<void> {
     try {
       const resultId = `result_${Date.now()}_${Math.random().toString(36).substr(2,9)}`;
       const resultRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results', resultId);
       await setDoc(resultRef, {
         id: resultId,
         gameId,
-        gameType: 'puzzle',
+        gameType,
         inviteId,
         guestName,
-        data: { timeInSeconds },
-        score: timeInSeconds, // Plus petit = meilleur score
+        data: gameType === 'puzzle' || gameType === 'memory-match' ? { timeInSeconds: score } : { score },
+        score, 
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -1959,11 +1975,22 @@ export class GameService {
     }
   }
 
-  // Récupérer les résultats du puzzle (classement)
+  // Récupérer les résultats du puzzle/love-quiz/memory-match (classement)
   static async getPuzzleResults(userId: string, modelId: string, gameId: string): Promise<GameResult[]> {
     try {
       const resultsRef = collection(db, this.USERS_COLLECTION, userId, 'UserModel', modelId, 'games', gameId, 'results');
-      const q = query(resultsRef, orderBy('score', 'asc')); // Meilleurs temps d'abord
+      // First get the game config to know the type
+      const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+      const modelSnap = await getDoc(modelRef);
+      let gameType: 'puzzle' | 'memory-match' | 'love-quiz' | null = null;
+      if (modelSnap.exists()) {
+        const games = modelSnap.data().games as GameConfiguration[];
+        const game = games.find(g => g.id === gameId);
+        if (game) {
+          gameType = game.type as any;
+        }
+      }
+      const q = query(resultsRef, orderBy('score', gameType === 'love-quiz' ? 'desc' : 'asc')); 
       const snapshot = await getDocs(q);
       const results: GameResult[] = [];
       snapshot.forEach(doc => {
