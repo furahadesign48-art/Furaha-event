@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import ornement5 from '../images/ornement5.png';
 import ornement6 from '../images/ornement6.png';
 import plume from '../images/plume.png';
+import furahaLogo from '../images/FURAHA-GOLD.png';
 
 // Fallback images if local assets are missing
 const pagneImage = 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop';
@@ -767,38 +768,103 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
    };
 
   useEffect(() => {
-    const loadData = async () => {
-      if (embedded) { setIsLoading(false); return; }
-      if (!inviteId) {
-        setDataError("Identifiant d'invitation manquant.");
-        setIsLoading(false);
-        return;
-      }
-      
+    if (embedded) {
+      setIsLoading(false);
+      return;
+    }
+    if (!inviteId) {
+      setDataError("Identifiant d'invitation manquant.");
+      setIsLoading(false);
+      return;
+    }
+
+    let unsubInvite: (() => void) | null = null;
+    let unsubUserModel: (() => void) | null = null;
+    let isSubscribing = true;
+
+    const init = async () => {
       try {
         const inviteData = await InviteService.getInviteGlobal(inviteId);
+        if (!isSubscribing) return;
+        
         if (inviteData) {
           setInvite(inviteData);
           setInviteDocPath(`users/${inviteData.userId}/invites/${inviteData.id}`);
           setIsConfirmed(inviteData.confirmed);
           setSelectedDrink((inviteData as any).selectedDrink ? (inviteData as any).selectedDrink.split(', ') : []);
+          
+          // Subscribe to invite updates
+          unsubInvite = InviteService.subscribeInvite(inviteData.userId, inviteData.id, (updatedInvite) => {
+            if (updatedInvite) {
+              setInvite(updatedInvite);
+              setIsConfirmed(updatedInvite.confirmed);
+              setSelectedDrink((updatedInvite as any).selectedDrink ? (updatedInvite as any).selectedDrink.split(', ') : []);
+            }
+          });
+
+          // Get user models and subscribe to the first one
           const models = await UserModelService.getUserModels(inviteData.userId);
           if (models.length > 0) {
             setUserModel(models[0]);
+            // Preload initial images
+            const initialImagesToPreload = [
+              models[0].backgroundImage,
+              models[0].headerSectionBackground,
+              models[0].textSectionBackground,
+              models[0].dateLocationSectionBackground,
+              models[0].gallerySectionBackground,
+              models[0].rsvpDrinksSectionBackground,
+              models[0].gamesSectionBackground,
+              models[0].qrFooterSectionBackground,
+              ...(models[0].eventPhotos || []),
+            ].filter(Boolean) as string[];
+            initialImagesToPreload.forEach((imgUrl) => {
+              const img = new Image();
+              img.src = imgUrl;
+            });
+
+            unsubUserModel = UserModelService.subscribeUserModel(inviteData.userId, models[0].id, (updatedModel) => {
+              if (updatedModel) {
+                setUserModel(updatedModel);
+                // Preload any new images
+                const imagesToPreload = [
+                  updatedModel.backgroundImage,
+                  updatedModel.headerSectionBackground,
+                  updatedModel.textSectionBackground,
+                  updatedModel.dateLocationSectionBackground,
+                  updatedModel.gallerySectionBackground,
+                  updatedModel.rsvpDrinksSectionBackground,
+                  updatedModel.gamesSectionBackground,
+                  updatedModel.qrFooterSectionBackground,
+                  ...(updatedModel.eventPhotos || []),
+                ].filter(Boolean) as string[];
+                imagesToPreload.forEach((imgUrl) => {
+                  const img = new Image();
+                  img.src = imgUrl;
+                });
+              }
+            });
           } else {
             setDataError("Aucun design d'invitation trouvé pour cet événement.");
           }
         } else {
           setDataError("Invitation introuvable. Veuillez vérifier le lien.");
         }
-      } catch (e) { 
-        console.error(e); 
+      } catch (e) {
+        console.error(e);
         setDataError("Erreur de chargement. Veuillez actualiser la page.");
-      } finally { 
-        setIsLoading(false); 
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadData();
+
+    init();
+
+    return () => {
+      isSubscribing = false;
+      unsubInvite?.();
+      unsubUserModel?.();
+    };
   }, [inviteId, embedded]);
 
   // Auto-expand love quiz when games modal opens
@@ -1046,38 +1112,45 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     };
   }, [isMusicPlaying, safeUserModel.backgroundMusic]);
 
-  // Afficher le modal de notifications une seule fois si non vu et pas encore autorisé
+  // Afficher le modal de notifications après 10s si pas déjà autorisé ou vu
   useEffect(() => {
     console.log('=== DEBUG NOTIFICATION MODAL ===');
     console.log('inviteDocPath:', inviteDocPath);
     console.log('permission:', permission);
+    console.log('token:', token);
     console.log('isLoading:', isLoading);
     console.log('isAdminView:', isAdminView);
-    console.log('Notification in window:', 'Notification' in window);
-    console.log('Protocol:', window.location.protocol);
-    console.log('Is localhost:', window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
     if (inviteDocPath && !isLoading && !isAdminView && isSecure) {
-      // Vérifier dans localStorage si l'utilisateur a déjà vu le modal
-      const hasSeenModal = localStorage.getItem('furaha_notification_modal_seen');
-      console.log('hasSeenModal:', hasSeenModal);
+      // Vérifier si notifications sont déjà autorisées (soit via permission, soit via localStorage)
+      const savedPermission = localStorage.getItem('furaha_notification_permission');
+      const savedToken = localStorage.getItem('furaha_notification_token');
+      const isAlreadyGranted = permission === 'granted' || savedPermission === 'granted' || !!savedToken;
       
-      if (!hasSeenModal) {
-        console.log('→ Setting timer to show notification modal');
+      if (isAlreadyGranted) {
+        // Sauvegarder dans localStorage pour persister si ce n'est pas déjà fait
+        if (permission === 'granted') {
+          localStorage.setItem('furaha_notification_permission', 'granted');
+        }
+        return;
+      }
+      
+      // Vérifier si l'utilisateur a déjà fermé le modal
+      const hasDismissedModal = localStorage.getItem('furaha_notification_modal_dismissed');
+      
+      if (!hasDismissedModal) {
+        console.log('→ Setting timer to show notification modal in 10s');
         const timer = setTimeout(() => {
           setShowNotificationModal(true);
-        }, 2000);
+        }, 10000);
         return () => clearTimeout(timer);
       }
     } else {
       console.log('→ Conditions not met to show modal');
-      if (!isSecure) {
-        console.warn('→ Site is not served over HTTPS or localhost - notifications will not work!');
-      }
     }
-  }, [inviteDocPath, permission, isLoading, isAdminView]);
+  }, [inviteDocPath, permission, token, isLoading, isAdminView]);
 
   const toggleMusic = () => {
     if (!audioRef.current) return;
@@ -1331,66 +1404,57 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white relative overflow-hidden">
-        {/* Premium Animated Background */}
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center text-slate-800 relative overflow-hidden">
+        {/* Soft Animated Background */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.primary}30, ${colors.secondary || colors.accent}30)`, animationDelay: '0s' }}></div>
-          <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.secondary || colors.accent}30, ${colors.primary}30)`, animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl animate-float" style={{ background: `linear-gradient(135deg, ${colors.accent || colors.primary}20, ${colors.secondary || colors.primary}20)`, animationDelay: '2s' }}></div>
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl" style={{ background: `${colors.primary}10`, animation: 'float 8s ease-in-out infinite' }}></div>
+          <div className="absolute bottom-1/3 right-1/4 w-80 h-80 rounded-full blur-3xl" style={{ background: `${colors.secondary || colors.accent}10`, animation: 'float 8s ease-in-out infinite 2s' }}></div>
         </div>
 
         {/* Loading Content */}
         <div className="relative z-10 flex flex-col items-center justify-center">
-          {/* Spinning Orbs */}
-          <div className="relative w-48 h-48 mb-6 flex items-center justify-center">
-            {[...Array(6)].map((_, i) => (
+          {/* Logo with Pulse */}
+          <img 
+            src={furahaLogo} 
+            alt="Furaha Logo" 
+            className="w-48 h-auto mb-8 opacity-0 animate-fadeIn"
+            style={{ animationDelay: '0.2s' }}
+          />
+          
+          {/* Loading Dots */}
+          <div className="flex items-center gap-2">
+            {[0, 1, 2].map((i) => (
               <div 
-                key={i} 
-                className="absolute w-4 h-4 rounded-full"
-                style={{
+                key={i}
+                className="w-3 h-3 rounded-full opacity-0"
+                style={{ 
                   background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary || colors.accent})`,
-                  left: '50%',
-                  top: '50%',
-                  marginLeft: '-8px',
-                  marginTop: '-8px',
-                  transform: `rotate(${i * 60}deg) translateY(-60px) rotate(-${i * 60}deg)`,
-                  animation: `spin 2s linear infinite`,
-                  animationDelay: `${i * 0.1}s`
+                  animation: `pulse 1.4s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`
                 }}
               ></div>
             ))}
-            
-            {/* Central Shimmering Circle */}
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20 backdrop-blur-md">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center animate-pulse">
-                <div className="w-8 h-8 rounded-full" style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary || colors.accent})` }}></div>
-              </div>
-            </div>
           </div>
-
-          {/* Loading Text with Shimmer */}
-          <div className="relative overflow-hidden">
-            <p className="font-poppins text-base font-semibold relative z-10">Chargement de votre invitation...</p>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 animate-shimmer"></div>
-          </div>
+          
+          {/* Loading Text */}
+          <p className="font-poppins text-sm text-slate-500 mt-4 opacity-0 animate-fadeIn" style={{ animationDelay: '0.8s' }}>Chargement de votre invitation...</p>
         </div>
 
         {/* Custom CSS for Animations */}
         <style>{`
           @keyframes float {
-            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.5; }
-            50% { transform: translateY(-30px) scale(1.1); opacity: 0.8; }
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.4; }
+            50% { transform: translateY(-40px) scale(1.1); opacity: 0.7; }
           }
-          @keyframes spin {
-            from { transform: rotate(0deg) translateY(-60px) rotate(0deg); }
-            to { transform: rotate(360deg) translateY(-60px) rotate(-360deg); }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-          @keyframes shimmer {
-            0% { transform: translateX(-100%) skewX(-12deg); }
-            100% { transform: translateX(200%) skewX(-12deg); }
+          @keyframes pulse {
+            0%, 100% { opacity: 0; transform: scale(0.6); }
+            50% { opacity: 1; transform: scale(1); }
           }
-          .animate-float { animation: float 6s ease-in-out infinite; }
-          .animate-shimmer { animation: shimmer 2s ease-in-out infinite; }
+          .animate-fadeIn { animation: fadeIn 0.6s ease-out forwards; }
         `}</style>
       </div>
     );
@@ -2285,7 +2349,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
-            {token && (
+            {(token || localStorage.getItem('furaha_notification_token') || permission === 'granted' || localStorage.getItem('furaha_notification_permission') === 'granted') && (
               <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full flex items-center justify-center border border-white text-[10px] font-bold shadow-sm">
                 ✓
               </div>
@@ -2798,7 +2862,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => {
               // Fermer le modal sans rien faire et marquer comme vu
-              localStorage.setItem('furaha_notification_modal_seen', 'true');
+              if (!(permission === 'granted' || token)) {
+                localStorage.setItem('furaha_notification_modal_dismissed', 'true');
+              }
               setShowNotificationModal(false);
             }}
           />
@@ -2840,13 +2906,26 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </div>
               )}
               
-              {token && (
-                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
-                  ✅ Notifications activées avec succès !
-                </div>
+              {/* Si notifications activées */}
+              {(permission === 'granted' || token) && (
+                <>
+                  <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm">
+                    ✅ Notifications activées avec succès !
+                  </div>
+                  <p className="text-slate-600 text-center mb-6">
+                    Recevez un rappel automatiquement pour ne pas oublier la date !
+                  </p>
+                  <button
+                    onClick={() => setShowNotificationModal(false)}
+                    className="w-full py-3 px-4 text-slate-500 font-medium rounded-xl transition-all hover:bg-slate-100"
+                  >
+                    Quitter
+                  </button>
+                </>
               )}
               
-              {isFCMSupported !== false && (
+              {/* Si notifications pas activées */}
+              {!(permission === 'granted' || token) && isFCMSupported !== false && (
                 <>
                   <p className="text-slate-600 text-center mb-6">
                     Recevez un rappel automatiquement pour ne pas oublier la date !
@@ -2855,7 +2934,6 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   <div className="flex flex-col gap-3">
                     <button
                       onClick={async () => {
-                        localStorage.setItem('furaha_notification_modal_seen', 'true');
                         console.log('=== CLIC SUR BOUTON AUTORISER ===');
                         console.log('inviteId:', inviteId);
                         console.log('inviteDocPath:', inviteDocPath);
@@ -2868,12 +2946,12 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                         background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` 
                       }}
                     >
-                      {isNotificationLoading ? 'Chargement...' : token ? 'Réactiver les rappels' : 'Autoriser les rappels'}
+                      {isNotificationLoading ? 'Chargement...' : 'Autoriser les rappels'}
                     </button>
                     
                     <button
                       onClick={() => {
-                        localStorage.setItem('furaha_notification_modal_seen', 'true');
+                        localStorage.setItem('furaha_notification_modal_dismissed', 'true');
                         setShowNotificationModal(false);
                       }}
                       className="w-full py-3 px-4 text-slate-500 font-medium rounded-xl transition-all hover:bg-slate-100"

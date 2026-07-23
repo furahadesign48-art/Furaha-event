@@ -478,6 +478,22 @@ export class UserModelService {
       throw new Error('Impossible de supprimer le modèle');
     }
   }
+
+  // Abonner aux mises à jour d'un modèle utilisateur
+  static subscribeUserModel(
+    userId: string, 
+    modelId: string, 
+    onUpdate: (model: UserModel | null) => void
+  ): () => void {
+    const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
+    return onSnapshot(modelRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate({ id: docSnap.id, ...docSnap.data() } as UserModel);
+      } else {
+        onUpdate(null);
+      }
+    });
+  }
 }
 
 // Service pour les invités
@@ -608,6 +624,22 @@ export class InviteService {
       console.error('Erreur lors de la récupération globale de l\'invité:', error);
       throw new Error('Impossible de récupérer l\'invité');
     }
+  }
+
+  // Abonner aux mises à jour d'un invité
+  static subscribeInvite(
+    userId: string, 
+    inviteId: string, 
+    onUpdate: (invite: (Invite & { userId: string }) | null) => void
+  ): () => void {
+    const inviteRef = doc(db, this.USERS_COLLECTION, userId, 'invites', inviteId);
+    return onSnapshot(inviteRef, (docSnap) => {
+      if (docSnap.exists()) {
+        onUpdate({ id: docSnap.id, userId, ...docSnap.data() } as (Invite & { userId: string }));
+      } else {
+        onUpdate(null);
+      }
+    });
   }
 
   // Mettre à jour un invité

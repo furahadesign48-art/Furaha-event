@@ -4,8 +4,18 @@ import { getToken, onMessage, isSupported } from 'firebase/messaging';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 export const useNotifications = () => {
-  const [token, setToken] = useState<string | null>(null);
-  const [permission, setPermission] = useState<NotificationPermission>('default');
+  // Initialiser token et permission depuis localStorage si disponibles
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('furaha_notification_token'));
+  const [permission, setPermission] = useState<NotificationPermission>(() => {
+    const saved = localStorage.getItem('furaha_notification_permission');
+    if (saved && (saved === 'granted' || saved === 'denied' || saved === 'default')) {
+      return saved as NotificationPermission;
+    }
+    if ('Notification' in window) {
+      return Notification.permission;
+    }
+    return 'default';
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFCMSupported, setIsFCMSupported] = useState<boolean | null>(null);
@@ -19,7 +29,13 @@ export const useNotifications = () => {
         setIsFCMSupported(supported);
         
         if ('Notification' in window) {
-          setPermission(Notification.permission);
+          // Prioriser localStorage, sinon vérifier la permission du navigateur
+          const savedPermission = localStorage.getItem('furaha_notification_permission');
+          if (savedPermission && (savedPermission === 'granted' || savedPermission === 'denied' || savedPermission === 'default')) {
+            setPermission(savedPermission as NotificationPermission);
+          } else {
+            setPermission(Notification.permission);
+          }
         }
       } catch (e) {
         console.error('❌ Error checking FCM support:', e);
@@ -59,6 +75,7 @@ export const useNotifications = () => {
       console.log('🔔 Requesting notification permission...');
       const permissionResult = await Notification.requestPermission();
       setPermission(permissionResult);
+      localStorage.setItem('furaha_notification_permission', permissionResult);
       console.log('✅ Permission result:', permissionResult);
 
       if (permissionResult !== 'granted') {
@@ -71,6 +88,7 @@ export const useNotifications = () => {
       const fcmToken = await getToken(messaging, { vapidKey });
       console.log('🎉 TOKEN RECEIVED:', fcmToken);
       setToken(fcmToken);
+      localStorage.setItem('furaha_notification_token', fcmToken);
 
       if (options?.inviteDocPath && options?.inviteId) {
         const inviteDocRef = doc(db, options.inviteDocPath);
