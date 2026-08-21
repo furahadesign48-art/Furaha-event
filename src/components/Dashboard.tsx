@@ -34,7 +34,9 @@ import {
   Save,
   Image as ImageIcon,
   BarChart3,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  Shield
 } from 'lucide-react';
 import { GameService, AVAILABLE_GAMES, GameConfiguration, LoveQuizConfig, MemoryMatchConfig } from '../services/templateService';
 import UserProfile from './UserProfile';
@@ -55,6 +57,7 @@ import furahaLogo from '../images/FURAHA-GOLD.png';
 import GuestMessagesViewer from './GuestMessagesViewer';
 import GuestExportModal from './GuestExportModal';
 import GuestImportModal from './GuestImportModal';
+import UserManagement from './UserManagement';
 
 interface TemplateData {
   id: string;
@@ -158,6 +161,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [tableSearchInput, setTableSearchInput] = useState('');
   const [showTableDropdown, setShowTableDropdown] = useState(false);
+  const [quickAddCategoryMode, setQuickAddCategoryMode] = useState(false);
+  const [quickAddCategoryName, setQuickAddCategoryName] = useState('');
+  const [quickAddTableMode, setQuickAddTableMode] = useState(false);
+  const [quickAddTableName, setQuickAddTableName] = useState('');
+  const [quickAddTableSeats, setQuickAddTableSeats] = useState<number>(8);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [openGuestActionsId, setOpenGuestActionsId] = useState<string | null>(null);
   const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
@@ -316,7 +324,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
       // Load results for each game
       const resultsMap: Record<string, any[]> = {};
       for (const game of loadedGames) {
-        if (game.type === 'love-quiz' || game.type === 'memory-match') {
+        if (game.type === 'love-quiz' || game.type === 'memory-match' || game.type === 'catch-love') {
           try {
             const results = await GameService.getPuzzleResults(userId, modelId, game.id);
             resultsMap[game.id] = results;
@@ -437,22 +445,37 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
       <div className="animate-fade-in space-y-4 md:space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 md:gap-4">
           <div>
-            <h3 className="text-lg md:text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h3 className="text-lg md:text-2xl font-extrabold tracking-tight text-white">
               Configuration des Jeux
             </h3>
-            <p className="text-xs md:text-sm text-slate-600 mt-1">Configurez les jeux pour vos invités</p>
+            <p className="text-xs md:text-sm text-white/55 mt-1">Configurez les jeux pour vos invités</p>
           </div>
         </div>
 
         {/* Sélection du modèle */}
-        <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6">
-          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
-            <div className="p-1.5 md:p-2 bg-amber-100 rounded-lg">
-              <Gamepad2 className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
+        <div className="relative rounded-lg md:rounded-2xl p-3 md:p-6 overflow-hidden border group"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+             }}
+             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.22)'; }}
+             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        >
+          <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[40%] pointer-events-none blur-3xl opacity-55"
+               style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.05) 38%, rgba(251,191,36,0) 70%)' }}></div>
+          <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4 relative z-10">
+            <div className="p-1.5 md:p-2 rounded-lg flex items-center justify-center"
+                 style={{
+                   background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.65)',
+                 }}>
+              <Gamepad2 className="h-4 md:h-5 w-4 md:w-5 text-[#0b0f17]" />
             </div>
-            <h4 className="font-semibold text-slate-900 text-sm md:text-base">Modèle sélectionné</h4>
+            <h4 className="font-semibold text-white text-sm md:text-base">Modèle sélectionné</h4>
           </div>
-          <div className="flex flex-wrap gap-1.5 md:gap-2">
+          <div className="flex flex-wrap gap-1.5 md:gap-2 relative z-10">
             {userModels.map((model) => (
               <button
                 key={model.id}
@@ -461,10 +484,13 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                   setSelectedModelForGames(model.id);
                 }}
                 className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl border-2 transition-all duration-300 font-medium text-xs md:text-sm ${
-                  selectedModelForGames === model.id
-                    ? 'border-amber-500 bg-amber-50 text-amber-700'
-                    : 'border-neutral-200 bg-white text-slate-700 hover:border-amber-300 hover:bg-amber-50'
+                  selectedModelForGames === model.id ? '' : ''
                 }`}
+                style={{
+                  borderColor: selectedModelForGames === model.id ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.08)',
+                  background: selectedModelForGames === model.id ? 'rgba(251,191,36,0.12)' : 'rgba(255,255,255,0.02)',
+                  color: selectedModelForGames === model.id ? '#fcd34d' : 'rgba(255,255,255,0.75)',
+                }}
               >
                 {model.name}
               </button>
@@ -473,7 +499,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
         </div>
 
         {isLoadingGames ? (
-          <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6 flex items-center justify-center py-8 md:py-12">
+          <div className="relative rounded-lg md:rounded-2xl p-3 md:p-6 flex items-center justify-center py-8 md:py-12 overflow-hidden border"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+               }}>
             <div className="w-8 md:w-10 h-8 md:h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
@@ -483,30 +513,53 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
               const loveQuizGame = games.find(g => g.type === 'love-quiz');
               if (!loveQuizGame) return null;
               return (
-                <div className="bg-white rounded-lg md:rounded-2xl shadow-luxury border border-neutral-200/50 p-3 md:p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-2 md:gap-0 mb-4 md:mb-6">
-                    <h4 className="font-semibold text-slate-900 flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
-                      <Heart className="h-4 md:h-5 w-4 md:w-5 text-rose-600 fill-rose-600" />
+                <div className="relative rounded-lg md:rounded-2xl p-3 md:p-6 overflow-hidden border group"
+                     style={{
+                       background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                       borderColor: 'rgba(255,255,255,0.08)',
+                       boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(236,72,153,0.04) inset',
+                       transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                     }}
+                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,72,153,0.28)'; }}
+                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
+                  <div aria-hidden className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-[88%] h-[45%] pointer-events-none blur-3xl opacity-60"
+                       style={{ background: 'radial-gradient(ellipse at center, rgba(236,72,153,0.20) 0%, rgba(236,72,153,0.05) 38%, rgba(236,72,153,0) 70%)' }}></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 md:gap-0 mb-4 md:mb-6 relative z-10">
+                    <h4 className="font-semibold text-white flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                      <Heart className="h-4 md:h-5 w-4 md:w-5 text-rose-400 fill-rose-400" />
                       Love Quiz
                     </h4>
                     <div className="flex flex-wrap gap-1.5 md:gap-2">
                       <button
                         onClick={() => setSelectedGameForResults(selectedGameForResults === loveQuizGame.id ? null : loveQuizGame.id)}
-                        className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        style={{
+                          background: 'linear-gradient(180deg, #3b82f6 0%, #4f46e5 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(59,130,246,0.5), 0 8px 20px -8px rgba(59,130,246,0.6)',
+                        }}
                       >
                         <Trophy className="h-3.5 md:h-4 w-3.5 md:w-4" />
                         {selectedGameForResults === loveQuizGame.id ? 'Cacher' : 'Classement'}
                       </button>
                       <button
                         onClick={() => setEditingGame(loveQuizGame)}
-                        className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        style={{
+                          background: 'linear-gradient(180deg, #f43f5e 0%, #db2777 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(244,63,94,0.5), 0 8px 20px -8px rgba(244,63,94,0.6)',
+                        }}
                       >
                         <Edit className="h-3.5 md:h-4 w-3.5 md:w-4" />
                         Config
                       </button>
                       <button
                         onClick={() => handleDeleteGame(loveQuizGame.id)}
-                        className="bg-red-500 text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        style={{
+                          background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(239,68,68,0.5), 0 8px 20px -8px rgba(239,68,68,0.6)',
+                        }}
                       >
                         <Trash2 className="h-3.5 md:h-4 w-3.5 md:w-4" />
                         Suppr
@@ -514,24 +567,37 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-neutral-50 to-rose-50/30 rounded-lg md:rounded-xl border border-neutral-200/50 p-3 md:p-4">
+                  <div className="relative rounded-lg md:rounded-xl border p-3 md:p-4"
+                       style={{
+                         background: 'linear-gradient(180deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
+                         borderColor: 'rgba(255,255,255,0.06)',
+                       }}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2">
-                          <h5 className="font-semibold text-slate-900 text-sm md:text-base">
+                          <h5 className="font-semibold text-white text-sm md:text-base">
                             {loveQuizGame.title}
                           </h5>
                           <span className={`px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-xs font-medium ${
-                            loveQuizGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
-                          }`}>
+                            loveQuizGame.isEnabled ? '' : ''
+                          }`}
+                          style={{
+                            background: loveQuizGame.isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                            color: loveQuizGame.isEnabled ? '#6ee7b7' : 'rgba(255,255,255,0.55)',
+                            border: loveQuizGame.isEnabled ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                          }}>
                             {loveQuizGame.isEnabled ? '✓' : '✗'}
                           </span>
                         </div>
-                        <p className="text-xs md:text-sm text-slate-600 mb-2 md:mb-3">{loveQuizGame.description}</p>
+                        <p className="text-xs md:text-sm text-white/60 mb-2 md:mb-3">{loveQuizGame.description}</p>
                         {(loveQuizGame as LoveQuizConfig).questions && (loveQuizGame as LoveQuizConfig).questions.length > 0 && (
                           <div className="mt-1.5 md:mt-2 space-y-1.5 md:space-y-2">
                             {(loveQuizGame as LoveQuizConfig).questions.slice(0, 2).map((q, i) => (
-                              <div key={i} className="p-1.5 md:p-2 rounded-lg bg-white border border-neutral-200 text-xs md:text-sm text-slate-700">
+                              <div key={i} className="p-1.5 md:p-2 rounded-lg border text-xs md:text-sm text-white/75"
+                                   style={{
+                                     background: 'rgba(255,255,255,0.03)',
+                                     borderColor: 'rgba(255,255,255,0.06)',
+                                   }}>
                                 {i+1}. {q.question}
                               </div>
                             ))}
@@ -543,15 +609,21 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
                   {/* Leaderboard section */}
                   {selectedGameForResults === loveQuizGame.id && (
-                    <div className="mt-4 md:mt-6 border-t border-neutral-200 pt-3 md:pt-4">
+                    <div className="mt-4 md:mt-6 border-t pt-3 md:pt-4 relative z-10"
+                         style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                       <div className="flex items-center justify-between mb-3 md:mb-4">
-                        <h5 className="font-semibold text-slate-900 flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
-                          <Trophy className="h-4 md:h-5 w-4 md:w-5 text-amber-600" />
+                        <h5 className="font-semibold text-white flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                          <Trophy className="h-4 md:h-5 w-4 md:w-5" style={{ color: '#fcd34d' }} />
                           Classement
                         </h5>
                         <button
                           onClick={() => refreshGameResults(loveQuizGame.id)}
-                          className="p-1.5 md:p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                          className="p-1.5 md:p-2 rounded-lg transition-all flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                          style={{
+                            background: 'rgba(59,130,246,0.12)',
+                            color: '#93c5fd',
+                            border: '1px solid rgba(59,130,246,0.22)',
+                          }}
                         >
                           <RefreshCw className="h-3.5 md:h-4 w-3.5 md:w-4" />
                           <span className="hidden sm:inline text-xs font-semibold">Rafraîchir</span>
@@ -562,7 +634,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                           {gameResults[loveQuizGame.id].sort((a, b) => (b.score || 0) - (a.score || 0)).map((result, index) => (
                             <div 
                               key={result.id} 
-                              className="flex items-center justify-between p-2 md:p-3 rounded-lg md:rounded-xl bg-neutral-50 border border-neutral-200"
+                              className="flex items-center justify-between p-2 md:p-3 rounded-lg md:rounded-xl border"
+                              style={{
+                                background: 'rgba(255,255,255,0.03)',
+                                borderColor: 'rgba(255,255,255,0.06)',
+                              }}
                             >
                               <div className="flex items-center gap-2 md:gap-3">
                                 <div className={`w-6 md:w-8 h-6 md:h-8 rounded-full flex items-center justify-center font-bold text-[10px] md:text-xs ${
@@ -573,12 +649,12 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                                 }`}>
                                   {index + 1}
                                 </div>
-                                <span className="font-semibold text-slate-800 text-xs md:text-sm">
+                                <span className="font-semibold text-white/85 text-xs md:text-sm">
                                   {result.guestName}
                                 </span>
                               </div>
                               <div className="flex items-center gap-1.5 md:gap-2">
-                                <span className="font-semibold text-slate-700 text-xs md:text-sm">
+                                <span className="font-semibold text-white/75 text-xs md:text-sm">
                                   {result.score || 0}/{(loveQuizGame as LoveQuizConfig).questions.length}
                                 </span>
                                 <button
@@ -593,7 +669,12 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                                       showToast('error', 'Erreur lors de la réinitialisation');
                                     }
                                   }}
-                                  className="p-1 md:p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+                                  className="p-1 md:p-1.5 rounded-lg transition-all"
+                                  style={{
+                                    background: 'rgba(239,68,68,0.12)',
+                                    color: '#fca5a5',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                  }}
                                 >
                                   <Trash2 className="h-3 md:h-3.5 w-3 md:w-3.5" />
                                 </button>
@@ -602,7 +683,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                           ))}
                         </div>
                       ) : (
-                        <p className="text-slate-500 text-xs md:text-sm text-center py-3 md:py-4">
+                        <p className="text-white/50 text-xs md:text-sm text-center py-3 md:py-4">
                           Aucun joueur n'a encore terminé ce jeu.
                         </p>
                       )}
@@ -614,10 +695,19 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
             {/* Add Love Quiz button if not present */}
             {!games.find(g => g.type === 'love-quiz') && (
-              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 text-center">
-                <div className="text-2xl text-neutral-400 mb-3">💕</div>
-                <h4 className="font-semibold text-neutral-700 mb-2">Love Quiz</h4>
-                <p className="text-neutral-500 mb-4">Ajoutez le quiz sur le couple à votre modèle</p>
+              <div className="relative rounded-2xl p-6 text-center overflow-hidden border group"
+                   style={{
+                     background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                     borderColor: 'rgba(255,255,255,0.08)',
+                     boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7)',
+                     transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                   }}
+                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,72,153,0.28)'; }}
+                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              >
+                <div className="text-2xl text-rose-400/70 mb-3">💕</div>
+                <h4 className="font-semibold text-white mb-2">Love Quiz</h4>
+                <p className="text-white/55 mb-4">Ajoutez le quiz sur le couple à votre modèle</p>
                 <button
                   onClick={async () => {
                     try {
@@ -632,7 +722,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                       alert('Erreur lors de l\'ajout du love quiz : ' + (error as Error).message);
                     }
                   }}
-                  className="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:from-rose-600 hover:to-pink-700 transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                  className="text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                  style={{
+                    background: 'linear-gradient(180deg, #f43f5e 0%, #db2777 100%)',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(244,63,94,0.55), 0 10px 24px -10px rgba(244,63,94,0.65)',
+                  }}
                 >
                   <Plus className="h-4 w-4" />
                   Ajouter Love Quiz
@@ -642,30 +736,53 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
             {/* Memory Match Game */}
             {memoryMatchGame ? (
-              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="font-semibold text-slate-900 flex items-center gap-2">
-                    <Heart className="h-5 w-5 text-pink-600 fill-pink-600" />
+              <div className="relative rounded-2xl p-6 overflow-hidden border group"
+                   style={{
+                     background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                     borderColor: 'rgba(255,255,255,0.08)',
+                     boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(236,72,153,0.04) inset',
+                     transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                   }}
+                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,72,153,0.28)'; }}
+                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              >
+                <div aria-hidden className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-[88%] h-[45%] pointer-events-none blur-3xl opacity-55"
+                     style={{ background: 'radial-gradient(ellipse at center, rgba(236,72,153,0.18) 0%, rgba(236,72,153,0.05) 38%, rgba(236,72,153,0) 70%)' }}></div>
+                <div className="flex flex-wrap items-center justify-between mb-6 gap-3 relative z-10">
+                  <h4 className="font-semibold text-white flex items-center gap-2">
+                    <Heart className="h-5 w-5 text-pink-400 fill-pink-400" />
                     Love Memory Match
                   </h4>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setSelectedGameForResults(selectedGameForResults === memoryMatchGame.id ? null : memoryMatchGame.id)}
-                      className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                      className="text-white px-4 py-2 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 text-sm"
+                      style={{
+                        background: 'linear-gradient(180deg, #3b82f6 0%, #4f46e5 100%)',
+                        boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(59,130,246,0.5), 0 8px 20px -8px rgba(59,130,246,0.6)',
+                      }}
                     >
                       <Trophy className="h-4 w-4" />
-                      {selectedGameForResults === memoryMatchGame.id ? 'Cacher Classement' : 'Voir Classement'}
+                      {selectedGameForResults === memoryMatchGame.id ? 'Cacher' : 'Classement'}
                     </button>
                     <button
                       onClick={() => setEditingGame(memoryMatchGame)}
-                      className="bg-gradient-to-r from-pink-500 to-rose-600 text-white px-4 py-2 rounded-xl hover:from-pink-600 hover:to-rose-700 transition-all duration-300 font-semibold flex items-center gap-2"
+                      className="text-white px-4 py-2 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 text-sm"
+                      style={{
+                        background: 'linear-gradient(180deg, #ec4899 0%, #db2777 100%)',
+                        boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(236,72,153,0.5), 0 8px 20px -8px rgba(236,72,153,0.6)',
+                      }}
                     >
                       <Edit className="h-4 w-4" />
                       Configurer
                     </button>
                     <button
                       onClick={() => handleDeleteGame(memoryMatchGame.id)}
-                      className="bg-red-500 text-white px-4 py-2 rounded-xl hover:bg-red-600 transition-all duration-300 font-semibold flex items-center gap-2"
+                      className="text-white px-4 py-2 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 text-sm"
+                      style={{
+                        background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
+                        boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(239,68,68,0.5), 0 8px 20px -8px rgba(239,68,68,0.6)',
+                      }}
                     >
                       <Trash2 className="h-4 w-4" />
                       Supprimer
@@ -673,20 +790,27 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-neutral-50 to-pink-50/30 rounded-xl border border-neutral-200/50 p-4">
+                <div className="relative rounded-xl border p-4"
+                     style={{
+                       background: 'linear-gradient(180deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02))',
+                       borderColor: 'rgba(255,255,255,0.06)',
+                     }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h5 className="font-semibold text-slate-900">
+                        <h5 className="font-semibold text-white">
                           {memoryMatchGame.title}
                         </h5>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          memoryMatchGame.isEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium`}
+                              style={{
+                                background: memoryMatchGame.isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                                color: memoryMatchGame.isEnabled ? '#6ee7b7' : 'rgba(255,255,255,0.55)',
+                                border: memoryMatchGame.isEnabled ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                              }}>
                           {memoryMatchGame.isEnabled ? 'Activé' : 'Désactivé'}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-600 mb-3">{memoryMatchGame.description}</p>
+                      <p className="text-sm text-white/60 mb-3">{memoryMatchGame.description}</p>
                       {(memoryMatchGame as MemoryMatchConfig).imageUrls && (memoryMatchGame as MemoryMatchConfig).imageUrls.length > 0 && (
                         <div className="grid grid-cols-4 gap-2 mt-2">
                           {(memoryMatchGame as MemoryMatchConfig).imageUrls.slice(0, 4).map((url, i) => (
@@ -694,7 +818,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                               key={i}
                               src={url} 
                               alt={`Memory ${i+1}`} 
-                              className="w-full h-12 object-cover rounded-lg border border-neutral-200"
+                              className="w-full h-12 object-cover rounded-lg border"
+                              style={{ borderColor: 'rgba(255,255,255,0.08)' }}
                             />
                           ))}
                         </div>
@@ -705,15 +830,21 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
                 {/* Leaderboard section */}
                 {selectedGameForResults === memoryMatchGame.id && (
-                  <div className="mt-6 border-t border-neutral-200 pt-4">
+                  <div className="mt-6 border-t pt-4 relative z-10"
+                       style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
                     <div className="flex items-center justify-between mb-4">
-                      <h5 className="font-semibold text-slate-900 flex items-center gap-2">
-                        <Trophy className="h-5 w-5 text-amber-600" />
-                        Classement des joueurs
+                      <h5 className="font-semibold text-white flex items-center gap-2">
+                        <Trophy className="h-5 w-5" style={{ color: '#fcd34d' }} />
+                        Classement
                       </h5>
                       <button
                         onClick={() => refreshGameResults(memoryMatchGame.id)}
-                        className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all flex items-center gap-2"
+                        className="p-2 rounded-lg transition-all flex items-center gap-2"
+                        style={{
+                          background: 'rgba(59,130,246,0.12)',
+                          color: '#93c5fd',
+                          border: '1px solid rgba(59,130,246,0.22)',
+                        }}
                       >
                         <RefreshCw className="h-4 w-4" />
                         <span className="text-xs font-semibold">Rafraîchir</span>
@@ -724,7 +855,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         {gameResults[memoryMatchGame.id].sort((a, b) => (a.score || 0) - (b.score || 0)).map((result, index) => (
                           <div 
                             key={result.id} 
-                            className="flex items-center justify-between p-3 rounded-xl bg-neutral-50 border border-neutral-200"
+                            className="flex items-center justify-between p-3 rounded-xl border"
+                            style={{
+                              background: 'rgba(255,255,255,0.03)',
+                              borderColor: 'rgba(255,255,255,0.06)',
+                            }}
                           >
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${
@@ -735,12 +870,12 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                               }`}>
                                 {index + 1}
                               </div>
-                              <span className="font-semibold text-slate-800 text-sm">
+                              <span className="font-semibold text-white/85 text-sm">
                                 {result.guestName}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-slate-700 text-sm">
+                              <span className="font-semibold text-white/75 text-sm">
                                 {(() => {
                                   const seconds = result.score || 0;
                                   const mins = Math.floor(seconds / 60);
@@ -754,13 +889,17 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                                   try {
                                     await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, memoryMatchGame.id, result.guestName);
                                     await loadGames(selectedModelForGames);
-                                    showToast('success', 'Résultat de l\'invité réinitialisé');
+                                    showToast('success', 'Résultat réinitialisé');
                                   } catch (err) {
-                                    console.error('Erreur lors de la réinitialisation:', err);
-                                    showToast('error', 'Erreur lors de la réinitialisation');
+                                    showToast('error', 'Erreur réinitialisation');
                                   }
                                 }}
-                                className="p-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-all"
+                                className="p-1.5 rounded-lg transition-all"
+                                style={{
+                                  background: 'rgba(239,68,68,0.12)',
+                                  color: '#fca5a5',
+                                  border: '1px solid rgba(239,68,68,0.2)',
+                                }}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -769,7 +908,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         ))}
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm text-center py-4">
+                      <p className="text-white/50 text-sm text-center py-4">
                         Aucun joueur n'a encore terminé ce jeu.
                       </p>
                     )}
@@ -777,10 +916,19 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                 )}
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6 text-center">
-                <div className="text-2xl text-neutral-400 mb-3">💝</div>
-                <h4 className="font-semibold text-neutral-700 mb-2">Love Memory Match</h4>
-                <p className="text-neutral-500 mb-4">Ajoutez le jeu de memory match à votre modèle</p>
+              <div className="relative rounded-2xl p-6 text-center overflow-hidden border group"
+                   style={{
+                     background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                     borderColor: 'rgba(255,255,255,0.08)',
+                     boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7)',
+                     transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                   }}
+                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(236,72,153,0.28)'; }}
+                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              >
+                <div className="text-2xl text-pink-400/70 mb-3">💝</div>
+                <h4 className="font-semibold text-white mb-2">Love Memory Match</h4>
+                <p className="text-white/55 mb-4">Ajoutez le jeu de memory match à votre modèle</p>
                 <button
                   onClick={async () => {
                     try {
@@ -791,14 +939,245 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                       await GameService.addGameToModel(userId, selectedModelForGames, 'memory-match');
                       await loadGames(selectedModelForGames);
                     } catch (error) {
-                      console.error('=== Error adding memory match:', error);
-                      alert('Erreur lors de l\'ajout du memory match : ' + (error as Error).message);
+                      alert('Erreur lors de l\'ajout : ' + (error as Error).message);
                     }
                   }}
-                  className="bg-gradient-to-r from-pink-500 to-rose-600 text-white px-6 py-3 rounded-xl hover:from-pink-600 hover:to-rose-700 transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                  className="text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 mx-auto"
+                  style={{
+                    background: 'linear-gradient(180deg, #ec4899 0%, #db2777 100%)',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(236,72,153,0.55), 0 10px 24px -10px rgba(236,72,153,0.65)',
+                  }}
                 >
                   <Plus className="h-4 w-4" />
                   Ajouter Memory Match
+                </button>
+              </div>
+            )}
+
+            {/* Catch Love Game */}
+            {(() => {
+              const catchLoveGame = games.find(g => g.type === 'catch-love');
+              if (!catchLoveGame) return null;
+              const config = catchLoveGame as any;
+              return (
+                <div className="relative rounded-lg md:rounded-2xl p-3 md:p-6 overflow-hidden border group"
+                     style={{
+                       background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                       borderColor: 'rgba(255,255,255,0.08)',
+                       boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(217,70,239,0.04) inset',
+                       transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                     }}
+                     onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,70,239,0.28)'; }}
+                     onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
+                  <div aria-hidden className="absolute -bottom-12 left-1/2 -translate-x-1/2 w-[88%] h-[45%] pointer-events-none blur-3xl opacity-55"
+                       style={{ background: 'radial-gradient(ellipse at center, rgba(217,70,239,0.18) 0%, rgba(251,191,36,0.08) 38%, rgba(217,70,239,0) 70%)' }}></div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 md:gap-0 mb-4 md:mb-6 relative z-10">
+                    <h4 className="font-semibold text-white flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                      <Sparkles className="h-4 md:h-5 w-4 md:w-5" style={{ color: '#e879f9' }} />
+                      Attrape l'Amour
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5 md:gap-2">
+                      <button
+                        onClick={() => setSelectedGameForResults(selectedGameForResults === catchLoveGame.id ? null : catchLoveGame.id)}
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:brightness-110"
+                        style={{
+                          background: 'linear-gradient(180deg, #d946ef 0%, #ec4899 50%, #f59e0b 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(217,70,239,0.45), 0 8px 20px -8px rgba(217,70,239,0.55)',
+                        }}
+                      >
+                        <Trophy className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        {selectedGameForResults === catchLoveGame.id ? 'Cacher' : 'Classement'}
+                      </button>
+                      <button
+                        onClick={() => setEditingGame(catchLoveGame)}
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        style={{
+                          background: 'linear-gradient(180deg, #d946ef 0%, #7c3aed 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(217,70,239,0.5), 0 8px 20px -8px rgba(217,70,239,0.6)',
+                        }}
+                      >
+                        <Edit className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        Config
+                      </button>
+                      <button
+                        onClick={() => handleDeleteGame(catchLoveGame.id)}
+                        className="text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                        style={{
+                          background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
+                          boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(239,68,68,0.5), 0 8px 20px -8px rgba(239,68,68,0.6)',
+                        }}
+                      >
+                        <Trash2 className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                        Suppr
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="relative rounded-lg md:rounded-xl border p-3 md:p-4"
+                       style={{
+                         background: 'linear-gradient(180deg, rgba(217,70,239,0.05) 0%, rgba(251,191,36,0.04) 100%)',
+                         borderColor: 'rgba(255,255,255,0.06)',
+                       }}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2 flex-wrap">
+                          <h5 className="font-semibold text-white text-sm md:text-base">
+                            {catchLoveGame.title}
+                          </h5>
+                          <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-xs font-medium"
+                                style={{
+                                  background: catchLoveGame.isEnabled ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)',
+                                  color: catchLoveGame.isEnabled ? '#6ee7b7' : 'rgba(255,255,255,0.55)',
+                                  border: catchLoveGame.isEnabled ? '1px solid rgba(16,185,129,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                                }}>
+                            {catchLoveGame.isEnabled ? '✓' : '✗'}
+                          </span>
+                          <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-xs font-medium"
+                                style={{
+                                  background: 'rgba(34,211,238,0.12)',
+                                  color: '#67e8f9',
+                                  border: '1px solid rgba(34,211,238,0.28)',
+                                }}>
+                            ⏱ {config.totalGameTime || 45}s
+                          </span>
+                          <span className="px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-xs font-medium"
+                                style={{
+                                  background: 'rgba(251,191,36,0.12)',
+                                  color: '#fcd34d',
+                                  border: '1px solid rgba(251,191,36,0.28)',
+                                }}>
+                            {config.difficulty === 'easy' ? 'Facile' : config.difficulty === 'hard' ? 'Difficile' : 'Normal'}
+                          </span>
+                        </div>
+                        <p className="text-xs md:text-sm text-white/60 mb-1.5 md:mb-2">{catchLoveGame.description}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {['❤️','💖','💍','💑','💐','🍾','💔','💣'].map((e, i) => (
+                            <span key={i} className="text-lg md:text-xl opacity-90">{e}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {selectedGameForResults === catchLoveGame.id && (
+                    <div className="mt-4 md:mt-6 border-t pt-3 md:pt-4 relative z-10"
+                         style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                      <div className="flex items-center justify-between mb-3 md:mb-4">
+                        <h5 className="font-semibold text-white flex items-center gap-1.5 md:gap-2 text-sm md:text-base">
+                          <Trophy className="h-4 md:h-5 w-4 md:w-5" style={{ color: '#fcd34d' }} />
+                          Classement
+                        </h5>
+                        <button
+                          onClick={() => refreshGameResults(catchLoveGame.id)}
+                          className="p-1.5 md:p-2 rounded-lg transition-all flex items-center gap-1.5 md:gap-2 text-xs md:text-sm"
+                          style={{
+                            background: 'rgba(217,70,239,0.12)',
+                            color: '#e879f9',
+                            border: '1px solid rgba(217,70,239,0.22)',
+                          }}
+                        >
+                          <RefreshCw className="h-3.5 md:h-4 w-3.5 md:w-4" />
+                          <span className="hidden sm:inline text-xs font-semibold">Rafraîchir</span>
+                        </button>
+                      </div>
+                      {gameResults[catchLoveGame.id] && gameResults[catchLoveGame.id].length > 0 ? (
+                        <div className="space-y-1.5 md:space-y-2">
+                          {[...gameResults[catchLoveGame.id]].sort((a, b) => (b.score || 0) - (a.score || 0)).map((result, index) => (
+                            <div
+                              key={result.id}
+                              className="flex items-center justify-between p-2 md:p-3 rounded-lg md:rounded-xl border"
+                              style={{
+                                background: 'rgba(255,255,255,0.03)',
+                                borderColor: 'rgba(255,255,255,0.06)',
+                              }}
+                            >
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <div className={`w-6 md:w-8 h-6 md:h-8 rounded-full flex items-center justify-center font-bold text-[10px] md:text-xs ${
+                                  index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                                  index === 1 ? 'bg-gray-400 text-gray-900' :
+                                  index === 2 ? 'bg-orange-400 text-orange-900' :
+                                  'bg-slate-300 text-slate-700'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                                <span className="font-semibold text-white/85 text-xs md:text-sm truncate max-w-[180px]">
+                                  {result.guestName}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 md:gap-2">
+                                <span className="font-bold text-sm md:text-base tabular-nums" style={{ color: '#fda4af' }}>
+                                  {result.score || 0} pts
+                                </span>
+                                <button
+                                  onClick={async () => {
+                                    if (!userData?.id || !selectedModelForGames) return;
+                                    try {
+                                      await GameService.deleteGuestGameResults(userData.id, selectedModelForGames, catchLoveGame.id, result.guestName);
+                                      await loadGames(selectedModelForGames);
+                                      showToast('success', 'Résultat réinitialisé');
+                                    } catch (err) {
+                                      showToast('error', 'Erreur réinitialisation');
+                                    }
+                                  }}
+                                  className="p-1 md:p-1.5 rounded-lg transition-all"
+                                  style={{
+                                    background: 'rgba(239,68,68,0.12)',
+                                    color: '#fca5a5',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                  }}
+                                >
+                                  <Trash2 className="h-3 md:h-3.5 w-3 md:w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-white/50 text-xs md:text-sm text-center py-3 md:py-4">
+                          Aucun joueur n'a encore terminé ce jeu.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Add Catch Love button if not present */}
+            {!games.find(g => g.type === 'catch-love') && (
+              <div className="relative rounded-2xl p-6 text-center overflow-hidden border group"
+                   style={{
+                     background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                     borderColor: 'rgba(255,255,255,0.08)',
+                     boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7)',
+                     transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+                   }}
+                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(217,70,239,0.28)'; }}
+                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              >
+                <div className="text-2xl mb-3" style={{ color: 'rgba(232,121,249,0.7)' }}>💖</div>
+                <h4 className="font-semibold text-white mb-2">Attrape l'Amour</h4>
+                <p className="text-white/55 mb-4">Jeu de réflexes fun pour les invités</p>
+                <button
+                  onClick={async () => {
+                    try {
+                      const userId = userData?.id;
+                      if (!userId || !selectedModelForGames) return;
+                      await GameService.addGameToModel(userId, selectedModelForGames, 'catch-love');
+                      await loadGames(selectedModelForGames);
+                    } catch (error) {
+                      alert('Erreur lors de l\'ajout : ' + (error as Error).message);
+                    }
+                  }}
+                  className="text-white px-6 py-3 rounded-xl transition-all duration-300 font-semibold flex items-center gap-2 mx-auto hover:brightness-110"
+                  style={{
+                    background: 'linear-gradient(180deg, #d946ef 0%, #ec4899 50%, #f59e0b 100%)',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(217,70,239,0.5), 0 10px 24px -10px rgba(217,70,239,0.6)',
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                  Ajouter Attrape l'Amour
                 </button>
               </div>
             )}
@@ -807,22 +1186,35 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
         {/* Modal d'édition de jeu */}
         {editingGame && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-            <div className="bg-white rounded-2xl shadow-luxury max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up">
-              <div className={`p-6 border-b border-neutral-200/50 flex justify-between items-center ${
-                editingGame.type === 'memory-match' 
-                  ? 'bg-gradient-to-r from-neutral-50 to-pink-50/30' 
-                  : editingGame.type === 'love-quiz'
-                  ? 'bg-gradient-to-r from-neutral-50 to-rose-50/30'
-                  : 'bg-gradient-to-r from-neutral-50 to-amber-50/30'
-              }`}>
-                <h3 className="text-xl font-bold text-slate-900">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-slide-up border"
+                 style={{
+                   background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                   borderColor: 'rgba(255,255,255,0.08)',
+                   boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.06) inset',
+                 }}>
+              <div className={`p-6 border-b flex justify-between items-center rounded-t-2xl`}
+                   style={{
+                     borderColor: 'rgba(255,255,255,0.06)',
+                     background: editingGame.type === 'memory-match'
+                       ? 'linear-gradient(135deg, rgba(236,72,153,0.1) 0%, rgba(255,255,255,0) 70%)'
+                       : editingGame.type === 'love-quiz'
+                       ? 'linear-gradient(135deg, rgba(244,63,94,0.1) 0%, rgba(255,255,255,0) 70%)'
+                       : editingGame.type === 'catch-love'
+                       ? 'linear-gradient(135deg, rgba(217,70,239,0.12) 0%, rgba(251,191,36,0.06) 50%, rgba(255,255,255,0) 80%)'
+                       : 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+                   }}>
+                <h3 className="text-xl font-extrabold tracking-tight text-white">
                   {editingGame.type === 'memory-match' ? 'Configurer Memory Match' : 
                    editingGame.type === 'love-quiz' ? 'Configurer Love Quiz' : 
+                   editingGame.type === 'catch-love' ? 'Configurer Attrape l\'Amour' :
                    'Configurer le Puzzle'}
                 </h3>
-                <button onClick={() => setEditingGame(null)} className="p-2 hover:bg-neutral-100 rounded-lg">
-                  <X className="h-5 w-5 text-neutral-500" />
+                <button onClick={() => setEditingGame(null)} className="p-2 rounded-lg transition-all duration-200"
+                        style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}>
+                  <X className="h-5 w-5" />
                 </button>
               </div>
               <div className="p-6 space-y-4">
@@ -837,6 +1229,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         ? 'focus:ring-pink-500' 
                         : editingGame.type === 'love-quiz'
                           ? 'focus:ring-rose-500'
+                          : editingGame.type === 'catch-love'
+                          ? 'focus:ring-fuchsia-500'
                           : 'focus:ring-amber-500'
                     }`}
                   />
@@ -851,6 +1245,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         ? 'focus:ring-pink-500' 
                         : editingGame.type === 'love-quiz'
                           ? 'focus:ring-rose-500'
+                          : editingGame.type === 'catch-love'
+                          ? 'focus:ring-fuchsia-500'
                           : 'focus:ring-amber-500'
                     } min-h-[100px]`}
                   />
@@ -866,6 +1262,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         ? 'text-pink-600 focus:ring-pink-500' 
                         : editingGame.type === 'love-quiz'
                           ? 'text-rose-600 focus:ring-rose-500'
+                          : editingGame.type === 'catch-love'
+                          ? 'text-fuchsia-600 focus:ring-fuchsia-500'
                           : 'text-amber-600 focus:ring-amber-500'
                     }`}
                   />
@@ -1127,6 +1525,69 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         </div>
                       </div>
                     </>
+                  ) : editingGame.type === 'catch-love' ? (
+                    <>
+                      <h4 className="font-semibold text-slate-800 flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-fuchsia-600" />
+                        Configuration Attrape l'Amour
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Temps total du jeu (secondes)</label>
+                          <input
+                            type="number"
+                            min="15"
+                            max="180"
+                            value={(editingGame as any).totalGameTime || 45}
+                            onChange={(e) => setEditingGame({ ...editingGame, totalGameTime: Number(e.target.value) } as any)}
+                            className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                          />
+                          <p className="text-xs text-slate-500 mt-1">Entre 15s et 180s (défaut : 45s)</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Difficulté</label>
+                          <select
+                            value={(editingGame as any).difficulty || 'normal'}
+                            onChange={(e) => setEditingGame({ ...editingGame, difficulty: e.target.value as any } as any)}
+                            className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-fuchsia-500"
+                          >
+                            <option value="easy">🌱 Facile (débutant)</option>
+                            <option value="normal">⚡ Normal (équilibré)</option>
+                            <option value="hard">🔥 Difficile (expert)</option>
+                          </select>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Facile : chute lente / Normal : moyen / Difficile : rapide et intense
+                          </p>
+                        </div>
+
+                        <div className="bg-gradient-to-r from-rose-50 to-fuchsia-50/50 rounded-xl p-4 border border-fuchsia-200/50">
+                          <h5 className="font-semibold text-sm text-slate-800 mb-2">Objets disponibles</h5>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {[
+                              ['❤️', '+10 pts'],
+                              ['💖', '+30 pts'],
+                              ['💍', '+50 pts'],
+                              ['💑', '+100 pts'],
+                              ['💐', '+75 pts'],
+                              ['🍾', '+5s temps'],
+                              ['💔', '-15 pts ❌'],
+                              ['💣', '-30 pts ❌'],
+                            ].map(([e, t], i) => (
+                              <div key={i} className="rounded-lg border p-2 text-center"
+                                   style={{
+                                     background: 'rgba(255,255,255,0.02)',
+                                     borderColor: 'rgba(255,255,255,0.08)',
+                                     boxShadow: '0 1px 0 rgba(255,255,255,0.04) inset',
+                                   }}>
+                                <div className="text-xl">{e}</div>
+                                <div className="text-[10px] font-bold text-white/75 mt-0.5">{t}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <>
                       <h4 className="font-semibold text-slate-800 flex items-center gap-2">
@@ -1221,12 +1682,16 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                           ? (editingGame as PuzzleConfig).showLeaderboard 
                           : editingGame.type === 'love-quiz'
                             ? (editingGame as any).showLeaderboard
+                            : editingGame.type === 'catch-love'
+                            ? (editingGame as any).showLeaderboard
                             : (editingGame as MemoryMatchConfig).showLeaderboard
                       }
                       onChange={(e) => {
                         if (editingGame.type === 'puzzle') {
                           setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as PuzzleConfig);
                         } else if (editingGame.type === 'love-quiz') {
+                          setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as any);
+                        } else if (editingGame.type === 'catch-love') {
                           setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as any);
                         } else {
                           setEditingGame({ ...editingGame, showLeaderboard: e.target.checked } as MemoryMatchConfig);
@@ -1237,6 +1702,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                           ? 'text-pink-600 focus:ring-pink-500' 
                           : editingGame.type === 'love-quiz'
                             ? 'text-rose-600 focus:ring-rose-500'
+                            : editingGame.type === 'catch-love'
+                            ? 'text-fuchsia-600 focus:ring-fuchsia-500'
                             : 'text-amber-600 focus:ring-amber-500'
                       }`}
                     />
@@ -1258,6 +1725,8 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
                         ? 'bg-gradient-to-r from-pink-500 to-rose-600' 
                         : editingGame.type === 'love-quiz'
                           ? 'bg-gradient-to-r from-rose-500 to-pink-600'
+                          : editingGame.type === 'catch-love'
+                          ? 'bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-500'
                           : 'bg-gradient-to-r from-amber-500 to-orange-600'
                     }`}
                   >
@@ -1325,7 +1794,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
         if (success) {
           setNewGuest({ nom: '', table: '', etat: 'simple', category: '' });
           setEditingGuestId(null);
-          setShowAddGuestModal(false);
+          closeAddGuestModal();
           await refreshUserData();
           showToast('success', 'Invité modifié avec succès');
         } else {
@@ -1342,7 +1811,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
 
         if (inviteId) {
           setNewGuest({ nom: '', table: '', etat: 'simple', category: '' });
-          setShowAddGuestModal(false);
+          closeAddGuestModal();
           await refreshUserData();
           showToast('success', 'Invité ajouté avec succès');
         } else {
@@ -1357,11 +1826,29 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     }
   };
 
+  const closeAddGuestModal = () => {
+    setShowAddGuestModal(false);
+    setNewGuest({ nom: '', table: '', etat: 'simple', category: '' });
+    setEditingGuestId(null);
+    setCategorySearchInput('');
+    setTableSearchInput('');
+    setQuickAddCategoryMode(false);
+    setQuickAddCategoryName('');
+    setQuickAddTableMode(false);
+    setQuickAddTableName('');
+    setQuickAddTableSeats(8);
+  };
+
   const openAddGuestModal = () => {
     setNewGuest({ nom: '', table: '', etat: 'simple', category: '' });
     setEditingGuestId(null);
     setCategorySearchInput('');
     setTableSearchInput('');
+    setQuickAddCategoryMode(false);
+    setQuickAddCategoryName('');
+    setQuickAddTableMode(false);
+    setQuickAddTableName('');
+    setQuickAddTableSeats(8);
     setShowAddGuestModal(true);
   };
 
@@ -1375,6 +1862,11 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     setEditingGuestId(guest.id);
     setCategorySearchInput(guest.category || '');
     setTableSearchInput(guest.table || '');
+    setQuickAddCategoryMode(false);
+    setQuickAddCategoryName('');
+    setQuickAddTableMode(false);
+    setQuickAddTableName('');
+    setQuickAddTableSeats(8);
     setShowAddGuestModal(true);
   };
 
@@ -1759,7 +2251,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     
     const messageBody = userData?.invitationMessage || "Nous sommes heureux de vous inviter à célébrer ce moment avec nous.";
     
-    return `_Bonjour_ *${guestLabel}* 💌\n\n_${messageBody}_\n\n_Votre invitation :_\n👉 _${invitationLink}_`;
+    return `Bonjour *${guestLabel}* 💌\n\n${messageBody}\n\nVotre invitation :\n👉 ${invitationLink}`;
   };
 
   const formatNotificationDate = (timestamp: any) => {
@@ -1788,7 +2280,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     const guestLabel = guest.etat === 'couple' ? `Couple ${guest.nom}` : guest.nom;
     
     const messageBody = userData?.invitationMessage || "Nous sommes heureux de vous inviter à célébrer ce moment avec nous.";
-    const message = `_Bonjour_ *${guestLabel}* 💌\n\n_${messageBody}_\n\n_Votre invitation :_\n👉 _${invitationLink}_`;
+    const message = `Bonjour *${guestLabel}* 💌\n\n${messageBody}\n\nVotre invitation :\n👉 ${invitationLink}`;
 
     try {
       await navigator.clipboard.writeText(message);
@@ -1813,7 +2305,7 @@ const Dashboard = ({ selectedTemplate, userData: propUserData, onLogout, onBackT
     const guestLabel = guest.etat === 'couple' ? `Couple ${guest.nom}` : guest.nom;
     
     const messageBody = userData?.invitationMessage || "Nous sommes heureux de vous inviter à célébrer ce moment avec nous.";
-    const message = `_Bonjour_ *${guestLabel}* 💌\n\n_${messageBody}_\n\n_Votre invitation :_\n👉 _${invitationLink}_`;
+    const message = `Bonjour *${guestLabel}* 💌\n\n${messageBody}\n\nVotre invitation :\n👉 ${invitationLink}`;
 
     // 1. Copier automatiquement au presse-papier (Sécurité)
     try {
@@ -1986,8 +2478,25 @@ Découvrez nos services : https://furaha-event.com`;
     }
   };
 
+  // Gestion de la déconnexion : confirmation avant appel
+  const openLogoutConfirm = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Se déconnecter ?',
+      message: 'Vous allez être déconnecté de votre tableau de bord. Voulez-vous continuer ?',
+      type: 'warning',
+      isLoading: false,
+      onConfirm: () => {
+        onLogout();
+      },
+      onClose: () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    } as any);
+  };
+
   if (showProfile && userData) {
-    return <UserProfile userData={userData} onLogout={onLogout} onBack={() => setShowProfile(false)} />;
+    return <UserProfile userData={userData} onLogout={openLogoutConfirm} onBack={() => setShowProfile(false)} />;
   }
 
   if (editingTemplate) {
@@ -2000,13 +2509,15 @@ Découvrez nos services : https://furaha-event.com`;
     );
   }
 
+  const isAdmin = userData?.role === 'admin';
   const tabs = [
     { id: 'overview', label: 'Vue d\'ensemble', icon: BarChart3 },
     { id: 'templates', label: 'Design', icon: Sparkles },
     { id: 'guests', label: 'Invités', icon: Users },
     { id: 'tables', label: 'Tables', icon: Table },
     { id: 'messages', label: 'Messages', icon: MessageCircle },
-    { id: 'games', label: 'Jeux', icon: Gamepad2 }
+    { id: 'games', label: 'Jeux', icon: Gamepad2 },
+    ...(isAdmin ? [{ id: 'users', label: 'Utilisateurs', icon: Shield }] : [])
   ];
 
 
@@ -2051,71 +2562,329 @@ const renderOverview = () => {
   ]);
   const totalTables = uniqueTableNames.size;
 
+  // --- STATS BOISSONS ---
+  const drinkOptions: string[] =
+    (selectedTemplate?.drinkOptions as string[] | undefined) ||
+    (userModels[0]?.drinkOptions as string[] | undefined) ||
+    [];
+
+  const drinkCounts: Record<string, number> = {};
+  let guestsWithDrinkResponse = 0;
+
+  userInvites.forEach((inv: any) => {
+    const raw = (inv.selectedDrink as string) || '';
+    if (raw && raw.trim() !== '') {
+      guestsWithDrinkResponse++;
+      const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+      parts.forEach(d => {
+        drinkCounts[d] = (drinkCounts[d] || 0) + 1;
+      });
+    }
+  });
+
+  const totalInvitesForStats = userInvites.length;
+
+  // Combiner les options définies + celles trouvées dans les réponses
+  const allDrinkNames = Array.from(new Set([
+    ...drinkOptions,
+    ...Object.keys(drinkCounts)
+  ]));
+
+  const drinkStats = allDrinkNames
+    .map(name => ({ name, count: drinkCounts[name] || 0 }))
+    .sort((a, b) => b.count - a.count);
+
+  const maxDrinkCount = Math.max(1, ...drinkStats.map(s => s.count));
+  const drinkResponseRate = totalInvitesForStats > 0
+    ? Math.round((guestsWithDrinkResponse / totalInvitesForStats) * 100)
+    : 0;
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+    <div className="space-y-6 animate-fade-in relative z-10">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {/* Total Invités */}
-        <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-4 md:p-6 border border-amber-200/50 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
-            <div className="p-2 md:p-3 bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl mb-2 md:mb-0 md:mr-4">
-              <Users className="h-5 w-5 md:h-6 md:w-6 text-white" />
+        <div className="relative rounded-2xl p-4 md:p-5 overflow-hidden border group"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+             }}
+             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.30)'; }}
+             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        >
+          <div aria-hidden className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-60 pointer-events-none" style={{ background: 'radial-gradient(closest-side, rgba(251,191,36,0.28), rgba(251,191,36,0) 70%)' }}></div>
+          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left relative z-10">
+            <div className="p-2.5 md:p-3 rounded-xl mb-2 md:mb-0 md:mr-4 flex items-center justify-center relative"
+                 style={{
+                   background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.85)',
+                 }}>
+              <Users className="h-5 w-5 md:h-5.5 md:w-5.5 text-[#0b0f17]" />
             </div>
             <div>
-              <p className="text-amber-700 text-xs md:text-sm font-medium">Total</p>
-              <p className="text-xl md:text-3xl font-bold text-amber-900">{totalGuests}</p>
+              <p className="text-[11px] md:text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(252,211,77,0.9)' }}>Total</p>
+              <p className="text-2xl md:text-3xl font-black mt-0.5 leading-tight" style={{ color: '#ffffff' }}>{totalGuests}</p>
             </div>
           </div>
         </div>
 
         {/* Confirmés */}
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl p-4 md:p-6 border border-emerald-200/50 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
-            <div className="p-2 md:p-3 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl mb-2 md:mb-0 md:mr-4">
-              <User className="h-5 w-5 md:h-6 md:w-6 text-white" />
+        <div className="relative rounded-2xl p-4 md:p-5 overflow-hidden border group"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(16,185,129,0.04) inset',
+               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+             }}
+             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(16,185,129,0.30)'; }}
+             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        >
+          <div aria-hidden className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(closest-side, rgba(16,185,129,0.22), rgba(16,185,129,0) 70%)' }}></div>
+          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left relative z-10">
+            <div className="p-2.5 md:p-3 rounded-xl mb-2 md:mb-0 md:mr-4 flex items-center justify-center"
+                 style={{
+                   background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(16,185,129,0.55), 0 10px 24px -10px rgba(16,185,129,0.65)',
+                 }}>
+              <User className="h-5 w-5 md:h-5.5 md:w-5.5 text-white" />
             </div>
             <div>
-              <p className="text-emerald-700 text-xs md:text-sm font-medium">Confirmés</p>
-              <p className="text-xl md:text-3xl font-bold text-emerald-900">{confirmedGuests}</p>
+              <p className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-emerald-300/90">Confirmés</p>
+              <p className="text-2xl md:text-3xl font-black mt-0.5 leading-tight text-white">{confirmedGuests}</p>
             </div>
           </div>
         </div>
 
         {/* En attente */}
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 md:p-6 border border-purple-200/50 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
-            <div className="p-2 md:p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl mb-2 md:mb-0 md:mr-4">
-              <Calendar className="h-5 w-5 md:h-6 md:w-6 text-white" />
+        <div className="relative rounded-2xl p-4 md:p-5 overflow-hidden border group"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(168,85,247,0.04) inset',
+               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+             }}
+             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.30)'; }}
+             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        >
+          <div aria-hidden className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(closest-side, rgba(168,85,247,0.22), rgba(168,85,247,0) 70%)' }}></div>
+          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left relative z-10">
+            <div className="p-2.5 md:p-3 rounded-xl mb-2 md:mb-0 md:mr-4 flex items-center justify-center"
+                 style={{
+                   background: 'linear-gradient(180deg, #a855f7 0%, #7c3aed 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(168,85,247,0.55), 0 10px 24px -10px rgba(168,85,247,0.65)',
+                 }}>
+              <Calendar className="h-5 w-5 md:h-5.5 md:w-5.5 text-white" />
             </div>
             <div>
-              <p className="text-purple-700 text-xs md:text-sm font-medium">Attente</p>
-              <p className="text-xl md:text-3xl font-bold text-purple-900">{pendingGuests}</p>
+              <p className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-purple-300/90">Attente</p>
+              <p className="text-2xl md:text-3xl font-black mt-0.5 leading-tight text-white">{pendingGuests}</p>
             </div>
           </div>
         </div>
 
         {/* Tables */}
-        <div className="bg-gradient-to-br from-rose-50 to-rose-100 rounded-2xl p-4 md:p-6 border border-rose-200/50 shadow-lg">
-          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left">
-            <div className="p-2 md:p-3 bg-gradient-to-r from-rose-500 to-rose-600 rounded-xl mb-2 md:mb-0 md:mr-4">
-              <Table className="h-5 w-5 md:h-6 md:w-6 text-white" />
+        <div className="relative rounded-2xl p-4 md:p-5 overflow-hidden border group"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(244,114,182,0.04) inset',
+               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+             }}
+             onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(244,114,182,0.30)'; }}
+             onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+        >
+          <div aria-hidden className="absolute -bottom-8 -right-8 w-40 h-40 rounded-full blur-3xl opacity-50 pointer-events-none" style={{ background: 'radial-gradient(closest-side, rgba(244,114,182,0.22), rgba(244,114,182,0) 70%)' }}></div>
+          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left relative z-10">
+            <div className="p-2.5 md:p-3 rounded-xl mb-2 md:mb-0 md:mr-4 flex items-center justify-center"
+                 style={{
+                   background: 'linear-gradient(180deg, #ec4899 0%, #db2777 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(236,72,153,0.55), 0 10px 24px -10px rgba(236,72,153,0.65)',
+                 }}>
+              <Table className="h-5 w-5 md:h-5.5 md:w-5.5 text-white" />
             </div>
             <div>
-              <p className="text-rose-700 text-xs md:text-sm font-medium">Tables</p>
-              <p className="text-xl md:text-3xl font-bold text-rose-900">{totalTables}</p>
+              <p className="text-[11px] md:text-xs font-semibold uppercase tracking-wider text-rose-300/90">Tables</p>
+              <p className="text-2xl md:text-3xl font-black mt-0.5 leading-tight text-white">{totalTables}</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* ===== STATS BOISSONS ===== */}
+      <div className="relative rounded-2xl overflow-hidden p-3 md:p-4.5 border group"
+           style={{
+             background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+             borderColor: 'rgba(255,255,255,0.08)',
+             boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+             transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+           }}
+           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.22)'; }}
+           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
+      >
+        {/* GitHub-style backlight */}
+        <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[40%] pointer-events-none blur-3xl opacity-65"
+             style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.20) 0%, rgba(251,191,36,0.06) 38%, rgba(251,191,36,0) 70%)' }}></div>
+        <div className="flex items-center justify-between mb-2.5 md:mb-3 relative z-10">
+          <div className="flex items-center">
+            <div className="p-1.5 md:p-2 rounded-lg mr-2 md:mr-3 flex items-center justify-center"
+                 style={{
+                   background: 'linear-gradient(180deg, #ec4899 0%, #f43f5e 100%)',
+                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(236,72,153,0.5), 0 8px 20px -8px rgba(236,72,153,0.65)',
+                 }}>
+              <Wine className="h-4 w-4 md:h-5 md:w-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-sm md:text-lg font-extrabold text-white leading-tight">
+                Boissons
+              </h3>
+              <p className="text-[10px] md:text-xs text-white/50 leading-none mt-0.5">
+                {guestsWithDrinkResponse} / {totalInvitesForStats}
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-bold" style={{
+                  background: 'rgba(251,191,36,0.12)',
+                  color: '#fcd34d',
+                  border: '1px solid rgba(251,191,36,0.25)',
+                }}>
+                  {drinkResponseRate}%
+                </span>
+              </p>
+            </div>
+          </div>
+          {userModels.length > 0 && drinkOptions.length > 0 && (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] md:text-xs font-semibold"
+                  style={{
+                    background: 'rgba(236,72,153,0.08)',
+                    color: '#f9a8d4',
+                    border: '1px solid rgba(236,72,153,0.22)',
+                  }}>
+              {drinkOptions.length} option{drinkOptions.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {drinkStats.length === 0 ? (
+          <div className="text-center py-4 md:py-6 rounded-xl border border-dashed relative z-10"
+               style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+            <Wine className="h-8 w-8 md:h-10 md:w-10 text-white/30 mx-auto mb-2 opacity-80" />
+            <p className="text-xs md:text-sm font-medium text-white/45">
+              Aucune réponse de boisson
+            </p>
+          </div>
+        ) : (
+          <div className="relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-2.5">
+              {drinkStats.map((stat, i) => {
+                const percent = Math.round((stat.count / maxDrinkCount) * 100);
+                const exactPercent = guestsWithDrinkResponse > 0
+                  ? Math.round((stat.count / Math.max(1, guestsWithDrinkResponse)) * 100)
+                  : 0;
+
+                const barColor = i === 0
+                  ? ['#fcd34d', '#f59e0b', '#fb923c']
+                  : i === 1
+                  ? ['#fb7185', '#ec4899', '#d946ef']
+                  : i === 2
+                  ? ['#c084fc', '#a855f7', '#6366f1']
+                  : i === 3
+                  ? ['#34d399', '#14b8a6', '#06b6d4']
+                  : ['#38bdf8', '#3b82f6', '#6366f1'];
+
+                return (
+                  <div
+                    key={stat.name}
+                    className="p-2 md:p-2.5 rounded-xl border bg-black/20 hover:bg-white/5 transition-all duration-200 group"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.18)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)'; }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5 gap-2">
+                      <div className="flex items-center min-w-0">
+                        <span className="inline-flex items-center justify-center w-5 h-5 md:w-6 md:h-6 rounded-full mr-1.5 md:mr-2 text-[10px] md:text-xs font-extrabold shrink-0"
+                              style={{
+                                background: `linear-gradient(180deg, ${barColor[0]}33, ${barColor[1]}1a)`,
+                                color: '#fcd34d',
+                                border: `1px solid rgba(251,191,36,0.22)`,
+                              }}>
+                          {i + 1}
+                        </span>
+                        <h4 className="font-semibold text-xs md:text-sm text-white truncate">
+                          {stat.name}
+                        </h4>
+                      </div>
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] md:text-xs font-bold border shrink-0"
+                            style={{
+                              background: `linear-gradient(180deg, ${barColor[0]}15, ${barColor[1]}0a)`,
+                              borderColor: 'rgba(255,255,255,0.08)',
+                              color: '#fff',
+                            }}>
+                        {stat.count}
+                        <span className="ml-1 opacity-70 font-medium">
+                          · {exactPercent}%
+                        </span>
+                      </span>
+                    </div>
+                    <div className="relative h-1.5 md:h-2 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      <div
+                        className="absolute inset-y-0 left-0 rounded-full shadow-inner transition-all duration-700 ease-out"
+                        style={{
+                          width: `${percent}%`,
+                          background: `linear-gradient(90deg, ${barColor[0]}, ${barColor[1]}, ${barColor[2]})`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {totalInvitesForStats > guestsWithDrinkResponse && (
+              <div className="mt-2.5 md:mt-3 pt-2.5 relative z-10" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] md:text-xs font-medium text-white/45 flex items-center">
+                    <Clock className="h-3 w-3 md:h-3.5 md:w-3.5 mr-1 opacity-75" />
+                    En attente
+                  </span>
+                  <span className="text-[10px] md:text-xs font-semibold text-white/55">
+                    {totalInvitesForStats - guestsWithDrinkResponse}
+                  </span>
+                </div>
+                <div className="relative h-1.5 md:h-2 w-full rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full shadow-inner transition-all duration-700 ease-out"
+                    style={{
+                      width: `${totalInvitesForStats > 0 ? Math.round(((totalInvitesForStats - guestsWithDrinkResponse) / totalInvitesForStats) * 100) : 0}%`,
+                      background: 'linear-gradient(90deg, rgba(255,255,255,0.25), rgba(255,255,255,0.45), rgba(255,255,255,0.25))',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {/* ===== FIN STATS BOISSONS ===== */}
+
         {/* Actions rapides */}
-        <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-4 md:mb-6">
+        <div className="relative rounded-2xl overflow-hidden border p-4 md:p-6"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+             }}>
+          <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[45%] pointer-events-none blur-3xl opacity-55"
+               style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.05) 38%, rgba(251,191,36,0) 70%)' }}></div>
+          <h3 className="relative z-10 text-lg md:text-xl font-extrabold tracking-tight text-white mb-4 md:mb-6">
             Actions rapides
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+          <div className="relative z-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
             <button
               onClick={openAddGuestModal}
-              className="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-3 md:p-4 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-glow-amber transform hover:scale-105 text-sm md:text-base"
+              className="p-3 md:p-4 rounded-xl transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center transform hover:scale-[1.03] text-sm md:text-base"
+              style={{
+                background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                color: '#0b0f17',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 26px -10px rgba(251,191,36,0.55)',
+              }}
             >
               <Plus className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
               <span>Invité</span>
@@ -2123,7 +2892,12 @@ const renderOverview = () => {
             
             <button
               onClick={() => setActiveTab('tables')}
-              className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-3 md:p-4 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
+              className="p-3 md:p-4 rounded-xl transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center transform hover:scale-[1.03] text-sm md:text-base"
+              style={{
+                background: 'linear-gradient(180deg, #a855f7 0%, #7c3aed 100%)',
+                color: '#ffffff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(168,85,247,0.45), 0 10px 26px -10px rgba(168,85,247,0.55)',
+              }}
             >
               <Table className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
               <span>Tables</span>
@@ -2131,23 +2905,68 @@ const renderOverview = () => {
             
             <button
               onClick={() => setActiveTab('templates')}
-              className="bg-gradient-to-r from-rose-500 to-rose-600 text-white p-3 md:p-4 rounded-xl hover:from-rose-600 hover:to-rose-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
+              className="p-3 md:p-4 rounded-xl transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center transform hover:scale-[1.03] text-sm md:text-base"
+              style={{
+                background: 'linear-gradient(180deg, #ec4899 0%, #e11d48 100%)',
+                color: '#ffffff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(236,72,153,0.45), 0 10px 26px -10px rgba(236,72,153,0.55)',
+              }}
             >
               <Eye className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
               <span>Design</span>
             </button>
 
-            <button
-              onClick={() => window.open(`/checkin/${userData?.id}`, '_blank')}
-              className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white p-3 md:p-4 rounded-xl hover:from-emerald-600 hover:to-teal-600 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
-            >
-              <Check className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
-              <span>Check-in</span>
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => window.open(`/checkin/${userData?.id}`, '_blank')}
+                className="p-3 md:p-4 rounded-xl transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center transform hover:scale-[1.03] text-sm md:text-base"
+                style={{
+                  background: 'linear-gradient(180deg, #10b981 0%, #0d9488 100%)',
+                  color: '#ffffff',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(16,185,129,0.45), 0 10px 26px -10px rgba(16,185,129,0.55)',
+                }}
+              >
+                <Check className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
+                <span>Check-in</span>
+              </button>
+              <button
+                onClick={async () => {
+                  const url = `${window.location.origin}/checkin/${userData?.id}`;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    showToast('success', 'Lien Check-in copié dans le presse-papier');
+                  } catch {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = url;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('success', 'Lien Check-in copié dans le presse-papier');
+                  }
+                }}
+                className="px-3 py-2 rounded-lg transition-all duration-300 font-semibold flex items-center justify-center gap-1.5 text-xs"
+                style={{
+                  background: 'rgba(16,185,129,0.1)',
+                  color: '#6ee7b7',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.16)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)'; }}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span>Copier le lien</span>
+              </button>
+            </div>
 
             <button
               onClick={() => setShowReminderModal(true)}
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-3 md:p-4 rounded-xl hover:from-teal-600 hover:to-emerald-700 transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center shadow-lg transform hover:scale-105 text-sm md:text-base"
+              className="p-3 md:p-4 rounded-xl transition-all duration-300 font-semibold flex flex-col md:flex-row items-center justify-center transform hover:scale-[1.03] text-sm md:text-base"
+              style={{
+                background: 'linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%)',
+                color: '#ffffff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(14,165,233,0.45), 0 10px 26px -10px rgba(14,165,233,0.55)',
+              }}
             >
               <Calendar className="h-5 w-5 md:mr-2 mb-1 md:mb-0" />
               <span>Rappel</span>
@@ -2157,22 +2976,33 @@ const renderOverview = () => {
 
         {/* Template sélectionné */}
         {selectedTemplate && (
-          <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-4 md:p-6">
-            <h3 className="text-lg md:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-4 md:mb-6">
+          <div className="relative rounded-2xl overflow-hidden border p-4 md:p-6"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+                 boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+               }}>
+            <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[45%] pointer-events-none blur-3xl opacity-55"
+                 style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.05) 38%, rgba(251,191,36,0) 70%)' }}></div>
+            <h3 className="relative z-10 text-lg md:text-xl font-extrabold tracking-tight text-white mb-4 md:mb-6">
               Template sélectionné
             </h3>
-            <div className="bg-gradient-to-r from-amber-50 to-rose-50/30 rounded-xl p-4 md:p-6 border border-amber-200/50">
+            <div className="relative z-10 rounded-xl p-4 md:p-6 border"
+                 style={{
+                   background: 'linear-gradient(135deg, rgba(251,191,36,0.08) 0%, rgba(236,72,153,0.04) 60%, rgba(251,191,36,0.02) 100%)',
+                   borderColor: 'rgba(251,191,36,0.22)',
+                 }}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="min-w-0">
-                  <h4 className="text-base md:text-lg font-semibold text-slate-900 mb-1 md:mb-2 truncate">{selectedTemplate.name}</h4>
-                  <p className="text-sm text-slate-600 mb-3 md:mb-4 truncate">{selectedTemplate.title}</p>
-                  <div className="flex items-center space-x-4 text-xs md:text-sm text-slate-600">
+                  <h4 className="text-base md:text-lg font-semibold text-white mb-1 md:mb-2 truncate">{selectedTemplate.name}</h4>
+                  <p className="text-sm text-white/65 mb-3 md:mb-4 truncate">{selectedTemplate.title}</p>
+                  <div className="flex items-center space-x-4 text-xs md:text-sm text-white/60">
                     <div className="flex items-center">
-                      <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                      <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1" style={{ color: '#fcd34d' }} />
                       <span>{selectedTemplate.eventDate}</span>
                     </div>
                     <div className="flex items-center">
-                      <Users className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                      <Users className="h-3 w-3 md:h-4 md:w-4 mr-1" style={{ color: '#fcd34d' }} />
                       <span>{selectedTemplate.eventTime}</span>
                     </div>
                   </div>
@@ -2180,7 +3010,12 @@ const renderOverview = () => {
                 <div className="flex sm:flex-col lg:flex-row gap-2">
                   <button
                     onClick={() => handleEditTemplate(selectedTemplate)}
-                    className="flex-1 sm:flex-none bg-amber-500 text-white px-4 py-2.5 rounded-lg hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center text-sm"
+                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-lg transition-all duration-300 font-semibold flex items-center justify-center text-sm"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.55)',
+                    }}
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Personnaliser
@@ -2192,48 +3027,74 @@ const renderOverview = () => {
         )}
 
         {/* Activité récente */}
-        <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 p-6">
-          <h3 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent mb-6">
+        <div className="relative rounded-2xl overflow-hidden border p-6"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+             }}>
+          <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[45%] pointer-events-none blur-3xl opacity-50"
+               style={{ background: 'radial-gradient(ellipse at center, rgba(236,72,153,0.2) 0%, rgba(236,72,153,0.04) 38%, rgba(236,72,153,0) 70%)' }}></div>
+          <h3 className="relative z-10 text-xl font-extrabold tracking-tight text-white mb-6">
             Activité récente
           </h3>
-          <div className="space-y-4">
+          <div className="relative z-10 space-y-3">
             {guests.slice(0, 5).map((guest, index) => (
               <div
                 key={guest.id}
-                className="flex items-center justify-between p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl border border-neutral-200/50 animate-slide-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
+                className="flex items-center justify-between p-4 rounded-xl border animate-slide-up group"
+                style={{
+                  animationDelay: `${index * 0.1}s`,
+                  background: 'rgba(255,255,255,0.02)',
+                  borderColor: 'rgba(255,255,255,0.06)',
+                  transition: 'all 300ms cubic-bezier(0.22,1,0.36,1)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.22)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
               >
                 <div className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg ${
-                    guest.etat === 'couple' 
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500' 
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                  }`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm`}
+                       style={{
+                         background: guest.etat === 'couple'
+                           ? 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)'
+                           : 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)',
+                         boxShadow: guest.etat === 'couple'
+                           ? '0 8px 22px -6px rgba(236,72,153,0.55)'
+                           : '0 8px 22px -6px rgba(251,191,36,0.5)',
+                       }}>
                     {guest.nom.split(' ').map(n => n[0]).join('').substring(0, 2)}
                   </div>
                   <div className="ml-3">
-                    <p className="font-medium text-slate-900">{guest.nom}</p>
-                    <p className="text-sm text-slate-600">Table: {guest.table}</p>
+                    <p className="font-semibold text-white">{guest.nom}</p>
+                    <p className="text-sm text-white/55">Table: {guest.table}</p>
                   </div>
                 </div>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                  guest.confirmed 
-                    ? 'bg-emerald-100 text-emerald-800' 
-                    : 'bg-amber-100 text-amber-800'
-                }`}>
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold`}
+                      style={{
+                        background: guest.confirmed
+                          ? 'rgba(16,185,129,0.15)'
+                          : 'rgba(251,191,36,0.15)',
+                        color: guest.confirmed ? '#6ee7b7' : '#fcd34d',
+                        border: `1px solid ${guest.confirmed ? 'rgba(16,185,129,0.35)' : 'rgba(251,191,36,0.35)'}`,
+                      }}>
                   {guest.confirmed ? 'Confirmé' : 'En attente'}
                 </span>
               </div>
             ))}
             
             {guests.length === 0 && (
-              <div className="text-center py-8">
-                <Users className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-neutral-500 mb-2">Aucun invité ajouté</h4>
-                <p className="text-neutral-400 mb-6">Commencez par ajouter vos premiers invités</p>
+              <div className="relative z-10 text-center py-8">
+                <Users className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                <h4 className="text-lg font-semibold text-white/70 mb-2">Aucun invité ajouté</h4>
+                <p className="text-white/50 mb-6">Commencez par ajouter vos premiers invités</p>
                 <button
                   onClick={openAddGuestModal}
-                  className="bg-amber-500 text-white px-6 py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold"
+                  className="px-6 py-3 rounded-xl transition-all duration-300 font-semibold"
+                  style={{
+                    background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    color: '#0b0f17',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 28px -10px rgba(251,191,36,0.55)',
+                  }}
                 >
                   Ajouter un invité
                 </button>
@@ -2249,10 +3110,10 @@ const renderOverview = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          <h3 className="text-2xl font-extrabold tracking-tight text-white">
             Mes Templates
           </h3>
-          <p className="text-slate-600 mt-1">Gérez vos modèles d'invitation personnalisés</p>
+          <p className="text-white/55 mt-1">Gérez vos modèles d'invitation personnalisés</p>
         </div>
       </div>
 
@@ -2260,28 +3121,47 @@ const renderOverview = () => {
         {userModels.map((template, index) => (
           <div
             key={template.id}
-            className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 overflow-hidden hover:shadow-glow-amber transition-all duration-500 animate-slide-up"
-            style={{ animationDelay: `${index * 0.1}s` }}
+            className="relative rounded-2xl overflow-hidden border group animate-slide-up"
+            style={{
+              background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+              borderColor: 'rgba(255,255,255,0.08)',
+              boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.04) inset',
+              transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
+              animationDelay: `${index * 0.1}s`,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.30)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
           >
-            <div className="relative h-48 overflow-hidden">
+            <div aria-hidden className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[45%] pointer-events-none blur-3xl opacity-60"
+                 style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.22) 0%, rgba(251,191,36,0.06) 38%, rgba(251,191,36,0) 70%)' }}></div>
+            <div className="relative h-48 overflow-hidden border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
               <img
                 src={template.backgroundImage}
                 alt={template.name}
-                className="w-full h-full object-cover hover:scale-110 transition-transform duration-700"
+                className="w-full h-full object-cover hover:scale-[1.04] transition-transform duration-700"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+              <div className="absolute inset-0"
+                   style={{
+                     background: 'linear-gradient(180deg, rgba(10,13,20,0.05) 0%, rgba(10,13,20,0.5) 55%, rgba(10,13,20,0.92) 100%)',
+                   }}
+              />
               <div className="absolute bottom-4 left-4 right-4">
                 <h4 className="text-white font-bold text-lg drop-shadow-lg">{template.title}</h4>
               </div>
             </div>
             
-            <div className="p-6">
+            <div className="p-6 relative z-10">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h5 className="font-semibold text-slate-900">{template.name}</h5>
-                  <p className="text-sm text-slate-600 capitalize">{template.category}</p>
+                  <h5 className="font-semibold text-white">{template.name}</h5>
+                  <p className="text-sm text-white/55 capitalize">{template.category}</p>
                 </div>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
+                      style={{
+                        background: 'rgba(251,191,36,0.12)',
+                        color: '#fcd34d',
+                        border: '1px solid rgba(251,191,36,0.28)',
+                      }}>
                   <Crown className="h-3 w-3 mr-1" />
                   Premium
                 </span>
@@ -2290,17 +3170,15 @@ const renderOverview = () => {
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleEditTemplate(template)}
-                  className="flex-1 bg-amber-100 text-amber-700 px-3 py-2 rounded-lg hover:bg-amber-200 transition-all duration-200 font-medium flex items-center justify-center text-sm"
+                  className="flex-1 px-3 py-2.5 rounded-lg transition-all duration-300 font-semibold flex items-center justify-center text-sm group-hover:scale-[1.01]"
+                  style={{
+                    background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    color: '#0b0f17',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.55)',
+                  }}
                 >
                   <Edit className="h-4 w-4 mr-1" />
                   Modifier
-                </button>
-                <button
-                  onClick={() => handleDeleteTemplate(template.id)}
-                  className="flex-1 bg-rose-100 text-rose-700 px-3 py-2 rounded-lg hover:bg-rose-200 transition-all duration-200 font-medium flex items-center justify-center text-sm"
-                >
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Supprimer
                 </button>
               </div>
             </div>
@@ -2309,13 +3187,22 @@ const renderOverview = () => {
       </div>
 
       {userModels.length === 0 && (
-        <div className="text-center py-12">
-          <Sparkles className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-neutral-500 mb-2">Aucun template personnalisé</h3>
-          <p className="text-neutral-400 mb-6">Créez votre premier template en sélectionnant un modèle</p>
+        <div className="relative rounded-2xl p-12 text-center overflow-hidden border"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+             }}>
+          <Sparkles className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(252,211,77,0.55)' }} />
+          <h3 className="text-lg font-semibold text-white/80 mb-2">Aucun template personnalisé</h3>
+          <p className="text-white/50 mb-6">Créez votre premier template en sélectionnant un modèle</p>
           <button
             onClick={() => onBackToHome ? onBackToHome() : window.location.reload()}
-            className="bg-amber-500 text-white px-6 py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold"
+            className="px-6 py-3 rounded-lg transition-all duration-300 font-semibold"
+            style={{
+              background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+              color: '#0b0f17',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 30px -10px rgba(251,191,36,0.55)',
+            }}
           >
             Retour à l'accueil
           </button>
@@ -2355,36 +3242,38 @@ const renderOverview = () => {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          <h3 className="text-2xl font-extrabold tracking-tight text-white">
             Gestion des Invités
           </h3>
-          <p className="text-slate-600 mt-1">Ajoutez et gérez vos invités</p>
+          <p className="text-white/55 mt-1">Ajoutez et gérez vos invités</p>
         </div>
-        
-        {subscription && subscription.plan === 'free' && (
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl p-4 border border-amber-200/50">
-            <div className="flex items-center">
-              <Crown className="h-5 w-5 text-amber-600 mr-2" />
-              <div>
-                <p className="text-amber-800 font-semibold text-sm">Plan Gratuit</p>
-                <p className="text-amber-700 text-xs">{getRemainingInvites()} invitations restantes</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Barre de recherche et filtres */}
-      <div className="bg-white rounded-xl shadow-sm border border-neutral-200/50 p-3 md:p-4">
-        <div className="flex flex-col gap-3">
+      <div className="relative rounded-2xl overflow-hidden border p-3 md:p-4"
+           style={{
+             background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+             borderColor: 'rgba(255,255,255,0.08)',
+             boxShadow: '0 20px 60px -30px rgba(0,0,0,0.6)',
+           }}>
+        <div aria-hidden className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-[92%] h-[55%] pointer-events-none blur-3xl opacity-50"
+             style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.04) 38%, rgba(251,191,36,0) 70%)' }}></div>
+        <div className="relative z-10 flex flex-col gap-3">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5" style={{ color: 'rgba(255,255,255,0.4)' }} />
             <input
               type="text"
               placeholder="Rechercher un nom..."
               value={guestSearchTerm}
               onChange={(e) => setGuestSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg transition-all duration-200 text-sm outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#ffffff',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
           </div>
           
@@ -2393,53 +3282,74 @@ const renderOverview = () => {
               <select
                 value={guestFilterStatus}
                 onChange={(e) => setGuestFilterStatus(e.target.value as any)}
-                className="pl-3 pr-8 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 appearance-none bg-white text-xs font-medium"
+                className="pl-3 pr-8 py-2 rounded-full appearance-none text-xs font-semibold outline-none cursor-pointer guest-filter-select"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                }}
               >
                 <option value="all">Tous statuts</option>
                 <option value="confirmed">Confirmés</option>
                 <option value="pending">Attente</option>
               </select>
-              <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-neutral-400 pointer-events-none" />
+              <Filter className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 pointer-events-none" style={{ color: 'rgba(255,255,255,0.4)' }} />
             </div>
 
             <div className="relative flex-shrink-0">
               <select
                 value={guestFilterTable}
                 onChange={(e) => setGuestFilterTable(e.target.value)}
-                className="pl-3 pr-8 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 appearance-none bg-white text-xs font-medium"
+                className="pl-3 pr-8 py-2 rounded-full appearance-none text-xs font-semibold outline-none cursor-pointer guest-filter-select"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                }}
               >
                 <option value="all">Toutes tables</option>
                 {availableTables.map((table) => (
                   <option key={table.name} value={table.name}>{table.name}</option>
                 ))}
               </select>
-              <Table className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-neutral-400 pointer-events-none" />
+              <Table className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 pointer-events-none" style={{ color: 'rgba(255,255,255,0.4)' }} />
             </div>
 
             <div className="relative flex-shrink-0">
               <select
                 value={guestFilterCategory}
                 onChange={(e) => setGuestFilterCategory(e.target.value)}
-                className="pl-3 pr-8 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 appearance-none bg-white text-xs font-medium"
+                className="pl-3 pr-8 py-2 rounded-full appearance-none text-xs font-semibold outline-none cursor-pointer guest-filter-select"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                }}
               >
                 <option value="all">Catégories</option>
                 {availableCategories.map(catName => (
                   <option key={catName} value={catName}>{catName}</option>
                 ))}
               </select>
-              <Tag className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-neutral-400 pointer-events-none" />
+              <Tag className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 pointer-events-none" style={{ color: 'rgba(255,255,255,0.4)' }} />
             </div>
 
             <div className="relative flex-shrink-0">
               <select
                 value={guestSortBy}
                 onChange={(e) => setGuestSortBy(e.target.value as any)}
-                className="pl-3 pr-8 py-1.5 border border-neutral-300 rounded-full focus:ring-2 focus:ring-amber-500 appearance-none bg-white text-xs font-medium"
+                className="pl-3 pr-8 py-2 rounded-full appearance-none text-xs font-semibold outline-none cursor-pointer guest-sort-select"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.85)',
+                }}
               >
                 <option value="name">Trier par nom</option>
                 <option value="table">Trier par table</option>
+                <option value="category">Trier par catégorie</option>
               </select>
-              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-neutral-400 pointer-events-none font-bold text-[8px]">AZ</div>
+              <div className="absolute right-2 top-1/2 transform -translate-y-1/2 h-3 w-3 pointer-events-none font-bold text-[8px]" style={{ color: 'rgba(255,255,255,0.4)' }}>AZ</div>
             </div>
           </div>
         </div>
@@ -2447,20 +3357,29 @@ const renderOverview = () => {
 
       {/* Barre d'actions groupées */}
       {selectedGuestIds.length > 0 && (
-        <div className="bg-amber-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl shadow-luxury-amber flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up sticky top-20 z-30">
+        <div className="px-4 md:px-6 py-3 md:py-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 animate-slide-up sticky top-20 z-30 border"
+             style={{
+               background: 'linear-gradient(135deg, rgba(251,191,36,0.22) 0%, rgba(245,158,11,0.14) 100%)',
+               borderColor: 'rgba(251,191,36,0.35)',
+               boxShadow: '0 20px 60px -20px rgba(251,191,36,0.35), 0 0 0 1px rgba(251,191,36,0.12) inset',
+               backdropFilter: 'blur(12px)',
+             }}>
           <div className="flex items-center">
-            <div className="bg-white/20 p-2 rounded-lg mr-3 md:mr-4">
-              <Users className="h-4 w-4 md:h-5 md:w-5 text-white" />
+            <div className="p-2 rounded-lg mr-3 md:mr-4" style={{ background: 'rgba(255,255,255,0.1)' }}>
+              <Users className="h-4 w-4 md:h-5 md:w-5" style={{ color: '#fcd34d' }} />
             </div>
             <div>
-              <p className="font-bold text-sm md:text-base">{selectedGuestIds.length} sélectionné{selectedGuestIds.length > 1 ? 's' : ''}</p>
-              <p className="text-amber-100 text-[10px] md:text-xs">Actions groupées disponibles</p>
+              <p className="font-extrabold text-sm md:text-base text-white">{selectedGuestIds.length} sélectionné{selectedGuestIds.length > 1 ? 's' : ''}</p>
+              <p className="text-[10px] md:text-xs text-white/60">Actions groupées disponibles</p>
             </div>
           </div>
           <div className="flex items-center space-x-2 md:space-x-3 w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             <button
               onClick={() => setSelectedGuestIds([])}
-              className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all duration-200 text-xs md:text-sm font-medium whitespace-nowrap"
+              className="flex-1 sm:flex-none px-3 md:px-4 py-2 rounded-xl transition-all duration-200 text-xs md:text-sm font-semibold whitespace-nowrap"
+              style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.08)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
             >
               Annuler
             </button>
@@ -2469,14 +3388,24 @@ const renderOverview = () => {
                 setSentGuestIds([]);
                 setShowBulkSendModal(true);
               }}
-              className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-amber-500 hover:bg-amber-400 rounded-xl transition-all duration-200 text-xs md:text-sm font-bold flex items-center justify-center shadow-lg whitespace-nowrap"
+              className="flex-1 sm:flex-none px-3 md:px-4 py-2 rounded-xl transition-all duration-200 text-xs md:text-sm font-bold flex items-center justify-center whitespace-nowrap"
+              style={{
+                background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                color: '#0b0f17',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.55)',
+              }}
             >
               <MessageSquare className="h-4 w-4 mr-1.5 md:mr-2" />
               Partager
             </button>
             <button
               onClick={handleBulkDelete}
-              className="flex-1 sm:flex-none px-3 md:px-4 py-2 bg-rose-500 hover:bg-rose-600 rounded-xl transition-all duration-200 text-xs md:text-sm font-bold flex items-center justify-center shadow-lg whitespace-nowrap"
+              className="flex-1 sm:flex-none px-3 md:px-4 py-2 rounded-xl transition-all duration-200 text-xs md:text-sm font-bold flex items-center justify-center whitespace-nowrap"
+              style={{
+                background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
+                color: '#ffffff',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(239,68,68,0.45), 0 10px 24px -10px rgba(239,68,68,0.5)',
+              }}
             >
               <Trash2 className="h-4 w-4 mr-1.5 md:mr-2" />
               Supprimer
@@ -2488,43 +3417,74 @@ const renderOverview = () => {
       {/* Formulaire d'ajout d'invité */}
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <div>
-          <h4 className="text-base sm:text-lg font-semibold text-slate-900">
+          <h4 className="text-base sm:text-lg font-semibold text-white">
             Liste des invités ({filteredGuests.length} / {guests.length})
           </h4>
-          <p className="text-slate-600 text-xs sm:text-sm">Gérez vos invités et leurs confirmations</p>
+          <p className="text-white/55 text-xs sm:text-sm">Gérez vos invités et leurs confirmations</p>
         </div>
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap lg:flex-nowrap gap-1.5 sm:gap-2 md:gap-3 w-full lg:w-auto">
           <button
             onClick={() => setShowCategoryManager(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
+            className="flex-1 sm:flex-none px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-[10px] sm:text-xs md:text-sm"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
           >
-            <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
+            <Tag className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" style={{ color: '#a78bfa' }} />
             Catégories
           </button>
           <button
             onClick={() => setShowImportModal(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
+            className="flex-1 sm:flex-none px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-[10px] sm:text-xs md:text-sm"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
           >
-            <FileSpreadsheet className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
+            <FileSpreadsheet className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" style={{ color: '#34d399' }} />
             Importer
           </button>
           <button
             onClick={() => setShowExportModal(true)}
-            className="flex-1 sm:flex-none bg-white text-slate-700 border border-neutral-300 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:bg-neutral-50 transition-all duration-300 font-semibold flex items-center justify-center shadow-sm text-[10px] sm:text-xs md:text-sm"
+            className="flex-1 sm:flex-none px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-[10px] sm:text-xs md:text-sm"
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              color: 'rgba(255,255,255,0.8)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
           >
-            <Download className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
+            <Download className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" style={{ color: '#60a5fa' }} />
             Exporter
           </button>
           <button
             onClick={() => setShowReminderModal(true)}
-            className="flex-1 sm:flex-none bg-gradient-to-r from-purple-500 to-purple-600 text-white px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-purple text-[10px] sm:text-xs md:text-sm"
+            className="flex-1 sm:flex-none px-2 sm:px-3 md:px-4 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-[10px] sm:text-xs md:text-sm transform hover:scale-[1.02]"
+            style={{
+              background: 'linear-gradient(180deg, #a855f7 0%, #7c3aed 100%)',
+              color: '#ffffff',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.2) inset, 0 0 0 1px rgba(168,85,247,0.45), 0 10px 28px -10px rgba(168,85,247,0.55)',
+            }}
           >
             <Bell className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Rappel
           </button>
           <button
             onClick={openAddGuestModal}
-            className="col-span-2 sm:flex-none bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 sm:px-4 md:px-6 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center justify-center shadow-glow-amber transform hover:scale-105 text-[10px] sm:text-xs md:text-sm"
+            className="col-span-2 sm:flex-none px-3 sm:px-4 md:px-6 py-1.5 sm:py-2.5 md:py-3 rounded-lg sm:rounded-xl transition-all duration-300 font-semibold flex items-center justify-center transform hover:scale-[1.02] text-[10px] sm:text-xs md:text-sm"
+            style={{
+              background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+              color: '#0b0f17',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 30px -10px rgba(251,191,36,0.55)',
+            }}
           >
             <Plus className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 mr-1 sm:mr-1.5 md:mr-2" />
             Ajouter invité
@@ -2533,20 +3493,39 @@ const renderOverview = () => {
       </div>
 
       {/* Liste des invités */}
-      <div className="bg-white rounded-2xl shadow-luxury border border-neutral-200/50 overflow-hidden">
-        <div className="px-3 py-2 sm:p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30 flex items-center justify-between">
-          <h4 className="text-sm sm:text-lg font-semibold text-slate-900">Liste des invités</h4>
+      <div className="relative rounded-2xl sm:overflow-hidden border"
+           style={{
+             background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+             borderColor: 'rgba(255,255,255,0.08)',
+             boxShadow: '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.03) inset',
+           }}>
+        <div aria-hidden className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[92%] h-[40%] pointer-events-none blur-3xl opacity-50"
+             style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.2) 0%, rgba(251,191,36,0.04) 38%, rgba(251,191,36,0) 70%)' }}></div>
+        <div className="relative z-10 px-3 py-2 sm:p-6 border-b flex items-center justify-between rounded-t-2xl"
+             style={{
+               borderColor: 'rgba(255,255,255,0.06)',
+               background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+             }}>
+          <h4 className="text-sm sm:text-lg font-semibold text-white">Liste des invités</h4>
           {filteredGuests.length > 0 && (
             <button
               onClick={() => toggleSelectAll(filteredGuests)}
-              className="text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors flex items-center"
+              className="text-xs sm:text-sm font-semibold transition-colors flex items-center"
+              style={{ color: '#fcd34d' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fbbf24'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
             >
               <div className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border-2 mr-1.5 sm:mr-2 flex items-center justify-center transition-all ${
                 selectedGuestIds.length === filteredGuests.length 
-                  ? 'bg-amber-500 border-amber-500' 
-                  : 'border-neutral-300'
-              }`}>
-                {selectedGuestIds.length === filteredGuests.length && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />}
+                  ? '' 
+                  : ''
+              }`}
+                   style={{
+                     borderColor: selectedGuestIds.length === filteredGuests.length ? '#f59e0b' : 'rgba(255,255,255,0.25)',
+                     background: selectedGuestIds.length === filteredGuests.length ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'transparent',
+                     boxShadow: selectedGuestIds.length === filteredGuests.length ? '0 6px 18px -4px rgba(251,191,36,0.5)' : 'none',
+                   }}>
+                {selectedGuestIds.length === filteredGuests.length && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" style={{ color: '#0b0f17' }} />}
               </div>
               <span className="hidden sm:inline">{selectedGuestIds.length === filteredGuests.length ? 'Tout désélectionner' : 'Tout sélectionner'}</span>
               <span className="sm:hidden">{selectedGuestIds.length === filteredGuests.length ? 'Tout' : 'Tout'}</span>
@@ -2554,78 +3533,202 @@ const renderOverview = () => {
           )}
         </div>
         
-        <div className="divide-y divide-neutral-200/50">
+        <div className="relative z-10">
           {filteredGuests.map((guest, index) => (
             <div
               key={guest.id}
-              className={`px-3 py-2 sm:p-6 transition-all duration-300 animate-slide-up flex items-center ${
-                selectedGuestIds.includes(guest.id) 
-                  ? 'bg-amber-50/50' 
-                  : 'hover:bg-gradient-to-r hover:from-neutral-50/50 hover:to-amber-50/30'
-              }`}
-              style={{ animationDelay: `${index * 0.05}s` }}
+              className={`px-3 py-2 sm:p-6 transition-all duration-300 animate-slide-up flex items-center border-t ${index === filteredGuests.length - 1 ? 'sm:rounded-b-none rounded-b-2xl' : ''}`}
+              style={{
+                animationDelay: `${index * 0.05}s`,
+                borderColor: selectedGuestIds.includes(guest.id) ? 'rgba(251,191,36,0.18)' : 'rgba(255,255,255,0.05)',
+                background: selectedGuestIds.includes(guest.id)
+                  ? 'linear-gradient(90deg, rgba(251,191,36,0.08) 0%, rgba(251,191,36,0.02) 60%, rgba(251,191,36,0) 100%)'
+                  : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!selectedGuestIds.includes(guest.id)) {
+                  e.currentTarget.style.background = 'linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 60%, rgba(255,255,255,0) 100%)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!selectedGuestIds.includes(guest.id)) {
+                  e.currentTarget.style.background = 'transparent';
+                }
+              }}
             >
               {/* Checkbox de sélection */}
               <button
                 onClick={() => toggleGuestSelection(guest.id)}
                 className="mr-2 sm:mr-4 flex-shrink-0"
               >
-                <div className={`w-4 h-4 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                  selectedGuestIds.includes(guest.id) 
-                    ? 'bg-amber-500 border-amber-500 shadow-glow-amber' 
-                    : 'border-neutral-300 hover:border-amber-400'
-                }`}>
-                  {selectedGuestIds.includes(guest.id) && <Check className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-white" />}
+                <div className={`w-4 h-4 sm:w-6 sm:h-6 rounded-lg border-2 flex items-center justify-center transition-all`}
+                     style={{
+                       borderColor: selectedGuestIds.includes(guest.id) ? '#f59e0b' : 'rgba(255,255,255,0.25)',
+                       background: selectedGuestIds.includes(guest.id) ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'transparent',
+                       boxShadow: selectedGuestIds.includes(guest.id) ? '0 6px 18px -4px rgba(251,191,36,0.5)' : 'none',
+                     }}>
+                  {selectedGuestIds.includes(guest.id) && <Check className="h-2.5 w-2.5 sm:h-4 sm:w-4" style={{ color: '#0b0f17' }} />}
                 </div>
               </button>
 
               <div className="flex-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
                 <div className="flex items-center">
-                  <div className={`w-7 h-7 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold shadow-lg text-[10px] sm:text-base ${
-                    guest.etat === 'couple' 
-                      ? 'bg-gradient-to-r from-pink-500 to-purple-500' 
-                      : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                  }`}>
+                  <div className={`w-7 h-7 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-semibold text-[10px] sm:text-base`}
+                       style={{
+                         background: guest.etat === 'couple'
+                           ? 'linear-gradient(135deg, #ec4899 0%, #a855f7 100%)'
+                           : 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)',
+                         boxShadow: guest.etat === 'couple'
+                           ? '0 8px 22px -6px rgba(236,72,153,0.55)'
+                           : '0 8px 22px -6px rgba(251,191,36,0.5)',
+                       }}>
                     {guest.nom.split(' ').map(n => n[0]).join('').substring(0, 2)}
                   </div>
-                  <div className="ml-2 sm:ml-4">
-                    <h5 className="font-semibold text-slate-900 text-sm sm:text-lg truncate max-w-[150px] sm:max-w-none">{guest.nom}</h5>
-                    <div className="flex items-center flex-wrap gap-1 sm:gap-4 text-[10px] sm:text-sm text-slate-600">
+                  <div className="ml-2 sm:ml-4 flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <h5 className="font-semibold text-white text-sm sm:text-lg truncate max-w-[150px] sm:max-w-none">{guest.nom}</h5>
+                      
+                      <div className="sm:hidden flex items-center gap-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold`}
+                              style={{
+                                background: guest.confirmed
+                                  ? 'rgba(16,185,129,0.15)'
+                                  : 'rgba(251,191,36,0.15)',
+                                color: guest.confirmed ? '#6ee7b7' : '#fcd34d',
+                                border: `1px solid ${guest.confirmed ? 'rgba(16,185,129,0.35)' : 'rgba(251,191,36,0.35)'}`,
+                              }}>
+                          {guest.confirmed ? '✓' : '!'}
+                        </span>
+                        
+                        <button
+                          onClick={() => copyInvitationWithPreview(guest)}
+                          className="p-1.5 rounded-lg transition-all duration-200"
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                          aria-label="Copier le message"
+                          title="Copier le message"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </button>
+
+                        <div className={`relative ${openGuestActionsId === guest.id ? 'z-[60]' : 'z-10'}`}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenGuestActionsId(openGuestActionsId === guest.id ? null : guest.id);
+                            }}
+                            className="p-1.5 rounded-lg transition-all duration-200 flex items-center"
+                            style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.22)', color: '#fcd34d' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.2)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; }}
+                          >
+                            <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${openGuestActionsId === guest.id ? 'rotate-180' : ''}`} />
+                          </button>
+
+                          {openGuestActionsId === guest.id && (
+                            <div className="absolute right-0 mt-2 w-40 rounded-2xl z-[100] overflow-hidden animate-fade-in py-2 border"
+                                 style={{
+                                   background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                                   borderColor: 'rgba(255,255,255,0.08)',
+                                   boxShadow: '0 20px 60px -20px rgba(0,0,0,0.8)',
+                                 }}>
+                              <button
+                                onClick={() => { handleShareInvitation(guest); setOpenGuestActionsId(null); }}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold flex items-center transition-colors"
+                                style={{ color: '#6ee7b7' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <MessageSquare className="h-3.5 w-3.5 mr-2" />
+                                WhatsApp
+                              </button>
+                              <button
+                                onClick={() => { sendEmailInvitation(guest); setOpenGuestActionsId(null); }}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold flex items-center transition-colors"
+                                style={{ color: '#93c5fd' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Mail className="h-3.5 w-3.5 mr-2" />
+                                Email
+                              </button>
+                              <div className="h-[1px] my-1 mx-2" style={{ background: 'rgba(255,255,255,0.06)' }}></div>
+                              <button
+                                onClick={() => { openEditGuestModal(guest); setOpenGuestActionsId(null); }}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold flex items-center transition-colors"
+                                style={{ color: '#fcd34d' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Edit className="h-3.5 w-3.5 mr-2" />
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => { handleDeleteGuest(guest.id); setOpenGuestActionsId(null); }}
+                                className="w-full px-3 py-2 text-left text-xs font-semibold flex items-center transition-colors"
+                                style={{ color: '#fca5a5' }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                Supprimer
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center flex-wrap gap-1 sm:gap-4 text-[10px] sm:text-sm text-white/60">
                       <span>Table: {guest.table}</span>
                       {guest.category && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-medium bg-purple-100 text-purple-800">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-semibold"
+                              style={{
+                                background: 'rgba(168,85,247,0.12)',
+                                color: '#c4b5fd',
+                                border: '1px solid rgba(168,85,247,0.28)',
+                              }}>
                           <Tag className="h-2 w-2 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                           {guest.category}
                         </span>
                       )}
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-medium ${
-                        guest.etat === 'couple' 
-                          ? 'bg-pink-100 text-pink-800' 
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-xs font-semibold`}
+                            style={{
+                              background: guest.etat === 'couple'
+                                ? 'rgba(236,72,153,0.12)'
+                                : 'rgba(59,130,246,0.12)',
+                              color: guest.etat === 'couple' ? '#f9a8d4' : '#93c5fd',
+                              border: `1px solid ${guest.etat === 'couple' ? 'rgba(236,72,153,0.3)' : 'rgba(59,130,246,0.3)'}`,
+                            }}>
                         {guest.etat === 'couple' ? 'Couple' : 'Simple'}
                       </span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center sm:flex-shrink-0 flex-wrap gap-1.5 sm:gap-2">
-                  <span className={`inline-flex items-center px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-sm font-medium ${
-                    guest.confirmed 
-                      ? 'bg-emerald-100 text-emerald-800' 
-                      : 'bg-amber-100 text-amber-800'
-                  }`}>
+                <div className="hidden sm:flex items-center sm:flex-shrink-0 flex-wrap gap-2">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold`}
+                        style={{
+                          background: guest.confirmed
+                            ? 'rgba(16,185,129,0.15)'
+                            : 'rgba(251,191,36,0.15)',
+                          color: guest.confirmed ? '#6ee7b7' : '#fcd34d',
+                          border: `1px solid ${guest.confirmed ? 'rgba(16,185,129,0.35)' : 'rgba(251,191,36,0.35)'}`,
+                        }}>
                     {guest.confirmed ? '✓' : '!'}
                   </span>
                   
-                  {/* Bouton Copier sorti de l'action pour accès rapide sur mobile */}
                   <button
                     onClick={() => copyInvitationWithPreview(guest)}
-                    className="p-1.5 sm:p-2.5 bg-slate-100 text-slate-700 rounded-lg sm:rounded-xl hover:bg-slate-200 transition-all duration-200 shadow-sm"
+                    className="p-2.5 rounded-xl transition-all duration-200"
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.7)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                     aria-label="Copier le message"
                     title="Copier le message"
                   >
-                    <Copy className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
+                    <Copy className="h-5 w-5" />
                   </button>
 
                   <div className={`relative ${openGuestActionsId === guest.id ? 'z-[60]' : 'z-10'}`}>
@@ -2635,51 +3738,73 @@ const renderOverview = () => {
                         e.stopPropagation();
                         setOpenGuestActionsId(openGuestActionsId === guest.id ? null : guest.id);
                       }}
-                      className="p-1.5 sm:p-2.5 bg-amber-100 text-amber-700 rounded-lg sm:rounded-xl hover:bg-amber-200 transition-all duration-200 shadow-sm flex items-center"
+                      className="p-2.5 rounded-xl transition-all duration-200 flex items-center"
+                      style={{ background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.22)', color: '#fcd34d' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.2)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; }}
                     >
-                      <ChevronDown className={`h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform duration-300 ${openGuestActionsId === guest.id ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-300 ${openGuestActionsId === guest.id ? 'rotate-180' : ''}`} />
                     </button>
 
-                    {/* Menu Actions repositionné et stylisé */}
                     {openGuestActionsId === guest.id && (
-                      <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-2xl shadow-2xl border border-neutral-100 z-[100] overflow-hidden animate-fade-in py-2">
+                      <div className="absolute right-0 mt-2 w-48 rounded-2xl z-[100] overflow-hidden animate-fade-in py-2 border"
+                           style={{
+                             background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                             borderColor: 'rgba(255,255,255,0.08)',
+                             boxShadow: '0 20px 60px -20px rgba(0,0,0,0.8)',
+                           }}>
                         <button
                           onClick={() => { handleShareInvitation(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-green-600 hover:bg-green-50 flex items-center transition-colors"
+                          className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center transition-colors"
+                          style={{ color: '#6ee7b7' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
+                          <MessageSquare className="h-4 w-4 mr-3" />
                           WhatsApp
                         </button>
                         <button
                           onClick={() => { sendEmailInvitation(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-blue-600 hover:bg-blue-50 flex items-center transition-colors"
+                          className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center transition-colors"
+                          style={{ color: '#93c5fd' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
+                          <Mail className="h-4 w-4 mr-3" />
                           Email
                         </button>
-                        <div className="h-[1px] bg-neutral-100 my-1 mx-2"></div>
+                        <div className="h-[1px] my-1 mx-2" style={{ background: 'rgba(255,255,255,0.06)' }}></div>
                         <button
                           onClick={() => { openEditGuestModal(guest); setOpenGuestActionsId(null); }}
-                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-amber-600 hover:bg-amber-50 flex items-center transition-colors"
+                          className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center transition-colors"
+                          style={{ color: '#fcd34d' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
+                          <Edit className="h-4 w-4 mr-3" />
                           Modifier
                         </button>
                         <button
                           onClick={() => { handleDeleteGuest(guest.id); setOpenGuestActionsId(null); }}
-                          className="w-full px-3 sm:px-4 py-2 text-left text-xs sm:text-sm font-medium text-rose-600 hover:bg-rose-50 flex items-center transition-colors"
+                          className="w-full px-4 py-2 text-left text-sm font-semibold flex items-center transition-colors"
+                          style={{ color: '#fca5a5' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                         >
-                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
+                          <Trash2 className="h-4 w-4 mr-3" />
                           Supprimer
                         </button>
                       </div>
                     )}
                   </div>
 
-                  <div className="hidden sm:flex items-center space-x-3">
+                  <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleShareInvitation(guest)}
-                      className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{ color: '#34d399' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       aria-label="Partager l'invitation"
                       title="Partager l'invitation"
                     >
@@ -2687,7 +3812,10 @@ const renderOverview = () => {
                     </button>
                     <button
                       onClick={() => sendEmailInvitation(guest)}
-                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{ color: '#60a5fa' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       aria-label="Envoyer par Email"
                       title="Envoyer par Email"
                     >
@@ -2695,7 +3823,10 @@ const renderOverview = () => {
                     </button>
                     <button
                       onClick={() => openEditGuestModal(guest)}
-                      className="p-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{ color: '#fbbf24' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       aria-label="Modifier l'invité"
                       title="Modifier l'invité"
                     >
@@ -2703,7 +3834,10 @@ const renderOverview = () => {
                     </button>
                     <button
                       onClick={() => handleDeleteGuest(guest.id)}
-                      className="p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      className="p-2 rounded-lg transition-all duration-200 transform hover:scale-110"
+                      style={{ color: '#f87171' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                       aria-label="Supprimer l'invité"
                       title="Supprimer l'invité"
                     >
@@ -2717,10 +3851,10 @@ const renderOverview = () => {
         </div>
 
         {guests.length === 0 && (
-          <div className="p-12 text-center">
-            <Users className="h-16 w-16 text-neutral-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-neutral-500 mb-2">Aucun invité ajouté</h3>
-            <p className="text-neutral-400">Commencez par ajouter vos premiers invités</p>
+          <div className="relative z-10 p-12 text-center">
+            <Users className="h-16 w-16 mx-auto mb-4" style={{ color: 'rgba(255,255,255,0.25)' }} />
+            <h3 className="text-lg font-semibold text-white/70 mb-2">Aucun invité ajouté</h3>
+            <p className="text-white/50">Commencez par ajouter vos premiers invités</p>
           </div>
         )}
       </div>
@@ -2755,28 +3889,69 @@ const renderOverview = () => {
         return renderTables();
       case 'messages':
         return (
-          <div className="animate-fade-in">
-            <div className="text-center py-12">
-              <MessageCircle className="h-16 w-16 text-amber-500 mx-auto mb-4 animate-glow" />
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Messages & Boissons</h3>
-              <p className="text-slate-600 mb-6">Consultez les vœux et choix de vos invités</p>
-              <div className="max-w-5xl mx-auto">
-                <GuestMessagesViewer />
-              </div>
-            </div>
+          <div className="animate-fade-in max-w-5xl mx-auto">
+            <GuestMessagesViewer />
           </div>
         );
       case 'games':
         return renderGames();
+      case 'users':
+        return isAdmin ? (
+          <div className="animate-fade-in">
+            <UserManagement />
+          </div>
+        ) : renderOverview();
       default:
         return renderOverview();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-amber-50/30 to-purple-50/20 dark:from-slate-900 dark:via-slate-800/30 dark:to-slate-900">
+    <div className="min-h-screen bg-[#0b0f17] relative overflow-hidden">
+      <style>{`
+        .guest-filter-select option,
+        .guest-sort-select option {
+          background-color: #ffffff;
+          color: #0b0f17;
+        }
+      `}</style>
+      {/* Subtle dot grid pattern — identique à la page d'accueil */}
+      <div
+        aria-hidden
+        className="absolute inset-0 opacity-[0.05] pointer-events-none"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+          backgroundSize: '26px 26px',
+        }}
+      />
+      {/* Ambient glows larges — identiques style Services/WhyChoose */}
+      <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-40 right-0 w-[620px] h-[620px] translate-x-1/3 rounded-full blur-3xl"
+             style={{
+               background:
+                 'radial-gradient(closest-side, rgba(251,191,36,0.22), rgba(251,191,36,0) 70%)',
+             }}
+        />
+        <div className="absolute bottom-40 left-0 w-[580px] h-[580px] -translate-x-1/3 rounded-full blur-3xl"
+             style={{
+               background:
+                 'radial-gradient(closest-side, rgba(217,70,239,0.15), rgba(217,70,239,0) 70%)',
+             }}
+        />
+        <div className="absolute top-2/3 left-1/3 w-[400px] h-[400px] rounded-full blur-3xl opacity-55 animate-float"
+             style={{
+               background:
+                 'radial-gradient(closest-side, rgba(244,114,182,0.10), rgba(244,114,182,0) 70%)',
+             }}
+        />
+      </div>
       {/* Header */}
-      <header className="bg-gradient-to-r from-neutral-50/95 via-amber-50/90 to-neutral-50/95 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/95 backdrop-blur-xl shadow-luxury border-b border-amber-200/30 dark:border-slate-600/30">
+      <header className="relative z-10 backdrop-blur-xl border-b" style={{
+        background: 'linear-gradient(180deg, rgba(17,23,39,0.92) 0%, rgba(13,18,32,0.92) 100%)',
+        borderColor: 'rgba(255,255,255,0.05)',
+        boxShadow: '0 0 0 1px rgba(251,191,36,0.05) inset'
+      }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-2">
@@ -2804,21 +3979,40 @@ const renderOverview = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="p-1.5 md:p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 relative"
+                  className="p-1.5 md:p-2 rounded-lg transition-all duration-200 relative"
+                  style={{
+                    color: showNotifications ? '#fcd34d' : 'rgba(255,255,255,0.65)',
+                    background: showNotifications ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = showNotifications ? '#fcd34d' : 'rgba(255,255,255,0.65)'; e.currentTarget.style.background = showNotifications ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.03)'; }}
                 >
                   <Bell className="h-5 w-5" />
                   {notifications.filter(n => !n.read).length > 0 && (
-                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-800 animate-pulse"></span>
+                    <span className="absolute top-0 right-0 block h-2 w-2 rounded-full ring-2 animate-pulse" style={{ background: '#ef4444', boxShadow: '0 0 0 2px #0d1220' }}></span>
                   )}
                 </button>
 
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-72 md:w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-amber-200/30 dark:border-slate-600/30 z-50 overflow-hidden animate-fade-in">
-                    <div className="p-3 md:p-4 border-b border-neutral-100 dark:border-slate-700 bg-gradient-to-r from-neutral-50 to-amber-50/30 dark:from-slate-800 dark:to-slate-700/50 flex justify-between items-center">
-                      <h3 className="font-bold text-slate-900 dark:text-white text-sm md:text-base">Notifications</h3>
+                  <div className="absolute right-0 mt-2 w-72 md:w-80 rounded-2xl shadow-2xl z-50 overflow-hidden animate-fade-in border"
+                       style={{
+                         background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                         borderColor: 'rgba(255,255,255,0.08)',
+                         boxShadow: '0 30px 80px -30px rgba(0,0,0,0.9)',
+                       }}>
+                    <div className="p-3 md:p-4 border-b flex justify-between items-center"
+                         style={{
+                           borderColor: 'rgba(255,255,255,0.06)',
+                           background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+                         }}>
+                      <h3 className="font-extrabold text-white text-sm md:text-base tracking-tight">Notifications</h3>
                       <button 
                         onClick={() => notificationService.markAllAsRead(userData?.uid || '')}
-                        className="text-[10px] md:text-xs text-amber-600 hover:text-amber-700 font-medium"
+                        className="text-[10px] md:text-xs font-semibold transition-colors"
+                        style={{ color: '#fcd34d' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.color = '#fbbf24'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
                       >
                         Tout marquer lu
                       </button>
@@ -2832,29 +4026,43 @@ const renderOverview = () => {
                               if (notification.id) notificationService.markAsRead(notification.id);
                               setShowNotifications(false);
                             }}
-                            className={`p-3 md:p-4 border-b border-neutral-50 dark:border-slate-700 hover:bg-neutral-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors duration-200 ${!notification.read ? 'bg-amber-50/30 dark:bg-amber-900/10' : ''}`}
+                            className={`p-3 md:p-4 border-b cursor-pointer transition-colors duration-200`}
+                            style={{
+                              borderColor: 'rgba(255,255,255,0.05)',
+                              background: !notification.read ? 'rgba(251,191,36,0.06)' : 'transparent',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = !notification.read ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.03)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = !notification.read ? 'rgba(251,191,36,0.06)' : 'transparent'; }}
                           >
                             <div className="flex items-start">
-                              <div className={`p-1.5 md:p-2 rounded-lg mr-2 md:mr-3 ${
-                                notification.type === 'confirmation' ? 'bg-emerald-100 text-emerald-600' :
-                                notification.type === 'message' ? 'bg-blue-100 text-blue-600' :
-                                'bg-amber-100 text-amber-600'
-                              }`}>
+                              <div className={`p-1.5 md:p-2 rounded-lg mr-2 md:mr-3`}
+                                   style={{
+                                     background: notification.type === 'confirmation'
+                                       ? 'rgba(16,185,129,0.15)'
+                                       : notification.type === 'message'
+                                       ? 'rgba(59,130,246,0.15)'
+                                       : 'rgba(251,191,36,0.15)',
+                                     color: notification.type === 'confirmation'
+                                       ? '#6ee7b7'
+                                       : notification.type === 'message'
+                                       ? '#93c5fd'
+                                       : '#fcd34d',
+                                   }}>
                                 {notification.type === 'confirmation' ? <Check className="h-3 w-3 md:h-4 md:w-4" /> :
                                  notification.type === 'message' ? <MessageSquare className="h-3 w-3 md:h-4 md:w-4" /> :
                                  <Bell className="h-3 w-3 md:h-4 md:w-4" />}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs md:text-sm font-bold text-slate-900 dark:text-white truncate">{notification.title}</p>
-                                <p className="text-[10px] md:text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{notification.body}</p>
+                                <p className="text-xs md:text-sm font-semibold text-white truncate">{notification.title}</p>
+                                <p className="text-[10px] md:text-xs text-white/55 line-clamp-2">{notification.body}</p>
                               </div>
                             </div>
                           </div>
                         ))
                       ) : (
                         <div className="p-6 md:p-8 text-center">
-                          <Bell className="h-6 w-6 md:h-8 md:w-8 text-neutral-300 mx-auto mb-2" />
-                          <p className="text-xs md:text-sm text-neutral-500">Aucune notification</p>
+                          <Bell className="h-6 w-6 md:h-8 md:w-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.25)' }} />
+                          <p className="text-xs md:text-sm text-white/45">Aucune notification</p>
                         </div>
                       )}
                     </div>
@@ -2864,17 +4072,26 @@ const renderOverview = () => {
               
               <button
                 onClick={() => setShowSettings(true)}
-                className="hidden md:block p-2 text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-slate-700 rounded-lg transition-all duration-200"
+                className="hidden md:block p-2 rounded-lg transition-all duration-200"
+                style={{ color: 'rgba(255,255,255,0.65)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
               >
                 <Settings className="h-5 w-5" />
               </button>
               
               <button
                 onClick={() => setShowProfile(true)}
-                className="flex items-center space-x-1.5 md:space-x-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white p-1.5 md:px-4 md:py-2 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold shadow-glow-amber transform hover:scale-105"
+                className="flex items-center space-x-1.5 md:space-x-2 text-[#0b0f17] p-1.5 md:px-4 md:py-2 rounded-lg transition-all duration-300 font-semibold group"
+                style={{
+                  background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 30px -10px rgba(251,191,36,0.55)',
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
               >
                 {userData && (
-                  <div className="w-5 h-5 md:w-6 md:h-6 bg-slate-900 rounded-full flex items-center justify-center text-amber-400 font-bold text-[8px] md:text-xs">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-[#0b0f17] rounded-full flex items-center justify-center font-bold text-[8px] md:text-xs" style={{ color: '#fcd34d' }}>
                     {userData.firstName[0]}{userData.lastName[0]}
                   </div>
                 )}
@@ -2882,8 +4099,11 @@ const renderOverview = () => {
               </button>
               
               <button
-                onClick={onLogout}
-                className="p-1.5 md:p-2 text-slate-600 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-slate-700 rounded-lg transition-all duration-200"
+                onClick={openLogoutConfirm}
+                className="p-1.5 md:p-2 rounded-lg transition-all duration-200"
+                style={{ color: 'rgba(255,255,255,0.65)', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fca5a5'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                 title="Se déconnecter"
               >
                 <LogOut className="h-5 w-5" />
@@ -2894,7 +4114,11 @@ const renderOverview = () => {
       </header>
 
       {/* Navigation - Desktop only (hidden on mobile) */}
-      <nav className="hidden md:block bg-white dark:bg-slate-800 shadow-lg border-b border-neutral-200/50 dark:border-slate-600/50 sticky top-16 z-40">
+      <nav className="relative z-10 hidden md:block sticky top-16 z-40 border-b" style={{
+        background: 'linear-gradient(180deg, rgba(17,23,39,0.95) 0%, rgba(13,18,32,0.95) 100%)',
+        borderColor: 'rgba(255,255,255,0.05)',
+        boxShadow: '0 0 0 1px rgba(251,191,36,0.03) inset'
+      }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 overflow-x-auto">
             {tabs.map((tab) => {
@@ -2905,9 +4129,14 @@ const renderOverview = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-2 py-4 px-2 border-b-2 font-medium text-sm transition-all duration-300 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                      ? 'border-amber-500'
+                      : 'border-transparent hover:border-white/10'
                   }`}
+                  style={{
+                    color: activeTab === tab.id ? '#fcd34d' : 'rgba(255,255,255,0.55)'
+                  }}
+                  onMouseEnter={(e) => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)'; }}
+                  onMouseLeave={(e) => { if (activeTab !== tab.id) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.55)'; }}
                 >
                   <IconComponent className="h-4 w-4" />
                   <span>{tab.label}</span>
@@ -2919,7 +4148,10 @@ const renderOverview = () => {
       </nav>
 
       {/* Bottom Navigation - Mobile only */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-800/95 backdrop-blur-lg border-t border-amber-200/30 dark:border-slate-600/30 z-[60] pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 backdrop-blur-lg border-t z-[60] pb-safe" style={{
+        background: 'linear-gradient(180deg, rgba(17,23,39,0.94) 0%, rgba(13,18,32,0.96) 100%)',
+        borderColor: 'rgba(251,191,36,0.08)',
+      }}>
         <div className="flex justify-around items-center h-16">
           {tabs.map((tab) => {
             const IconComponent = tab.icon;
@@ -2928,13 +4160,10 @@ const renderOverview = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-300 ${
-                  isActive
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-slate-500 dark:text-slate-400'
-                }`}
+                className={`flex flex-col items-center justify-center w-full h-full space-y-1 transition-all duration-300`}
+                style={{ color: isActive ? '#fcd34d' : 'rgba(255,255,255,0.5)' }}
               >
-                <div className={`p-1 rounded-lg ${isActive ? 'bg-amber-50 dark:bg-amber-900/20' : ''}`}>
+                <div className={`p-1 rounded-lg`} style={{ background: isActive ? 'rgba(251,191,36,0.12)' : 'transparent' }}>
                   <IconComponent className={`h-5 w-5 ${isActive ? 'scale-110' : ''}`} />
                 </div>
                 <span className="text-[10px] font-medium">{tab.label === 'Vue d\'ensemble' ? 'Accueil' : tab.label}</span>
@@ -2950,7 +4179,25 @@ const renderOverview = () => {
       </main>
 
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[1000] px-4 py-3 rounded-xl shadow-glow-amber border ${toast.type === 'success' ? 'bg-white/95 border-emerald-200 text-emerald-700 dark:bg-slate-800/95 dark:text-emerald-300' : toast.type === 'error' ? 'bg-white/95 border-rose-200 text-rose-700 dark:bg-slate-800/95 dark:text-rose-300' : 'bg-white/95 border-amber-200 text-amber-700 dark:bg-slate-800/95 dark:text-amber-300'}`}>
+        <div className={`fixed bottom-6 right-6 z-[1000] px-4 py-3 rounded-xl border backdrop-blur-xl animate-fade-in`}
+             style={{
+               background: toast.type === 'success'
+                 ? 'linear-gradient(180deg, rgba(16,185,129,0.2) 0%, rgba(16,185,129,0.1) 100%)'
+                 : toast.type === 'error'
+                 ? 'linear-gradient(180deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0.1) 100%)'
+                 : 'linear-gradient(180deg, rgba(251,191,36,0.2) 0%, rgba(251,191,36,0.1) 100%)',
+               borderColor: toast.type === 'success'
+                 ? 'rgba(16,185,129,0.35)'
+                 : toast.type === 'error'
+                 ? 'rgba(239,68,68,0.35)'
+                 : 'rgba(251,191,36,0.35)',
+               color: toast.type === 'success'
+                 ? '#6ee7b7'
+                 : toast.type === 'error'
+                 ? '#fca5a5'
+                 : '#fcd34d',
+               boxShadow: '0 20px 60px -20px rgba(0,0,0,0.6)',
+             }}>
           <span className="font-semibold">{toast.message}</span>
         </div>
       )}
@@ -2982,16 +4229,28 @@ const renderOverview = () => {
 
       {/* Modal d'ajout d'invité */}
       {showAddGuestModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-luxury max-w-md w-full animate-slide-up">
-            <div className="p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">{editingGuestId ? 'Modifier l\'invité' : 'Ajouter un invité'}</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="rounded-2xl max-w-md w-full animate-slide-up border overflow-hidden"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+                 boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.06) inset',
+               }}>
+            <div className="p-6 border-b flex justify-between items-center"
+                 style={{
+                   borderColor: 'rgba(255,255,255,0.06)',
+                   background: 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+                 }}>
+              <div className="flex justify-between items-center w-full">
+                <h3 className="text-xl font-extrabold tracking-tight text-white">{editingGuestId ? 'Modifier l\'invité' : 'Ajouter un invité'}</h3>
                 <button
-                  onClick={() => setShowAddGuestModal(false)}
-                  className="p-2 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
+                  onClick={() => closeAddGuestModal()}
+                  className="p-2 rounded-lg transition-all duration-200"
+                  style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
                 >
-                  <X className="h-5 w-5 text-neutral-500" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -2999,20 +4258,27 @@ const renderOverview = () => {
             <div className="p-6">
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-semibold text-white/80 mb-2">
                     Nom complet
                   </label>
                   <input
                     type="text"
                     value={newGuest.nom}
                     onChange={(e) => setNewGuest({ ...newGuest, nom: e.target.value })}
-                    className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                    className="w-full px-4 py-3 rounded-xl transition-all duration-200 outline-none"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      color: '#ffffff',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: Sophie Martin"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-semibold text-white/80 mb-2">
                     Catégorie
                   </label>
                   <div className="relative">
@@ -3023,21 +4289,149 @@ const renderOverview = () => {
                         setCategorySearchInput(e.target.value);
                         setShowCategoryDropdown(true);
                       }}
-                      onFocus={() => setShowCategoryDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      onFocus={(e) => {
+                        setShowCategoryDropdown(true);
+                        e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)';
+                      }}
+                      onBlur={(e) => {
+                        if (!quickAddCategoryMode) {
+                          setTimeout(() => setShowCategoryDropdown(false), 200);
+                        }
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      className="w-full px-4 py-3 rounded-xl transition-all duration-200 outline-none"
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        color: '#ffffff',
+                      }}
                       placeholder="Rechercher ou ajouter une catégorie..."
                     />
                     {showCategoryDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-neutral-200 max-h-60 overflow-y-auto">
+                      <div
+                        className="absolute z-10 w-full mt-1 rounded-xl border overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                          borderColor: 'rgba(255,255,255,0.08)',
+                          boxShadow: '0 20px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(251,191,36,0.04) inset',
+                        }}
+                      >
+                        <div className="max-h-64 overflow-y-auto">
+                          <div
+                            className="px-3 py-2 border-b"
+                            style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                          >
+                            {!quickAddCategoryMode ? (
+                              <button
+                                key="quick-add-category"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setQuickAddCategoryName(categorySearchInput.trim() || '');
+                                  setQuickAddCategoryMode(true);
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                                style={{
+                                  color: '#fcd34d',
+                                  background:
+                                    'linear-gradient(180deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%)',
+                                  border: '1px solid rgba(251,191,36,0.2)',
+                                }}
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span className="font-semibold text-sm">Nouvelle catégorie</span>
+                              </button>
+                            ) : (
+                              <div className="space-y-2">
+                              <input
+                                autoFocus
+                                type="text"
+                                value={quickAddCategoryName}
+                                onChange={(e) => setQuickAddCategoryName(e.target.value)}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && quickAddCategoryName.trim()) {
+                                    e.preventDefault();
+                                    const newCat = quickAddCategoryName.trim();
+                                    createGuestCategory(newCat).then(async () => {
+                                      await refreshUserData();
+                                      setNewGuest({ ...newGuest, category: newCat });
+                                      setCategorySearchInput(newCat);
+                                      setQuickAddCategoryMode(false);
+                                      setQuickAddCategoryName('');
+                                      setShowCategoryDropdown(false);
+                                    });
+                                  }
+                                  if (e.key === 'Escape') {
+                                    setQuickAddCategoryMode(false);
+                                    setQuickAddCategoryName('');
+                                  }
+                                }}
+                                className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+                                style={{
+                                  background: 'rgba(255,255,255,0.04)',
+                                  border: '1px solid rgba(251,191,36,0.3)',
+                                  color: '#ffffff',
+                                }}
+                                placeholder="Nom de la catégorie..."
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={async () => {
+                                    const newCat = quickAddCategoryName.trim();
+                                    if (!newCat) return;
+                                    await createGuestCategory(newCat);
+                                    await refreshUserData();
+                                    setNewGuest({ ...newGuest, category: newCat });
+                                    setCategorySearchInput(newCat);
+                                    setQuickAddCategoryMode(false);
+                                    setQuickAddCategoryName('');
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                  disabled={!quickAddCategoryName.trim()}
+                                  className="flex-1 px-3 py-1.5 rounded-lg font-semibold text-xs text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  style={{
+                                    background:
+                                      'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                                    color: '#0b0f17',
+                                  }}
+                                >
+                                  Créer
+                                </button>
+                                <button
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => {
+                                    setQuickAddCategoryMode(false);
+                                    setQuickAddCategoryName('');
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg font-medium text-xs text-sm transition-all"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.04)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    color: 'rgba(255,255,255,0.7)',
+                                  }}
+                                >
+                                  Annuler
+                                </button>
+                              </div>
+                            </div>
+                            )}
+                          </div>
+
                         <button
                           key="no-category"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
                             setNewGuest({ ...newGuest, category: '' });
                             setCategorySearchInput('');
                             setShowCategoryDropdown(false);
+                            setQuickAddCategoryMode(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                          className="w-full text-left px-4 py-2 transition-colors text-white/55"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.color = '#fcd34d'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
                         >
                           Aucune catégorie
                         </button>
@@ -3046,38 +4440,56 @@ const renderOverview = () => {
                           .map((catName) => (
                             <button
                               key={catName}
+                              onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
                                 setNewGuest({ ...newGuest, category: catName });
                                 setCategorySearchInput(catName);
                                 setShowCategoryDropdown(false);
+                                setQuickAddCategoryMode(false);
                               }}
-                              className={`w-full text-left px-4 py-2 transition-colors ${newGuest.category === catName ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50 text-slate-700'}`}
+                              className="w-full text-left px-4 py-2 transition-colors"
+                              style={{
+                                background: newGuest.category === catName ? 'rgba(251,191,36,0.12)' : 'transparent',
+                                color: newGuest.category === catName ? '#fcd34d' : 'rgba(255,255,255,0.8)',
+                                borderLeft: newGuest.category === catName ? '2px solid #fcd34d' : '2px solid transparent',
+                              }}
+                              onMouseEnter={(e) => { if (newGuest.category !== catName) { e.currentTarget.style.background = 'rgba(251,191,36,0.06)'; e.currentTarget.style.color = '#fcd34d'; } }}
+                              onMouseLeave={(e) => { if (newGuest.category !== catName) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; } }}
                             >
                               {catName}
                             </button>
                           ))}
-                        {categorySearchInput.trim() && !availableCategories.includes(categorySearchInput.trim()) && (
+                        {categorySearchInput.trim() && !availableCategories.includes(categorySearchInput.trim()) && !quickAddCategoryMode && (
                           <button
                             key="add-category"
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={async () => {
                               const newCat = categorySearchInput.trim();
                               await createGuestCategory(newCat);
+                              await refreshUserData();
                               setNewGuest({ ...newGuest, category: newCat });
                               setCategorySearchInput(newCat);
                               setShowCategoryDropdown(false);
                             }}
-                            className="w-full text-left px-4 py-2 hover:bg-amber-100 transition-colors text-amber-600 font-semibold"
+                            className="w-full text-left px-4 py-2 transition-colors font-semibold"
+                            style={{
+                              color: '#fcd34d',
+                              borderTop: '1px solid rgba(255,255,255,0.06)',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                           >
                             + Ajouter "{categorySearchInput.trim()}"
                           </button>
                         )}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-semibold text-white/80 mb-2">
                     Table
                   </label>
                   <div className="relative">
@@ -3088,32 +4500,213 @@ const renderOverview = () => {
                         setTableSearchInput(e.target.value);
                         setShowTableDropdown(true);
                       }}
-                      onFocus={() => setShowTableDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowTableDropdown(false), 200)}
-                      className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
+                      onFocus={(e) => {
+                        setShowTableDropdown(true);
+                        e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)';
+                      }}
+                      onBlur={(e) => {
+                        if (!quickAddTableMode) {
+                          setTimeout(() => setShowTableDropdown(false), 200);
+                        }
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      className="w-full px-4 py-3 rounded-xl transition-all duration-200 outline-none"
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        color: '#ffffff',
+                      }}
                       placeholder="Rechercher ou ajouter une table..."
                     />
                     {showTableDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white rounded-xl shadow-lg border border-neutral-200 max-h-60 overflow-y-auto">
+                      <div
+                        className="absolute z-10 w-full mt-1 rounded-xl border overflow-hidden"
+                        style={{
+                          background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                          borderColor: 'rgba(255,255,255,0.08)',
+                          boxShadow: '0 20px 60px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(251,191,36,0.04) inset',
+                        }}
+                      >
+                        <div className="max-h-64 overflow-y-auto">
+                          <div
+                            className="px-3 py-2 border-b"
+                            style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                          >
+                            {!quickAddTableMode ? (
+                              <button
+                                key="quick-add-table"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setQuickAddTableName(tableSearchInput.trim() || '');
+                                  setQuickAddTableSeats(8);
+                                  setQuickAddTableMode(true);
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg transition-all duration-200 flex items-center gap-2"
+                                style={{
+                                  color: '#fcd34d',
+                                  background:
+                                    'linear-gradient(180deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%)',
+                                  border: '1px solid rgba(251,191,36,0.2)',
+                                }}
+                              >
+                                <Plus className="w-4 h-4" />
+                                <span className="font-semibold text-sm">Nouvelle table</span>
+                              </button>
+                            ) : (
+                              <div className="space-y-2">
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={quickAddTableName}
+                                  onChange={(e) => setQuickAddTableName(e.target.value)}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Enter' && quickAddTableName.trim()) {
+                                      e.preventDefault();
+                                      const newTableName = quickAddTableName.trim();
+                                      await createTable({
+                                        name: newTableName,
+                                        seats: Number(quickAddTableSeats) || 8,
+                                      });
+                                      await refreshUserData();
+                                      setNewGuest({ ...newGuest, table: newTableName });
+                                      setTableSearchInput(newTableName);
+                                      setQuickAddTableMode(false);
+                                      setQuickAddTableName('');
+                                      setShowTableDropdown(false);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setQuickAddTableMode(false);
+                                      setQuickAddTableName('');
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 rounded-lg outline-none text-sm"
+                                  style={{
+                                    background: 'rgba(255,255,255,0.04)',
+                                    border: '1px solid rgba(251,191,36,0.3)',
+                                    color: '#ffffff',
+                                  }}
+                                  placeholder="Nom de la table (ex: Table des mariés)"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className="text-xs shrink-0"
+                                    style={{ color: 'rgba(255,255,255,0.6)' }}
+                                  >
+                                    Places :
+                                  </span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    max={99}
+                                    value={quickAddTableSeats}
+                                    onChange={(e) => {
+                                      const v = Number(e.target.value);
+                                      setQuickAddTableSeats(
+                                        isNaN(v) ? 8 : Math.max(1, Math.min(99, v))
+                                      );
+                                    }}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onKeyDown={async (e) => {
+                                      if (e.key === 'Enter' && quickAddTableName.trim()) {
+                                        e.preventDefault();
+                                        const newTableName = quickAddTableName.trim();
+                                        await createTable({
+                                          name: newTableName,
+                                          seats: Number(quickAddTableSeats) || 8,
+                                        });
+                                        await refreshUserData();
+                                        setNewGuest({ ...newGuest, table: newTableName });
+                                        setTableSearchInput(newTableName);
+                                        setQuickAddTableMode(false);
+                                        setQuickAddTableName('');
+                                        setShowTableDropdown(false);
+                                      }
+                                    }}
+                                    className="flex-1 w-full px-3 py-1.5 rounded-lg outline-none text-sm"
+                                    style={{
+                                      background: 'rgba(255,255,255,0.04)',
+                                      border: '1px solid rgba(255,255,255,0.12)',
+                                      color: '#ffffff',
+                                    }}
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={async () => {
+                                      const newTableName = quickAddTableName.trim();
+                                      if (!newTableName) return;
+                                      await createTable({
+                                        name: newTableName,
+                                        seats: Number(quickAddTableSeats) || 8,
+                                      });
+                                      await refreshUserData();
+                                      setNewGuest({ ...newGuest, table: newTableName });
+                                      setTableSearchInput(newTableName);
+                                      setQuickAddTableMode(false);
+                                      setQuickAddTableName('');
+                                      setShowTableDropdown(false);
+                                    }}
+                                    disabled={!quickAddTableName.trim()}
+                                    className="flex-1 px-3 py-1.5 rounded-lg font-semibold text-xs transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    style={{
+                                      background:
+                                        'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                                      color: '#0b0f17',
+                                    }}
+                                  >
+                                    Créer
+                                  </button>
+                                  <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      setQuickAddTableMode(false);
+                                      setQuickAddTableName('');
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg font-medium text-xs transition-all"
+                                    style={{
+                                      background: 'rgba(255,255,255,0.04)',
+                                      border: '1px solid rgba(255,255,255,0.1)',
+                                      color: 'rgba(255,255,255,0.7)',
+                                    }}
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
                         <button
                           key="select-table"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
                             setNewGuest({ ...newGuest, table: '' });
                             setTableSearchInput('');
                             setShowTableDropdown(false);
+                            setQuickAddTableMode(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                          className="w-full text-left px-4 py-2 transition-colors text-white/55"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.color = '#fcd34d'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
                         >
                           Sélectionner une table
                         </button>
                         <button
                           key="no-table"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => {
                             setNewGuest({ ...newGuest, table: 'Non assigné' });
                             setTableSearchInput('Non assigné');
                             setShowTableDropdown(false);
+                            setQuickAddTableMode(false);
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-amber-50 transition-colors text-slate-600"
+                          className="w-full text-left px-4 py-2 transition-colors text-white/55"
+                          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.color = '#fcd34d'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
                         >
                           Non assigné
                         </button>
@@ -3134,50 +4727,69 @@ const renderOverview = () => {
                             return (
                               <button
                                 key={table.id}
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
                                   setNewGuest({ ...newGuest, table: table.name });
                                   setTableSearchInput(table.name);
                                   setShowTableDropdown(false);
+                                  setQuickAddTableMode(false);
                                 }}
-                                className={`w-full text-left px-4 py-2 transition-colors ${newGuest.table === table.name ? 'bg-amber-100 text-amber-700' : 'hover:bg-amber-50 text-slate-700'}`}
+                                className="w-full text-left px-4 py-2 transition-colors"
+                                style={{
+                                  background: newGuest.table === table.name ? 'rgba(251,191,36,0.12)' : 'transparent',
+                                  color: newGuest.table === table.name ? '#fcd34d' : 'rgba(255,255,255,0.8)',
+                                  borderLeft: newGuest.table === table.name ? '2px solid #fcd34d' : '2px solid transparent',
+                                }}
+                                onMouseEnter={(e) => { if (newGuest.table !== table.name) { e.currentTarget.style.background = 'rgba(251,191,36,0.06)'; e.currentTarget.style.color = '#fcd34d'; } }}
+                                onMouseLeave={(e) => { if (newGuest.table !== table.name) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; } }}
                               >
-                                {table.name} {remainingSeats !== null ? `(${remainingSeats} restantes)` : ''}
+                                {table.name} {remainingSeats !== null ? <span style={{ color: 'rgba(255,255,255,0.45)' }}>({remainingSeats} restantes)</span> : ''}
                               </button>
                             );
                           })}
-                        {tableSearchInput.trim() && !availableTables.find(t => t.name === tableSearchInput.trim()) && tableSearchInput.trim() !== 'Non assigné' && (
+                        {tableSearchInput.trim() && !availableTables.find(t => t.name === tableSearchInput.trim()) && tableSearchInput.trim() !== 'Non assigné' && !quickAddTableMode && (
                           <button
                             key="add-table"
-                            onClick={async () => {
-                              const newTableName = tableSearchInput.trim();
-                              await createTable({ name: newTableName, seats: 10 }); // Set default to 10 seats
-                              setNewGuest({ ...newGuest, table: newTableName });
-                              setTableSearchInput(newTableName);
-                              setShowTableDropdown(false);
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setQuickAddTableName(tableSearchInput.trim());
+                              setQuickAddTableSeats(8);
+                              setQuickAddTableMode(true);
                             }}
-                            className="w-full text-left px-4 py-2 hover:bg-amber-100 transition-colors text-amber-600 font-semibold"
+                            className="w-full text-left px-4 py-2 transition-colors font-semibold"
+                            style={{
+                              color: '#fcd34d',
+                              borderTop: '1px solid rgba(255,255,255,0.06)',
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                           >
                             + Ajouter "{tableSearchInput.trim()}"
                           </button>
                         )}
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-sm font-semibold text-white/80 mb-2">
                     Statut
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setNewGuest({ ...newGuest, etat: 'simple' })}
-                      className={`flex items-center justify-center px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
-                        newGuest.etat === 'simple'
-                          ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
-                          : 'border-neutral-200 hover:border-emerald-300 text-slate-600'
-                      }`}
+                      className="flex items-center justify-center px-4 py-3 rounded-xl border-2 transition-all duration-300 font-medium"
+                      style={{
+                        borderColor: newGuest.etat === 'simple' ? 'rgba(16,185,129,0.6)' : 'rgba(255,255,255,0.08)',
+                        background: newGuest.etat === 'simple' ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.02)',
+                        color: newGuest.etat === 'simple' ? '#6ee7b7' : 'rgba(255,255,255,0.75)',
+                        boxShadow: newGuest.etat === 'simple' ? '0 0 0 1px rgba(16,185,129,0.25), 0 8px 20px -8px rgba(16,185,129,0.4)' : 'none',
+                      }}
+                      onMouseEnter={(e) => { if (newGuest.etat !== 'simple') { e.currentTarget.style.borderColor = 'rgba(16,185,129,0.35)'; e.currentTarget.style.color = '#6ee7b7'; } }}
+                      onMouseLeave={(e) => { if (newGuest.etat !== 'simple') { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; } }}
                     >
                       <User className="h-4 w-4 mr-2" />
                       Simple
@@ -3186,11 +4798,15 @@ const renderOverview = () => {
                     <button
                       type="button"
                       onClick={() => setNewGuest({ ...newGuest, etat: 'couple' })}
-                      className={`flex items-center justify-center px-4 py-3 rounded-xl border-2 transition-all duration-300 ${
-                        newGuest.etat === 'couple'
-                          ? 'border-rose-400 bg-rose-50 text-rose-700'
-                          : 'border-neutral-200 hover:border-rose-300 text-slate-600'
-                      }`}
+                      className="flex items-center justify-center px-4 py-3 rounded-xl border-2 transition-all duration-300 font-medium"
+                      style={{
+                        borderColor: newGuest.etat === 'couple' ? 'rgba(236,72,153,0.6)' : 'rgba(255,255,255,0.08)',
+                        background: newGuest.etat === 'couple' ? 'rgba(236,72,153,0.12)' : 'rgba(255,255,255,0.02)',
+                        color: newGuest.etat === 'couple' ? '#f9a8d4' : 'rgba(255,255,255,0.75)',
+                        boxShadow: newGuest.etat === 'couple' ? '0 0 0 1px rgba(236,72,153,0.25), 0 8px 20px -8px rgba(236,72,153,0.4)' : 'none',
+                      }}
+                      onMouseEnter={(e) => { if (newGuest.etat !== 'couple') { e.currentTarget.style.borderColor = 'rgba(236,72,153,0.35)'; e.currentTarget.style.color = '#f9a8d4'; } }}
+                      onMouseLeave={(e) => { if (newGuest.etat !== 'couple') { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; } }}
                     >
                       <Heart className="h-4 w-4 mr-2" />
                       Couple
@@ -3201,19 +4817,33 @@ const renderOverview = () => {
 
               <div className="flex space-x-3 mt-6">
                 <button
-                  onClick={() => setShowAddGuestModal(false)}
-                  className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all duration-200 font-medium"
+                  onClick={() => closeAddGuestModal()}
+                  className="flex-1 px-4 py-3 rounded-xl transition-all duration-300 font-medium border"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.75)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
                 >
                   Annuler
                 </button>
                 <button
                   onClick={handleAddGuest}
                   disabled={isAddingGuest || !newGuest.nom.trim()}
-                  className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold shadow-glow-amber transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  className="flex-1 px-4 py-3 rounded-xl transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: isAddingGuest || !newGuest.nom.trim() ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    color: '#0b0f17',
+                    boxShadow: isAddingGuest || !newGuest.nom.trim() ? 'none' : '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.65)',
+                  }}
+                  onMouseEnter={(e) => { if (!isAddingGuest && newGuest.nom.trim()) { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
                 >
                   {isAddingGuest ? (
                     <div className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                      <div className="w-5 h-5 border-2 border-[#0b0f17]/30 border-t-[#0b0f17] rounded-full animate-spin mr-2"></div>
                       {editingGuestId ? 'Modification...' : 'Ajout...'}
                     </div>
                   ) : (
@@ -3228,16 +4858,28 @@ const renderOverview = () => {
 
       {/* Modal gestion des catégories */}
       {showCategoryManager && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-luxury max-w-sm w-full animate-slide-up">
-            <div className="p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-slate-900">Gérer les catégories</h3>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
+          <div className="rounded-2xl max-w-sm w-full animate-slide-up border overflow-hidden"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+                 boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.06) inset',
+               }}>
+            <div className="p-6 border-b flex justify-between items-center"
+                 style={{
+                   borderColor: 'rgba(255,255,255,0.06)',
+                   background: 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+                 }}>
+              <div className="flex justify-between items-center w-full">
+                <h3 className="text-xl font-extrabold tracking-tight text-white">Gérer les catégories</h3>
                 <button
                   onClick={() => setShowCategoryManager(false)}
-                  className="p-2 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
+                  className="p-2 rounded-lg transition-all duration-200"
+                  style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.6)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
                 >
-                  <X className="h-5 w-5 text-neutral-500" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -3248,13 +4890,28 @@ const renderOverview = () => {
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  className="flex-1 px-4 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="flex-1 px-4 py-2 rounded-xl transition-all duration-200 outline-none text-white"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: '#ffffff',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder={editingCategoryId ? "Modifier la catégorie..." : "Nouvelle catégorie..."}
                 />
                 <button
                   onClick={handleSaveCategory}
                   disabled={!newCategoryName.trim()}
-                  className={`text-white px-4 py-2 rounded-xl transition-all duration-300 font-semibold disabled:opacity-50 ${editingCategoryId ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-amber-500 hover:bg-amber-600'}`}
+                  className="text-[#0b0f17] px-4 py-2 rounded-xl transition-all duration-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: editingCategoryId
+                      ? 'linear-gradient(180deg, #34d399 0%, #10b981 100%)'
+                      : 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    boxShadow: editingCategoryId
+                      ? '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(16,185,129,0.5), 0 8px 20px -8px rgba(16,185,129,0.6)'
+                      : '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.65)',
+                  }}
                 >
                   {editingCategoryId ? <Check className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
                 </button>
@@ -3264,7 +4921,14 @@ const renderOverview = () => {
                       setNewCategoryName('');
                       setEditingCategoryId(null);
                     }}
-                    className="bg-neutral-200 text-neutral-600 px-4 py-2 rounded-xl hover:bg-neutral-300 transition-all duration-300"
+                    className="px-4 py-2 rounded-xl transition-all duration-200"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: 'rgba(255,255,255,0.7)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -3273,21 +4937,42 @@ const renderOverview = () => {
 
               <div className="space-y-2 max-h-[300px] overflow-y-auto">
                 {userCategories.map(cat => (
-                  <div key={cat.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-200">
-                    <span className="font-medium text-slate-700">{cat.name}</span>
+                  <div
+                    key={cat.id}
+                    className="flex items-center justify-between p-3 rounded-xl border"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      borderColor: 'rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <span className="font-semibold text-white/85">{cat.name}</span>
                     <div className="flex gap-2">
                       <button
                         onClick={() => {
                           setNewCategoryName(cat.name);
                           setEditingCategoryId(cat.id);
                         }}
-                        className="text-amber-500 hover:text-amber-700 p-2 hover:bg-amber-50 rounded-lg transition-colors"
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                          background: 'rgba(251,191,36,0.12)',
+                          color: '#fcd34d',
+                          border: '1px solid rgba(251,191,36,0.2)',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.2)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; }}
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteCategoryWrapper(cat.id)}
-                        className="text-rose-500 hover:text-rose-700 p-2 hover:bg-rose-50 rounded-lg transition-colors"
+                        className="p-2 rounded-lg transition-all duration-200"
+                        style={{
+                          background: 'rgba(244,63,94,0.12)',
+                          color: '#fda4af',
+                          border: '1px solid rgba(244,63,94,0.2)',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(244,63,94,0.2)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(244,63,94,0.12)'; }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -3295,7 +4980,7 @@ const renderOverview = () => {
                   </div>
                 ))}
                 {userCategories.length === 0 && (
-                  <p className="text-center text-neutral-400 py-4">Aucune catégorie personnalisée</p>
+                  <p className="text-center text-white/40 py-4 text-sm">Aucune catégorie personnalisée</p>
                 )}
               </div>
             </div>

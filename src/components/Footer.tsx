@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Phone, MapPin } from 'lucide-react';
+import { Mail, Phone, MapPin, Facebook } from 'lucide-react';
 import furahaLogo from '../images/FURAHA-GOLD.png';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -15,7 +15,7 @@ const Footer = () => {
       </div>
       
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-6">
@@ -32,16 +32,33 @@ const Footer = () => {
             <p className="text-gray-300 mb-6 max-w-md leading-relaxed backdrop-blur-sm bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
               {t('footer_description') || 'Créez des invitations digitales exceptionnelles qui marquent les esprits. Votre événement mérite une invitation à la hauteur de son importance.'}
             </p>
-            <div className="flex space-x-4">
-              <div className="flex items-center text-gray-300 dark:text-gray-400">
+            <div className="flex flex-wrap items-center gap-4">
+              <a
+                href="mailto:furahadesign48@gmail.com"
+                className="flex items-center text-gray-300 dark:text-gray-400 hover:text-amber-300 transition-colors duration-300"
+              >
                 <div className="relative mr-2">
                   <Mail className="h-5 w-5 text-amber-500 drop-shadow-sm" />
                   <div className="absolute inset-0 animate-pulse">
                     <Mail className="h-5 w-5 text-amber-300 opacity-20" />
                   </div>
                 </div>
-                <span>contact@furaha-event.com</span>
-              </div>
+                <span>furahadesign48@gmail.com</span>
+              </a>
+              <a
+                href="https://www.facebook.com/profile.php?id=61580901819765&locale=fr_FR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 hover:scale-110"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(59,130,246,0.18), rgba(59,130,246,0.06))',
+                  border: '1px solid rgba(59,130,246,0.35)',
+                  boxShadow: '0 10px 24px -12px rgba(59,130,246,0.55)',
+                }}
+                aria-label="Facebook Furaha-Event"
+              >
+                <Facebook className="h-5 w-5" style={{ color: '#93c5fd' }} />
+              </a>
             </div>
           </div>
 
@@ -50,58 +67,25 @@ const Footer = () => {
             <h3 className="text-lg font-semibold mb-6 bg-gradient-to-r from-amber-500 to-amber-400 dark:from-amber-400 dark:to-amber-300 bg-clip-text text-transparent">{t('quick_links') || 'Liens rapides'}</h3>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group">
-                  {t('about') || 'À propos'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group">
+                <a
+                  href="https://wa.me/243844333917"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group"
+                >
                   {t('contact') || 'Contact'}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group">
-                  {t('privacy_policy') || 'Politique de confidentialité'}
+                <a
+                  href="https://www.furaha-digital.net"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group"
+                >
+                  Autres Services
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-amber-400 dark:hover:text-amber-300 transition-all duration-300 relative group">
-                  {t('terms_of_service') || 'Conditions d\'utilisation'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="text-lg font-semibold mb-6 bg-gradient-to-r from-amber-500 to-rose-400 dark:from-amber-400 dark:to-rose-300 bg-clip-text text-transparent">{t('support') || 'Support'}</h3>
-            <ul className="space-y-3">
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-rose-400 dark:hover:text-rose-300 transition-all duration-300 relative group">
-                  {t('help_center') || 'Centre d\'aide'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-rose-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-rose-400 dark:hover:text-rose-300 transition-all duration-300 relative group">
-                  {t('guides') || 'Guides'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-rose-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-rose-400 dark:hover:text-rose-300 transition-all duration-300 relative group">
-                  {t('tutorials') || 'Tutoriels'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-rose-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 dark:text-gray-400 hover:text-rose-400 dark:hover:text-rose-300 transition-all duration-300 relative group">
-                  {t('faq') || 'FAQ'}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-rose-500 to-amber-400 group-hover:w-full transition-all duration-300"></span>
                 </a>
               </li>
             </ul>

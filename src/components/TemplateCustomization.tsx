@@ -23,7 +23,13 @@ import {
   Check,
   X,
   Trash2,
-  Music
+  Music,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Hotel,
+  Mail,
+  Globe
 } from 'lucide-react';
 import InvitationPreview from './InvitationPreview';
 import { UserModel } from '../services/templateService';
@@ -32,6 +38,27 @@ declare global {
   interface Window {
     cloudinary: any;
   }
+}
+
+interface Accommodation {
+  id: string;
+  name: string;
+  address: string;
+  email?: string;
+  websiteUrl?: string;
+  priceHint?: string;
+  badge?: string;
+  note?: string;
+  orderIndex: number;
+}
+
+interface UsefulAddress {
+  id: string;
+  name: string;
+  address: string;
+  icon?: 'plane' | 'train' | 'car' | 'taxi' | 'info';
+  details?: string;
+  orderIndex: number;
 }
 
 interface TemplateData {
@@ -57,11 +84,25 @@ interface TemplateData {
   eventTime: string;
   eventLocation: string;
   eventAddress?: string;
+  eventLat?: number;
+  eventLng?: number;
   backgroundMusic?: string;
   drinkOptions: string[];
   features: string[];
   useRichInvitation?: boolean;
   richInvitationHTML?: string;
+  accommodationEnabled?: boolean;
+  accommodations?: Accommodation[];
+  usefulAddressesEnabled?: boolean;
+  usefulAddresses?: UsefulAddress[];
+  headerSectionBackground?: string;
+  textSectionBackground?: string;
+  dateLocationSectionBackground?: string;
+  gallerySectionBackground?: string;
+  rsvpDrinksSectionBackground?: string;
+  gamesSectionBackground?: string;
+  qrFooterSectionBackground?: string;
+  accommodationSectionBackground?: string;
 }
 
 interface TemplateCustomizationProps {
@@ -392,6 +433,107 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     }
   };
 
+  /* ========= Handlers Hébergements ========= */
+  const persistAccommodations = async (nextList: Accommodation[]) => {
+    const updated = { ...customTemplate, accommodations: nextList } as TemplateData;
+    setCustomTemplate(updated);
+    if (user && customTemplate.id) {
+      try {
+        const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+        await setDoc(modelRef, { accommodations: nextList, updatedAt: serverTimestamp() }, { merge: true });
+        onSave(updated);
+      } catch {}
+    }
+  };
+
+  const addAccommodation = () => {
+    const list = customTemplate.accommodations ? [...customTemplate.accommodations] : [];
+    const newAcc: Accommodation = {
+      id: 'acc_' + Math.random().toString(36).slice(2, 10),
+      name: '',
+      address: '',
+      email: '',
+      websiteUrl: '',
+      priceHint: '',
+      badge: '',
+      note: '',
+      orderIndex: list.length
+    };
+    persistAccommodations([...list, newAcc]);
+  };
+
+  const removeAccommodation = (id: string) => {
+    const list = (customTemplate.accommodations || []).filter(a => a.id !== id);
+    const reordered = list.map((a, i) => ({ ...a, orderIndex: i }));
+    persistAccommodations(reordered);
+  };
+
+  const updateAccommodation = (id: string, patch: Partial<Accommodation>) => {
+    const list = (customTemplate.accommodations || []).map(a =>
+      a.id === id ? { ...a, ...patch } : a
+    );
+    const updated = { ...customTemplate, accommodations: list } as TemplateData;
+    setCustomTemplate(updated);
+  };
+
+  const reorderAccommodation = (index: number, direction: -1 | 1) => {
+    const list = [...(customTemplate.accommodations || [])].sort((a,b)=>a.orderIndex-b.orderIndex);
+    const newIdx = index + direction;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    [list[index], list[newIdx]] = [list[newIdx], list[index]];
+    const reordered = list.map((a, i) => ({ ...a, orderIndex: i }));
+    persistAccommodations(reordered);
+  };
+
+  /* ========= Handlers Adresses Utiles ========= */
+  const persistUsefulAddresses = async (nextList: UsefulAddress[]) => {
+    const updated = { ...customTemplate, usefulAddresses: nextList } as TemplateData;
+    setCustomTemplate(updated);
+    if (user && customTemplate.id) {
+      try {
+        const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+        await setDoc(modelRef, { usefulAddresses: nextList, updatedAt: serverTimestamp() }, { merge: true });
+        onSave(updated);
+      } catch {}
+    }
+  };
+
+  const addUsefulAddress = () => {
+    const list = customTemplate.usefulAddresses ? [...customTemplate.usefulAddresses] : [];
+    const newAddr: UsefulAddress = {
+      id: 'ua_' + Math.random().toString(36).slice(2, 10),
+      name: '',
+      address: '',
+      icon: 'info',
+      details: '',
+      orderIndex: list.length
+    };
+    persistUsefulAddresses([...list, newAddr]);
+  };
+
+  const removeUsefulAddress = (id: string) => {
+    const list = (customTemplate.usefulAddresses || []).filter(a => a.id !== id);
+    const reordered = list.map((a, i) => ({ ...a, orderIndex: i }));
+    persistUsefulAddresses(reordered);
+  };
+
+  const updateUsefulAddress = (id: string, patch: Partial<UsefulAddress>) => {
+    const list = (customTemplate.usefulAddresses || []).map(a =>
+      a.id === id ? { ...a, ...patch } : a
+    );
+    const updated = { ...customTemplate, usefulAddresses: list } as TemplateData;
+    setCustomTemplate(updated);
+  };
+
+  const reorderUseful = (index: number, direction: -1 | 1) => {
+    const list = [...(customTemplate.usefulAddresses || [])].sort((a,b)=>a.orderIndex-b.orderIndex);
+    const newIdx = index + direction;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    [list[index], list[newIdx]] = [list[newIdx], list[index]];
+    const reordered = list.map((a, i) => ({ ...a, orderIndex: i }));
+    persistUsefulAddresses(reordered);
+  };
+
   const handleSave = async () => {
     if (!customTemplate.id || !user) return;
 
@@ -441,65 +583,81 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Sous-titre au-dessus du titre
               </label>
               <input
                 type="text"
                 value={customTemplate.invitationTitleSubtitle || ''}
                 onChange={(e) => handleInputChange('invitationTitleSubtitle', e.target.value)}
-                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 placeholder="Ex: Nous avons le plaisir de vous inviter à"
               />
             </div>
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Titre de l'invitation
               </label>
               <input
                 type="text"
                 value={customTemplate.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 placeholder="Ex: Mariage de Sophie & Lucas"
               />
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Photo dans la zone de texte
               </label>
               <div className="space-y-2.5 sm:space-y-3">
                 {/* Titre de la photo */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-0.5 sm:mb-1">
+                  <label className="block text-xs font-medium mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
                     Titre de la photo
                   </label>
                   <input
                     type="text"
                     value={customTemplate.invitationTextPhotoTitle || ''}
                     onChange={(e) => handleInputChange('invitationTextPhotoTitle', e.target.value)}
-                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-neutral-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: Motif de pagne"
                   />
                 </div>
 
                 {/* Sous-titre de la photo */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-0.5 sm:mb-1">
+                  <label className="block text-xs font-medium mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
                     Sous-titre de la photo
                   </label>
                   <input
                     type="text"
                     value={(customTemplate as any).invitationTextPhotoSubtitle || ''}
                     onChange={(e) => handleInputChange('invitationTextPhotoSubtitle' as any, e.target.value)}
-                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 border border-neutral-300 rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: Notre tradition"
                   />
                 </div>
 
                 {/* Aperçu et upload */}
-                <div className="relative h-20 sm:h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
                   {customTemplate.invitationTextPhoto ? (
                     <>
                       <img
@@ -509,7 +667,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       />
                       <button
                         onClick={() => handleInputChange('invitationTextPhoto', '')}
-                        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         title="Retirer la photo"
                       >
                         <X className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -518,17 +677,24 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <Camera className="h-6 w-6 sm:h-8 sm:w-8 text-neutral-400 mx-auto mb-1.5 sm:mb-2" />
-                        <p className="text-neutral-500 text-xs sm:text-sm">Aucune photo sélectionnée</p>
+                        <Camera className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                        <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune photo sélectionnée</p>
                       </div>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('invitationTextPhoto')}
-                    className="bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                     Charger une photo
@@ -538,35 +704,64 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Texte d'invitation
               </label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                <button type="button" onClick={() => wrapSelection('[b]', '[/b]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Gras</button>
-                <button type="button" onClick={() => wrapSelection('[i]', '[/i]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Italique</button>
-                <input type="color" value={selectedTextColor} onChange={(e) => setSelectedTextColor(e.target.value)} className="h-7 w-9 sm:h-9 sm:w-12 p-0.5 border rounded-lg" />
-                <button type="button" onClick={() => wrapSelection(`[color=${selectedTextColor}]`, '[/color]')} className="px-2 py-1 rounded-lg border text-xs sm:text-sm">Couleur</button>
-                <button type="button" onClick={clearFormatting} className="ml-auto px-2 py-1 rounded-lg border text-xs sm:text-sm">Réinitialiser</button>
+                <button type="button" onClick={() => wrapSelection('[b]', '[/b]')}
+                        className="px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; e.currentTarget.style.color = '#fcd34d'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
+                >Gras</button>
+                <button type="button" onClick={() => wrapSelection('[i]', '[/i]')}
+                        className="px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; e.currentTarget.style.color = '#fcd34d'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
+                >Italique</button>
+                <input type="color" value={selectedTextColor} onChange={(e) => setSelectedTextColor(e.target.value)}
+                       className="h-7 w-9 sm:h-9 sm:w-12 p-0.5 rounded-lg cursor-pointer"
+                       style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                />
+                <button type="button" onClick={() => wrapSelection(`[color=${selectedTextColor}]`, '[/color]')}
+                        className="px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.12)'; e.currentTarget.style.color = '#fcd34d'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
+                >Couleur</button>
+                <button type="button" onClick={clearFormatting}
+                        className="ml-auto px-2 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.12)'; e.currentTarget.style.color = '#f9a8d4'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
+                >Réinitialiser</button>
               </div>
               <textarea
                 value={customTemplate.invitationText}
                 onChange={(e) => handleInputChange('invitationText', e.target.value)}
                 rows={5}
-                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 resize-none text-sm"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 resize-none text-sm outline-none"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 placeholder="Rédigez votre message d'invitation..."
                 ref={textAreaRef}
               />
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Nom du template
               </label>
               <input
                 type="text"
                 value={customTemplate.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 placeholder="Nom de votre template personnalisé"
               />
             </div>
@@ -577,11 +772,15 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Image de fond
               </label>
               <div className="space-y-2.5 sm:space-y-3">
-                <div className="relative h-20 sm:h-24 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
                   {customTemplate.backgroundImage ? (
                     <>
                       <img
@@ -591,7 +790,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       />
                       <button
                         onClick={() => handleInputChange('backgroundImage', '')}
-                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute top-2 right-2 p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         title="Retirer l'image de fond"
                       >
                         <X className="h-4 w-4" />
@@ -600,8 +800,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <Camera className="h-8 w-8 text-neutral-400 mx-auto mb-2" />
-                        <p className="text-neutral-500 text-sm">Aucune image sélectionnée</p>
+                        <Camera className="h-8 w-8 mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                        <p className="text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image sélectionnée</p>
                       </div>
                     </div>
                   )}
@@ -610,7 +810,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('backgroundImage')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Charger une image
@@ -618,7 +825,10 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   
                   <button
                     onClick={() => handleInputChange('backgroundImage', 'https://images.pexels.com/photos/1024993/pexels-photo-1024993.jpeg?auto=compress&cs=tinysrgb&w=1200')}
-                    className="bg-neutral-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-neutral-600 transition-all duration-300 font-semibold"
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; e.currentTarget.style.color = '#fcd34d'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)'; }}
                   >
                     Image par défaut
                   </button>
@@ -626,12 +836,12 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-2xl p-6 border border-amber-200/50">
+            <div className="rounded-2xl p-6" style={{ background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)' }}>
               <div className="flex items-center mb-4">
-                <Camera className="h-5 w-5 text-amber-600 mr-2" />
-                <h3 className="text-lg font-semibold text-amber-800">Téléchargement d'image</h3>
+                <Camera className="h-5 w-5 mr-2" style={{ color: '#fcd34d' }} />
+                <h3 className="text-lg font-semibold" style={{ color: '#fcd34d' }}>Téléchargement d'image</h3>
               </div>
-              <div className="space-y-2 text-amber-700 text-sm">
+              <div className="space-y-2 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 <p>• Formats acceptés : JPEG, PNG, WebP</p>
                 <p>• Taille maximale : 5MB</p>
                 <p>• L'image sera stockée de manière sécurisée</p>
@@ -639,126 +849,152 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
             </div>
 
-            <p className="text-xs font-medium text-slate-600 mb-2">Recommandé</p>
+            <p className="text-xs font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Recommandé</p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://i.pinimg.com/736x/fd/7a/65/fd7a65aca807295846701baaf4e968da.jpg')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/736x/fd/7a/65/fd7a65aca807295846701baaf4e968da.jpg"
                     alt="Template 1"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Romantique</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Romantique</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://i.pinimg.com/736x/3e/93/bf/3e93bfe0d8a1532054bce013b6f1f07b.jpg')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/736x/3e/93/bf/3e93bfe0d8a1532054bce013b6f1f07b.jpg"
                     alt="Template 2"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Élégant</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Élégant</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://i.pinimg.com/1200x/4b/ee/84/4bee8478bb54a57537b1c95b366ea5bc.jpg')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/1200x/4b/ee/84/4bee8478bb54a57537b1c95b366ea5bc.jpg"
                     alt="Template 3"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Moderne</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Moderne</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://i.pinimg.com/736x/1b/3b/b7/1b3bb7268cca9e4a60e7680a249545d6.jpg')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/736x/1b/3b/b7/1b3bb7268cca9e4a60e7680a249545d6.jpg"
                     alt="Template 4"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Classique</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Classique</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://i.pinimg.com/736x/21/10/c9/2110c97858e0272bbf004d3772c95dd2.jpg')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/736x/21/10/c9/2110c97858e0272bbf004d3772c95dd2.jpg"
                     alt="Texture 1"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Texture</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Texture</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://images.unsplash.com/photo-1470770903676-69b98201ea1c?q=80&w=1200&auto=format&fit=crop')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://images.unsplash.com/photo-1470770903676-69b98201ea1c?q=80&w=400&auto=format&fit=crop"
                     alt="Bois"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Bois</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Bois</p>
               </div>
 
               <div
                 onClick={() => handleInputChange('backgroundImage', 'https://images.unsplash.com/photo-1496302662116-35cc4f36dfaa?q=80&w=1200&auto=format&fit=crop')}
                 className="cursor-pointer group"
               >
-                <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                >
                   <img
                     src="https://i.pinimg.com/736x/58/e5/e7/58e5e7042c1d3ee97090114d4081e08e.jpg"
                     alt="Marbre"
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-all duration-300"></div>
                 </div>
-                <p className="text-[11px] text-center mt-1 text-slate-600">Marbre</p>
+                <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Marbre</p>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 fond de l'invitation
               </label>
               <div className="space-y-3">
-                <div className="relative h-20 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
                   {customTemplate.patternBackgroundImage ? (
                     <>
                       <div className="absolute inset-0 rounded-xl" style={{ backgroundImage: `url(${customTemplate.patternBackgroundImage})`, backgroundRepeat: 'repeat', backgroundSize: 'auto' }}></div>
                       <button
                         onClick={() => handleInputChange('patternBackgroundImage', '')}
-                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute top-2 right-2 p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         title="Retirer le motif"
                       >
                         <X className="h-4 w-4" />
@@ -767,8 +1003,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <div className="text-center">
-                        <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                        <p className="text-neutral-500 text-xs">Aucun motif sélectionné</p>
+                        <Camera className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucun motif sélectionné</p>
                       </div>
                     </div>
                   )}
@@ -784,20 +1020,21 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     <div
                       key={url}
                       onClick={() => handleInputChange('patternBackgroundImage', url)}
-                      className={`cursor-pointer group relative rounded-xl transition-all duration-300 ${
-                        customTemplate.patternBackgroundImage === url ? 'ring-2 ring-amber-500 ring-offset-2' : ''
-                      }`}
+                      className={`cursor-pointer group relative rounded-xl transition-all duration-300`}
                     >
-                      <div className="relative h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-amber-400 transition-all duration-300">
+                      <div className="relative h-16 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                           style={{ borderColor: customTemplate.patternBackgroundImage === url ? 'rgba(251,191,36,0.45)' : 'rgba(255,255,255,0.08)' }}
+                           onMouseEnter={(e) => { if (customTemplate.patternBackgroundImage !== url) e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'; }}
+                           onMouseLeave={(e) => { if (customTemplate.patternBackgroundImage !== url) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                      >
                         <div className="absolute inset-0" style={{ backgroundImage: `url(${url})`, backgroundRepeat: 'repeat' }}></div>
-                        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/5 transition-all duration-300"></div>
                         {customTemplate.patternBackgroundImage === url && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-amber-500/20">
-                            <Check className="h-6 w-6 text-amber-600 bg-white rounded-full p-1" />
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(251,191,36,0.15)' }}>
+                            <Check className="h-6 w-6 rounded-full p-1" style={{ background: '#0d1220', color: '#fcd34d', border: '1px solid rgba(255,255,255,0.08)' }} />
                           </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-center mt-1 text-slate-600">Motif {idx + 1}</p>
+                      <p className="text-[11px] text-center mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Motif {idx + 1}</p>
                     </div>
                   ))}
                 </div>
@@ -805,7 +1042,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('patternBackgroundImage')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Charger un motif
@@ -815,18 +1059,23 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Ornement
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
-                  <div className="relative h-20 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                  <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                       style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                  >
                     {customTemplate.guestInfoLeftImage ? (
                       <>
                         <img src={customTemplate.guestInfoLeftImage} alt="Aperçu gauche" className="w-full h-full object-contain rounded-xl" />
                         <button
                           onClick={() => handleInputChange('guestInfoLeftImage', '')}
-                          className="absolute top-2 right-2 p-1 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          className="absolute top-2 right-2 p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -834,8 +1083,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                          <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                          <p className="text-neutral-500 text-xs">Aucune image sélectionnée</p>
+                          <Camera className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image sélectionnée</p>
                         </div>
                       </div>
                     )}
@@ -843,7 +1092,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('guestInfoLeftImage')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Charger
@@ -860,14 +1116,15 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       <button
                         key={url}
                         onClick={() => handleInputChange('guestInfoLeftImage', url)}
-                        className={`relative h-14 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                          customTemplate.guestInfoLeftImage === url ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-transparent hover:border-amber-400'
-                        }`}
+                        className="relative h-14 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                        style={{ borderColor: customTemplate.guestInfoLeftImage === url ? 'rgba(251,191,36,0.45)' : 'rgba(255,255,255,0.08)' }}
+                        onMouseEnter={(e) => { if (customTemplate.guestInfoLeftImage !== url) e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'; }}
+                        onMouseLeave={(e) => { if (customTemplate.guestInfoLeftImage !== url) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                       >
                         <img src={url} alt="Choix ornement gauche" className="w-full h-full object-contain bg-white" />
                         {customTemplate.guestInfoLeftImage === url && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-amber-500/10">
-                            <Check className="h-4 w-4 text-amber-600 bg-white rounded-full p-0.5" />
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(251,191,36,0.15)' }}>
+                            <Check className="h-4 w-4 rounded-full p-0.5" style={{ background: '#0d1220', color: '#fcd34d', border: '1px solid rgba(255,255,255,0.08)' }} />
                           </div>
                         )}
                       </button>
@@ -876,13 +1133,18 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 </div>
 
                 <div className="space-y-4">
-                  <div className="relative h-20 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                  <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                       style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                       onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                  >
                     {customTemplate.guestInfoRightImage ? (
                       <>
                         <img src={customTemplate.guestInfoRightImage} alt="Aperçu droite" className="w-full h-full object-contain rounded-xl" />
                         <button
                           onClick={() => handleInputChange('guestInfoRightImage', '')}
-                          className="absolute top-2 right-2 p-1 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          className="absolute top-2 right-2 p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                          style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -890,8 +1152,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     ) : (
                       <div className="flex items-center justify-center h-full">
                         <div className="text-center">
-                          <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                          <p className="text-neutral-500 text-xs">Aucune image sélectionnée</p>
+                          <Camera className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image sélectionnée</p>
                         </div>
                       </div>
                     )}
@@ -899,7 +1161,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleCloudinaryUpload('guestInfoRightImage')}
-                      className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                      className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                      style={{
+                        background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                        color: '#0b0f17',
+                        boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                     >
                       <Upload className="h-4 w-4 mr-2" />
                       Charger
@@ -916,14 +1185,15 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       <button
                         key={url}
                         onClick={() => handleInputChange('guestInfoRightImage', url)}
-                        className={`relative h-14 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                          customTemplate.guestInfoRightImage === url ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-transparent hover:border-amber-400'
-                        }`}
+                        className="relative h-14 rounded-xl overflow-hidden border-2 transition-all duration-300"
+                        style={{ borderColor: customTemplate.guestInfoRightImage === url ? 'rgba(251,191,36,0.45)' : 'rgba(255,255,255,0.08)' }}
+                        onMouseEnter={(e) => { if (customTemplate.guestInfoRightImage !== url) e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'; }}
+                        onMouseLeave={(e) => { if (customTemplate.guestInfoRightImage !== url) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                       >
                         <img src={url} alt="Choix ornement droite" className="w-full h-full object-contain bg-white" />
                         {customTemplate.guestInfoRightImage === url && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-amber-500/10">
-                            <Check className="h-4 w-4 text-amber-600 bg-white rounded-full p-0.5" />
+                          <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(251,191,36,0.15)' }}>
+                            <Check className="h-4 w-4 rounded-full p-0.5" style={{ background: '#0d1220', color: '#fcd34d', border: '1px solid rgba(255,255,255,0.08)' }} />
                           </div>
                         )}
                       </button>
@@ -934,32 +1204,44 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Photo
               </label>
               <div className="space-y-3">
-                <div className="relative h-24 rounded-xl border-2 border-dashed border-neutral-300 bg-gradient-to-br from-neutral-100 to-amber-50 flex items-center justify-center group">
+                <div className="relative h-24 rounded-xl border-2 border-dashed transition-all duration-300 flex items-center justify-center group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
                   {customTemplate.invitationPhoto ? (
                     <>
                       <img src={customTemplate.invitationPhoto} alt="Aperçu photo" className="h-20 w-20 rounded-full object-cover shadow-md" />
                       <button
                         onClick={() => handleInputChange('invitationPhoto', '')}
-                        className="absolute top-2 right-2 p-1 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute top-2 right-2 p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                       >
                         <X className="h-4 w-4" />
                       </button>
                     </>
                   ) : (
                     <div className="text-center">
-                      <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                      <p className="text-neutral-500 text-xs">Aucune photo sélectionnée</p>
+                      <Camera className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune photo sélectionnée</p>
                     </div>
                   )}
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleCloudinaryUpload('invitationPhoto')}
-                    className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     Charger une photo
@@ -969,9 +1251,9 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             {/* Section backgrounds */}
-            <div className="border-t border-amber-200 pt-6 mt-6">
-              <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Palette className="h-5 w-5 text-amber-600" />
+            <div className="pt-6 mt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                <Palette className="h-5 w-5" style={{ color: '#fcd34d' }} />
                 Fonds par section
               </h3>
               <div className="space-y-5">
@@ -983,13 +1265,18 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   { field: 'rsvpDrinksSectionBackground', label: 'Section RSVP & Boissons' },
                   { field: 'gamesSectionBackground', label: 'Section Jeux' },
                   { field: 'qrFooterSectionBackground', label: 'Section QR Code & Footer' },
+                  { field: 'accommodationSectionBackground', label: 'Section Hébergements & Adresses Utiles' },
                 ].map(({ field, label }) => (
                   <div key={field}>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                       {label}
                     </label>
                     <div className="space-y-3">
-                      <div className="relative h-20 bg-gradient-to-br from-neutral-100 to-amber-50 rounded-xl border-2 border-dashed border-neutral-300 hover:border-amber-400 transition-all duration-300 group">
+                      <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                           style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                      >
                         {(customTemplate as any)[field] ? (
                           <>
                             <img
@@ -999,7 +1286,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                             />
                             <button
                               onClick={() => handleInputChange(field as keyof TemplateData, '')}
-                              className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white text-rose-600 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              className="absolute top-2 right-2 p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                              style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                               title="Retirer l'image de fond"
                             >
                               <X className="h-4 w-4" />
@@ -1008,8 +1296,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                         ) : (
                           <div className="flex items-center justify-center h-full">
                             <div className="text-center">
-                              <Camera className="h-6 w-6 text-neutral-400 mx-auto mb-1" />
-                              <p className="text-neutral-500 text-xs">Aucune image sélectionnée</p>
+                              <Camera className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image sélectionnée</p>
                             </div>
                           </div>
                         )}
@@ -1017,7 +1305,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleCloudinaryUpload(field as keyof TemplateData)}
-                          className="bg-amber-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                          className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                          style={{
+                            background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                            color: '#0b0f17',
+                            boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Charger une image
@@ -1037,7 +1332,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
+              <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Couleur principale
               </label>
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -1045,21 +1340,25 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   type="color"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl cursor-pointer p-0.5"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
                 />
                 <input
                   type="text"
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 font-mono text-xs sm:text-sm outline-none"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="#f59e0b"
                 />
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur utilisée pour les éléments principaux et les boutons</p>
+              <p className="text-xs sm:text-sm mt-1.5 sm:mt-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Couleur utilisée pour les éléments principaux et les boutons</p>
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
+              <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Couleur secondaire
               </label>
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -1067,21 +1366,25 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   type="color"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl cursor-pointer p-0.5"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
                 />
                 <input
                   type="text"
                   value={secondaryColor}
                   onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 font-mono text-xs sm:text-sm outline-none"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="#d97706"
                 />
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur pour les effets de survol et les accents</p>
+              <p className="text-xs sm:text-sm mt-1.5 sm:mt-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Couleur pour les effets de survol et les accents</p>
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
+              <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Couleur d'accent
               </label>
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -1089,17 +1392,21 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   type="color"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl border-2 border-neutral-300 cursor-pointer"
+                  className="w-12 h-9 sm:w-16 sm:h-12 rounded-xl cursor-pointer p-0.5"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
                 />
                 <input
                   type="text"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 font-mono text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 font-mono text-xs sm:text-sm outline-none"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="#f43f5e"
                 />
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2">Couleur pour les éléments décoratifs et les icônes</p>
+              <p className="text-xs sm:text-sm mt-1.5 sm:mt-2" style={{ color: 'rgba(255,255,255,0.55)' }}>Couleur pour les éléments décoratifs et les icônes</p>
             </div>
 
             <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
@@ -1109,14 +1416,20 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   setSecondaryColor('#d97706');
                   setAccentColor('#f43f5e');
                 }}
-                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-amber-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.4)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
               >
                 <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-amber-500"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-amber-600"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-rose-500"></div>
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-amber-700">Doré & Rose</p>
+                <p className="text-xs sm:text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}
+                   onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                >Doré & Rose</p>
               </button>
 
               <button
@@ -1125,14 +1438,20 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   setSecondaryColor('#7c3aed');
                   setAccentColor('#ec4899');
                 }}
-                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-purple-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(139,92,246,0.4)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
               >
                 <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-violet-500"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-violet-600"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-pink-500"></div>
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-purple-700">Violet & Rose</p>
+                <p className="text-xs sm:text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}
+                   onMouseEnter={(e) => { e.currentTarget.style.color = '#c4b5fd'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                >Violet & Rose</p>
               </button>
 
               <button
@@ -1141,23 +1460,29 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   setSecondaryColor('#059669');
                   setAccentColor('#3b82f6');
                 }}
-                className="p-3 sm:p-4 rounded-xl border-2 border-neutral-200 hover:border-emerald-400 transition-all duration-300 group"
+                className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(16,185,129,0.4)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
               >
                 <div className="flex space-x-1.5 sm:space-x-2 mb-1.5 sm:mb-2">
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-emerald-500"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-emerald-600"></div>
                   <div className="w-4.5 h-4.5 sm:w-6 sm:h-6 rounded-full bg-blue-500"></div>
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-slate-700 group-hover:text-emerald-700">Émeraude & Bleu</p>
+                <p className="text-xs sm:text-sm font-medium" style={{ color: 'rgba(255,255,255,0.8)' }}
+                   onMouseEnter={(e) => { e.currentTarget.style.color = '#6ee7b7'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                >Émeraude & Bleu</p>
               </button>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-3 sm:p-6 border border-purple-200/50">
+            <div className="rounded-2xl p-3 sm:p-6" style={{ background: 'rgba(217,70,239,0.06)', border: '1px solid rgba(217,70,239,0.15)' }}>
               <div className="flex items-center mb-2 sm:mb-4">
-                <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 mr-1.5 sm:mr-2" />
-                <h3 className="text-base sm:text-lg font-semibold text-purple-800">Personnalisation des couleurs</h3>
+                <Palette className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#e9a4f2' }} />
+                <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#e9a4f2' }}>Personnalisation des couleurs</h3>
               </div>
-              <p className="text-purple-700 text-xs sm:text-sm">
+              <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 Personnalisez les couleurs de votre invitation pour qu'elle corresponde parfaitement à votre thème.
                 Les modifications s'appliquent en temps réel dans l'aperçu.
               </p>
@@ -1170,7 +1495,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
           <div className="space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                   Date de l'événement
                 </label>
                 <input
@@ -1199,83 +1524,409 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     });
                     handleInputChange('eventDate', formattedDate);
                   }}
-                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
 
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                   Heure de l'événement
                 </label>
                 <input
                   type="time"
                   value={customTemplate.eventTime ? customTemplate.eventTime.replace('h', ':') : ''}
                   onChange={(e) => handleInputChange('eventTime', e.target.value.replace(':', 'h'))}
-                  className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                  className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Lieu de l'événement
               </label>
               <input
                 type="text"
                 value={customTemplate.eventLocation}
                 onChange={(e) => handleInputChange('eventLocation', e.target.value)}
-                className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-sm"
+                className="w-full px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-sm"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 placeholder="Nom du lieu (ex: Château de la Loire)"
               />
               <div className="mt-2.5 sm:mt-3">
-                <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Adresse de l'événement</label>
+                <label className="block text-xs font-semibold mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Adresse de l'événement</label>
                 <input
                   type="text"
                   value={customTemplate.eventAddress || ''}
                   onChange={(e) => handleInputChange('eventAddress', e.target.value)}
-                  className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
+                  className="w-full px-3 py-2 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="Adresse complète (ex: 123 Rue de la Paix, 75001 Paris)"
                 />
               </div>
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mt-2.5 sm:mt-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Latitude (optionnel)</label>
+                  <label className="block text-xs font-semibold mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Latitude (optionnel)</label>
                   <input
                     type="number"
                     value={customTemplate.eventLat ?? ''}
                     onChange={(e) => handleInputChange('eventLat', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                     step="0.000001"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
+                    className="w-full px-3 py-2 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: -4.3251"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-0.5 sm:mb-1">Longitude (optionnel)</label>
+                  <label className="block text-xs font-semibold mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Longitude (optionnel)</label>
                   <input
                     type="number"
                     value={customTemplate.eventLng ?? ''}
                     onChange={(e) => handleInputChange('eventLng', e.target.value === '' ? undefined : parseFloat(e.target.value))}
                     step="0.000001"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
+                    className="w-full px-3 py-2 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: 15.3136"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-2xl p-3 sm:p-6 border border-amber-200/50">
+            <div className="rounded-2xl p-3 sm:p-6 border" style={{ background: 'rgba(251,191,36,0.06)', borderColor: 'rgba(251,191,36,0.15)' }}>
               <div className="flex items-center mb-2 sm:mb-4">
-                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 mr-1.5 sm:mr-2" />
-                <h3 className="text-base sm:text-lg font-semibold text-amber-800">Informations du lieu</h3>
+                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#fcd34d' }} />
+                <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#fcd34d' }}>Informations du lieu</h3>
               </div>
-              <p className="text-amber-700 text-xs sm:text-sm">
+              <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 Assurez-vous que l'adresse est complète et précise pour faciliter l'accès de vos invités.
                 Vous pouvez inclure des indications supplémentaires dans le texte d'invitation.
               </p>
             </div>
 
+            {/* ============ HÉBERGEMENTS PROCHES ============ */}
+            <div className="pt-4 sm:pt-6 mt-4 sm:mt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <div className="flex items-center">
+                  <Hotel className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#fcd34d' }} />
+                  <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#ffffff' }}>Hébergements & Adresses Utiles</h3>
+                </div>
+              </div>
+
+              {/* Toggle Hébergements */}
+              <div className="rounded-xl p-3 sm:p-4 border mb-3 sm:mb-4" style={{ background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)', borderColor: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm sm:text-base flex items-center gap-2" style={{ color: '#ffffff' }}>
+                      <Hotel className="h-4 w-4" style={{ color: '#fcd34d' }} />
+                      Section Hébergements recommandés
+                    </h4>
+                    <p className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      Proposez des hôtels ou chambres d'hôtes à proximité de la salle
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('accommodationEnabled' as any, !customTemplate.accommodationEnabled)}
+                    className="relative w-11 sm:w-12 h-6 sm:h-7 rounded-full transition-colors duration-200 flex-shrink-0 ml-3"
+                    style={{ background: customTemplate.accommodationEnabled ? '#f59e0b' : 'rgba(255,255,255,0.12)' }}
+                  >
+                    <span
+                      className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow-md transition-transform duration-200"
+                      style={{ background: '#ffffff', transform: customTemplate.accommodationEnabled ? 'translateX(20px)' : 'translateX(0)' }}
+                    />
+                  </button>
+                </div>
+
+                {customTemplate.accommodationEnabled && (
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t space-y-2.5 sm:space-y-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    {(customTemplate.accommodations || []).sort((a,b)=>a.orderIndex-b.orderIndex).map((acc, idx) => (
+                      <div key={acc.id} className="rounded-xl p-3 sm:p-4 border space-y-2.5 sm:space-y-3" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(251,191,36,0.14)' }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-xs sm:text-sm font-bold" style={{ color: '#fcd34d' }}>Hébergement #{idx+1}</div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              disabled={idx===0}
+                              onClick={() => reorderAccommodation(idx, -1)}
+                              className="p-1 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { if (idx !== 0) e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <ChevronUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={idx===(customTemplate.accommodations?.length || 0)-1}
+                              onClick={() => reorderAccommodation(idx, 1)}
+                              className="p-1 rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { if (idx !== (customTemplate.accommodations?.length || 0)-1) e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <ChevronDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeAccommodation(acc.id)}
+                              className="p-1 rounded-lg transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
+                              title="Supprimer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Nom de l'établissement *</label>
+                            <input
+                              type="text"
+                              value={acc.name}
+                              onChange={(e) => updateAccommodation(acc.id, { name: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: Hôtel du Parc & Spa"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Adresse complète *</label>
+                            <input
+                              type="text"
+                              value={acc.address}
+                              onChange={(e) => updateAccommodation(acc.id, { address: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: 123 Av. des Champs-Élysées, 75008 Paris"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                              <Mail className="h-3 w-3" /> Email réservation
+                            </label>
+                            <input
+                              type="email"
+                              value={acc.email || ''}
+                              onChange={(e) => updateAccommodation(acc.id, { email: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="reception@hotel-parc.com"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5 flex items-center gap-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                              <Globe className="h-3 w-3" /> Site web / Booking
+                            </label>
+                            <input
+                              type="url"
+                              value={acc.websiteUrl || ''}
+                              onChange={(e) => updateAccommodation(acc.id, { websiteUrl: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="https://..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Tarif indicatif</label>
+                            <input
+                              type="text"
+                              value={acc.priceHint || ''}
+                              onChange={(e) => updateAccommodation(acc.id, { priceHint: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: ~130€/nuit"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Badge</label>
+                            <input
+                              type="text"
+                              value={acc.badge || ''}
+                              onChange={(e) => updateAccommodation(acc.id, { badge: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: Partenaire | 5 min"
+                            />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Note privée (non affichée)</label>
+                            <input
+                              type="text"
+                              value={acc.note || ''}
+                              onChange={(e) => updateAccommodation(acc.id, { note: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: Prévenir mariage Lucie & Paul"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={addAccommodation}
+                      className="w-full py-2.5 sm:py-3 rounded-xl border-2 border-dashed transition-all text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 sm:gap-2"
+                      style={{ borderColor: 'rgba(251,191,36,0.35)', color: '#fcd34d' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.35)'; }}
+                    >
+                      <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                      Ajouter un hébergement
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Toggle Adresses Utiles */}
+              <div className="rounded-xl p-3 sm:p-4 border" style={{ background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)', borderColor: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-sm sm:text-base flex items-center gap-2" style={{ color: '#ffffff' }}>
+                      <MapPin className="h-4 w-4" style={{ color: '#fcd34d' }} />
+                      Adresses utiles (gare, aéroport, parking)
+                    </h4>
+                    <p className="text-xs sm:text-sm mt-0.5 sm:mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      Informations supplémentaires pour les invités en voyage
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('usefulAddressesEnabled' as any, !customTemplate.usefulAddressesEnabled)}
+                    className="relative w-11 sm:w-12 h-6 sm:h-7 rounded-full transition-colors duration-200 flex-shrink-0 ml-3"
+                    style={{ background: customTemplate.usefulAddressesEnabled ? '#f59e0b' : 'rgba(255,255,255,0.12)' }}
+                  >
+                    <span
+                      className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full shadow-md transition-transform duration-200"
+                      style={{ background: '#ffffff', transform: customTemplate.usefulAddressesEnabled ? 'translateX(20px)' : 'translateX(0)' }}
+                    />
+                  </button>
+                </div>
+
+                {customTemplate.usefulAddressesEnabled && (
+                  <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t space-y-2.5 sm:space-y-3" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+                    {(customTemplate.usefulAddresses || []).sort((a,b)=>a.orderIndex-b.orderIndex).map((addr, idx) => (
+                      <div key={addr.id} className="rounded-xl p-3 sm:p-4 border space-y-2.5" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="text-xs sm:text-sm font-bold" style={{ color: '#fcd34d' }}>Adresse utile #{idx+1}</div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" disabled={idx===0} onClick={() => reorderUseful(idx, -1)} className="p-1 rounded-lg disabled:opacity-30 transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { if (idx !== 0) e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" disabled={idx===(customTemplate.usefulAddresses?.length||0)-1} onClick={() => reorderUseful(idx, 1)} className="p-1 rounded-lg disabled:opacity-30 transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { if (idx !== (customTemplate.usefulAddresses?.length || 0)-1) e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </button>
+                            <button type="button" onClick={() => removeUsefulAddress(addr.id)} className="p-1 rounded-lg transition-all duration-200"
+                              style={{ color: 'rgba(255,255,255,0.55)' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Nom *</label>
+                            <input type="text" value={addr.name} onChange={(e) => updateUsefulAddress(addr.id, { name: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: Aéroport Roissy CDG" />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Adresse</label>
+                            <input type="text" value={addr.address} onChange={(e) => updateUsefulAddress(addr.id, { address: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Adresse ou nom du lieu" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Icône</label>
+                            <select value={addr.icon || 'info'} onChange={(e) => updateUsefulAddress(addr.id, { icon: e.target.value as any })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none appearance-none"
+                              style={{ background: '#0d1220', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.85)' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                            >
+                              <option value="info" style={{ background: '#0d1220', color: '#ffffff' }}>ℹ️ Info</option>
+                              <option value="plane" style={{ background: '#0d1220', color: '#ffffff' }}>✈️ Avion</option>
+                              <option value="train" style={{ background: '#0d1220', color: '#ffffff' }}>🚆 Train</option>
+                              <option value="car" style={{ background: '#0d1220', color: '#ffffff' }}>🚗 Voiture / Parking</option>
+                              <option value="taxi" style={{ background: '#0d1220', color: '#ffffff' }}>🚕 Taxi</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Détails complémentaires</label>
+                            <input type="text" value={addr.details || ''} onChange={(e) => updateUsefulAddress(addr.id, { details: e.target.value })}
+                              className="w-full px-3 py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              placeholder="Ex: 45 min de la salle" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    <button type="button" onClick={addUsefulAddress}
+                      className="w-full py-2.5 sm:py-3 rounded-xl border-2 border-dashed transition-all text-xs sm:text-sm font-semibold flex items-center justify-center gap-1.5 sm:gap-2"
+                      style={{ borderColor: 'rgba(255,255,255,0.18)', color: 'rgba(255,255,255,0.65)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; e.currentTarget.style.color = '#fcd34d'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
+                    >
+                      <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                      Ajouter une adresse utile
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="mt-4 sm:mt-6">
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Photos sous la date
               </label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
@@ -1284,22 +1935,33 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   const previewSrc = (customTemplate[field] as string) || customTemplate.eventPhotos?.[idx] || customTemplate.invitationPhoto || customTemplate.backgroundImage;
                   return (
                     <div key={idx} className="space-y-1.5 sm:space-y-2">
-                      <div className="relative h-16 sm:h-20 rounded-xl border-2 border-dashed border-neutral-300 bg-gradient-to-br from-neutral-100 to-amber-50 flex items-center justify-center overflow-hidden">
+                      <div className="relative h-16 sm:h-20 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all duration-300"
+                           style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                           onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                           onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                      >
                         {previewSrc ? (
                           <img src={previewSrc} alt={`Aperçu ${idx+1}`} className="h-12 w-20 sm:h-16 sm:w-24 object-cover rounded-lg shadow" />
                         ) : (
                           <div className="text-center">
-                            <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-neutral-400 mx-auto mb-0.5 sm:mb-1" />
-                            <p className="text-neutral-500 text-[10px] sm:text-xs">Aucune image</p>
+                            <Camera className="h-5 w-5 sm:h-6 sm:w-6 mx-auto mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                            <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image</p>
                           </div>
                         )}
-                        <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ boxShadow: 'inset 0 0 0 2px rgba(245, 158, 11, 0.15)' }} />
+                        <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ boxShadow: 'inset 0 0 0 2px rgba(251, 191, 36, 0.15)' }} />
                       </div>
                       <div className="flex items-center space-x-1.5 sm:space-x-2">
                         <button
                           type="button"
                           onClick={() => handleCloudinaryUpload(field)}
-                          className="w-full bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center"
+                          className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                          style={{
+                            background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                            color: '#0b0f17',
+                            boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                         >
                           <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                           Charger photo {idx + 1}
@@ -1312,18 +1974,19 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
 
               <div className="mt-4 sm:mt-6">
-                <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                   Galerie du couple
                 </label>
               <div className="space-y-2.5 sm:space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
                   {(customTemplate.eventPhotos || []).map((src, idx) => (
-                    <div key={`${src}-${idx}`} className="relative rounded-xl overflow-hidden border">
+                    <div key={`${src}-${idx}`} className="relative rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
                       <img src={src} alt={`Galerie ${idx+1}`} className="w-full h-20 sm:h-24 object-cover" />
                       <button
                         type="button"
                         onClick={() => removeGalleryPhoto(idx)}
-                        className="absolute top-1.5 right-1.5 p-1.5 rounded-full bg-white/80 hover:bg-white text-rose-600 shadow"
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-full shadow transition-all duration-200"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
                         title="Retirer"
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -1331,14 +1994,21 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     </div>
                   ))}
                   {!(customTemplate.eventPhotos || []).length && (
-                    <div className="text-xs sm:text-sm text-slate-500">Aucune photo dans la galerie pour le moment</div>
+                    <div className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune photo dans la galerie pour le moment</div>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   <button
                     type="button"
                     onClick={() => handleCloudinaryUpload('gallery')}
-                    className="bg-amber-500 text-white px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center gap-1.5 sm:gap-2"
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 sm:gap-2"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
                     <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Ajouter des photos à la galerie
@@ -1353,7 +2023,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2 sm:mb-4">
+              <label className="block text-xs sm:text-sm font-semibold mb-2 sm:mb-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Options de boissons
               </label>
               
@@ -1361,15 +2031,21 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 {customTemplate.drinkOptions.map((drink, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl p-3 sm:p-4 border border-neutral-200/50"
+                    className="flex items-center justify-between rounded-xl p-3 sm:p-4 border transition-all duration-300 group"
+                    style={{ background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)', borderColor: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                   >
                     <div className="flex items-center">
-                      <Wine className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 mr-2.5 sm:mr-3" />
-                      <span className="text-slate-700 font-medium text-xs sm:text-sm">{drink}</span>
+                      <Wine className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2.5 sm:mr-3" style={{ color: '#fcd34d' }} />
+                      <span className="font-medium text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.9)' }}>{drink}</span>
                     </div>
                     <button
                       onClick={() => removeDrinkOption(index)}
-                      className="p-1.5 sm:p-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all duration-200"
+                      className="p-1.5 sm:p-2 rounded-lg transition-all duration-200"
+                      style={{ color: 'rgba(255,255,255,0.45)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
                     >
                       <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
@@ -1383,24 +2059,35 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   value={newDrink}
                   onChange={(e) => setNewDrink(e.target.value)}
                   placeholder="Nouvelle option de boisson"
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   onKeyPress={(e) => e.key === 'Enter' && addDrinkOption()}
                 />
                 <button
                   onClick={addDrinkOption}
-                  className="bg-amber-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold text-xs sm:text-sm"
+                  className="px-4 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-xs sm:text-sm flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    color: '#0b0f17',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                 >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
                   Ajouter
                 </button>
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-purple-50 to-purple-100 rounded-2xl p-3 sm:p-6 border border-purple-200/50">
+            <div className="rounded-2xl p-3 sm:p-6 border" style={{ background: 'rgba(217,70,239,0.06)', borderColor: 'rgba(217,70,239,0.18)' }}>
               <div className="flex items-center mb-2 sm:mb-4">
-                <Wine className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 mr-1.5 sm:mr-2" />
-                <h3 className="text-base sm:text-lg font-semibold text-purple-800">Gestion des boissons</h3>
+                <Wine className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#e9a4f2' }} />
+                <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#e9a4f2' }}>Gestion des boissons</h3>
               </div>
-              <p className="text-purple-700 text-xs sm:text-sm">
+              <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 Personnalisez les options de boissons selon vos préférences. Vos invités pourront 
                 sélectionner leur choix directement depuis l'invitation.
               </p>
@@ -1412,7 +2099,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         return (
           <div className="space-y-4 sm:space-y-6">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Musique de fond (Lien direct MP3)
               </label>
               <div className="flex space-x-2.5 sm:space-x-3 mb-3 sm:mb-4">
@@ -1421,12 +2108,18 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   value={customTemplate.backgroundMusic || ''}
                   onChange={(e) => handleInputChange('backgroundMusic', e.target.value)}
                   placeholder="https://exemple.com/musique.mp3"
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                 />
                 {customTemplate.backgroundMusic && (
                   <button
                     onClick={() => handleInputChange('backgroundMusic', '')}
-                    className="p-2.5 sm:p-3 text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all"
+                    className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                    style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
                   >
                     <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
@@ -1436,7 +2129,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <button
                   onClick={() => handleCloudinaryUpload('backgroundMusic' as any)}
-                  className="flex-1 bg-amber-500 text-white px-3 py-2 sm:px-4 sm:py-3 rounded-xl hover:bg-amber-600 transition-all duration-300 font-semibold flex items-center justify-center shadow-md text-xs sm:text-sm"
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-xs sm:text-sm"
+                  style={{
+                    background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    color: '#0b0f17',
+                    boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
                 >
                   <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
                   Télécharger une musique
@@ -1444,12 +2144,12 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-3 sm:p-6 border border-blue-200/50">
+            <div className="rounded-2xl p-3 sm:p-6 border" style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.2)' }}>
               <div className="flex items-center mb-2 sm:mb-4">
-                <Music className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 mr-1.5 sm:mr-2" />
-                <h3 className="text-base sm:text-lg font-semibold text-blue-800">Conseils Musique</h3>
+                <Music className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#93c5fd' }} />
+                <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#93c5fd' }}>Conseils Musique</h3>
               </div>
-              <div className="space-y-1.5 sm:space-y-2 text-blue-700 text-xs sm:text-sm">
+              <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
                 <p>• Utilisez des fichiers MP3 légers pour un chargement rapide.</p>
                 <p>• La musique se lancera automatiquement dès que l'invité commencera à défiler la page.</p>
                 <p>• Un bouton de contrôle du son sera visible pour l'invité.</p>
@@ -1457,8 +2157,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             </div>
 
             {customTemplate.backgroundMusic && (
-              <div className="p-3 sm:p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <p className="text-[10px] sm:text-xs font-bold text-slate-500 mb-1.5 sm:mb-2 uppercase tracking-widest">Aperçu Audio</p>
+              <div className="p-3 sm:p-4 rounded-xl border" style={{ background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)', borderColor: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}>
+                <p className="text-[10px] sm:text-xs font-bold mb-1.5 sm:mb-2 uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.55)' }}>Aperçu Audio</p>
                 <audio controls src={customTemplate.backgroundMusic} className="w-full h-8 sm:h-10" />
               </div>
             )}
@@ -1539,28 +2239,46 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   };
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in min-h-screen" style={{
+      color: '#ffffff',
+      background: '#0b0f17',
+      backgroundImage: `radial-gradient(circle at 20% 0%, rgba(252,211,77,0.10), transparent 55%),
+                       radial-gradient(circle at 80% 10%, rgba(244,114,182,0.10), transparent 55%),
+                       radial-gradient(circle at 50% 100%, rgba(217,70,239,0.08), transparent 60%),
+                       radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)`,
+      backgroundSize: 'auto, auto, auto, 22px 22px'
+    }}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
         <div className="flex items-center">
           <button
             onClick={onBack}
-            className="flex items-center text-amber-600 hover:text-amber-700 transition-all duration-300 group mr-3"
+            className="flex items-center transition-all duration-300 group mr-3"
+            style={{ color: '#fcd34d' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#fbbf24'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
           >
             <ArrowLeft className="h-4 w-4 mr-1 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="text-sm">Retour</span>
+            <span className="text-sm font-medium">Retour</span>
           </button>
           <div>
-            <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
               Personnalisation du Template
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-0.5">{customTemplate.name}</p>
+            <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{customTemplate.name}</p>
           </div>
         </div>
-        
+
         <button
           onClick={handleSave}
-          className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold flex items-center shadow-glow-amber transform hover:scale-105 text-sm"
+          className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-all duration-300 font-semibold flex items-center text-sm"
+          style={{
+            background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+            color: '#0b0f17',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.65)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
         >
           <Save className="h-3.5 w-3.5 mr-1.5" />
           Sauvegarder
@@ -1569,7 +2287,12 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
       {/* Mobile Tab Navigation */}
       <div className="lg:hidden mb-4">
-        <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 overflow-hidden">
+        <div className="rounded-xl overflow-hidden border"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: 'rgba(255,255,255,0.08)',
+               boxShadow: '0 20px 60px -25px rgba(0,0,0,0.6), 0 0 0 1px rgba(251,191,36,0.04) inset',
+             }}>
           <nav className="p-2 flex overflow-x-auto gap-1.5">
             {tabs.map((tab) => {
               const IconComponent = tab.icon;
@@ -1577,11 +2300,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-shrink-0 flex items-center px-3 py-1.5 rounded-lg transition-all duration-300 text-xs font-medium ${
-                    activeTab === tab.id
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-glow-amber'
-                      : 'text-slate-600 hover:bg-amber-50 hover:text-amber-700'
-                  }`}
+                  className="flex-shrink-0 flex items-center px-3 py-1.5 rounded-lg transition-all duration-300 text-xs font-semibold"
+                  style={{
+                    background: activeTab === tab.id ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'rgba(255,255,255,0.02)',
+                    color: activeTab === tab.id ? '#0b0f17' : 'rgba(255,255,255,0.7)',
+                    boxShadow: activeTab === tab.id ? '0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 16px -8px rgba(251,191,36,0.6)' : 'none',
+                  }}
+                  onMouseEnter={(e) => { if (activeTab !== tab.id) { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; e.currentTarget.style.color = '#fcd34d'; } }}
+                  onMouseLeave={(e) => { if (activeTab !== tab.id) { e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
                 >
                   <IconComponent className="h-3.5 w-3.5 mr-1.5" />
                   {tab.label}
@@ -1595,10 +2321,19 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Sidebar Navigation (Desktop only) */}
         <div className="lg:col-span-1 hidden lg:block">
-          <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 overflow-hidden sticky top-8">
-            <div className="p-3 sm:p-4 bg-gradient-to-r from-neutral-50 to-amber-50/30 border-b border-neutral-200/50">
-              <h3 className="text-sm sm:text-base font-semibold text-slate-900">Personnalisation</h3>
-              <p className="text-xs text-slate-600 mt-1">Modifiez votre invitation</p>
+          <div className="rounded-xl overflow-hidden border sticky top-8"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+                 boxShadow: '0 30px 80px -30px rgba(0,0,0,0.75), 0 0 0 1px rgba(251,191,36,0.04) inset',
+               }}>
+            <div className="p-3 sm:p-4 border-b"
+                 style={{
+                   borderColor: 'rgba(255,255,255,0.06)',
+                   background: 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+                 }}>
+              <h3 className="text-sm sm:text-base font-bold text-white">Personnalisation</h3>
+              <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>Modifiez votre invitation</p>
             </div>
             <nav className="p-2.5 sm:p-3">
               {tabs.map((tab) => {
@@ -1607,11 +2342,14 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-all duration-300 mb-0.5 sm:mb-1 text-xs sm:text-sm ${
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-glow-amber'
-                        : 'text-slate-600 hover:bg-amber-50 hover:text-amber-700'
-                    }`}
+                    className="w-full flex items-center px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg transition-all duration-300 mb-0.5 sm:mb-1 text-xs sm:text-sm font-medium"
+                    style={{
+                      background: activeTab === tab.id ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'transparent',
+                      color: activeTab === tab.id ? '#0b0f17' : 'rgba(255,255,255,0.7)',
+                      boxShadow: activeTab === tab.id ? '0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 16px -8px rgba(251,191,36,0.6)' : 'none',
+                    }}
+                    onMouseEnter={(e) => { if (activeTab !== tab.id) { e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; e.currentTarget.style.color = '#fcd34d'; } }}
+                    onMouseLeave={(e) => { if (activeTab !== tab.id) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; } }}
                   >
                     <IconComponent className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
                     {tab.label}
@@ -1619,15 +2357,27 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 );
               })}
             </nav>
-            
+
             {/* Quick Actions (Desktop only) */}
-            <div className="p-2.5 sm:p-3 border-t border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
+            <div className="p-2.5 sm:p-3 border-t"
+                 style={{
+                   borderColor: 'rgba(255,255,255,0.06)',
+                   background: 'rgba(255,255,255,0.015)',
+                 }}>
               <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                <button className="flex items-center justify-center px-2.5 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-all duration-300 text-xs font-medium">
+                <button className="flex items-center justify-center px-2.5 py-1.5 rounded-lg transition-all duration-300 text-xs font-semibold"
+                        style={{ background: 'rgba(217,70,239,0.14)', color: '#e9a4f2', border: '1px solid rgba(217,70,239,0.22)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(217,70,239,0.22)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(217,70,239,0.14)'; }}
+                >
                   <Eye className="h-3 w-3 mr-1" />
                   Aperçu
                 </button>
-                <button className="flex items-center justify-center px-2.5 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-all duration-300 text-xs font-medium">
+                <button className="flex items-center justify-center px-2.5 py-1.5 rounded-lg transition-all duration-300 text-xs font-semibold"
+                        style={{ background: 'rgba(16,185,129,0.14)', color: '#8af0cc', border: '1px solid rgba(16,185,129,0.22)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.22)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(16,185,129,0.14)'; }}
+                >
                   <Download className="h-3 w-3 mr-1" />
                   Export
                 </button>
@@ -1638,12 +2388,17 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
         {/* Main Content */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-luxury border border-neutral-200/50 p-4 sm:p-6">
-            <div className="mb-3 sm:mb-4">
-              <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-0.5 sm:mb-1">
+          <div className="rounded-xl border p-4 sm:p-6"
+               style={{
+                 background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                 borderColor: 'rgba(255,255,255,0.08)',
+                 boxShadow: '0 30px 80px -30px rgba(0,0,0,0.75), 0 0 0 1px rgba(251,191,36,0.04) inset',
+               }}>
+            <div className="mb-3 sm:mb-4 pb-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              <h3 className="text-base sm:text-lg font-extrabold tracking-tight mb-0.5 sm:mb-1" style={{ color: '#ffffff' }}>
                 {tabs.find(tab => tab.id === activeTab)?.label}
               </h3>
-              <p className="text-xs sm:text-sm text-slate-600">
+              <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 {activeTab === 'general' && 'Modifiez le contenu principal de votre invitation'}
                 {activeTab === 'design' && 'Personnalisez l\'apparence visuelle'}
                 {activeTab === 'colors' && 'Ajustez la palette de couleurs'}
@@ -1655,14 +2410,20 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             {renderTabContent()}
           </div>
         </div>
-        
+
         {/* Real-time Preview */}
         <div className="lg:col-span-1">
           {renderPreview()}
         </div>
       </div>
       {toast && (
-        <div className={`fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] px-3 py-2 sm:px-4 sm:py-3 rounded-xl shadow-glow-amber border text-xs sm:text-sm ${toast.type === 'success' ? 'bg-white/95 border-emerald-200 text-emerald-700' : toast.type === 'error' ? 'bg-white/95 border-rose-200 text-rose-700' : 'bg-white/95 border-amber-200 text-amber-700'}`}>
+        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] px-3 py-2 sm:px-4 sm:py-3 rounded-xl border text-xs sm:text-sm"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+               borderColor: toast.type === 'success' ? 'rgba(16,185,129,0.4)' : toast.type === 'error' ? 'rgba(236,72,153,0.4)' : 'rgba(251,191,36,0.4)',
+               color: toast.type === 'success' ? '#8af0cc' : toast.type === 'error' ? '#f9a8d4' : '#fcd34d',
+               boxShadow: '0 20px 60px -20px rgba(0,0,0,0.85)',
+             }}>
           <span className="font-semibold">{toast.message}</span>
         </div>
       )}

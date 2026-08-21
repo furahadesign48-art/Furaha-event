@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import ornement5 from '../images/ornement5.png';
@@ -48,7 +48,15 @@ import {
   Gamepad2,
   Trophy,
   HelpCircle,
-  Star
+  Star,
+  RefreshCw,
+  Hotel,
+  Mail,
+  Globe,
+  Plane,
+  Train,
+  Car,
+  CarTaxiFront
 } from 'lucide-react';
 import { UserModelService, InviteService, GameService, GameConfiguration, AVAILABLE_GAMES, GameResult } from '../services/templateService';
 import { UserModel, Invite } from '../services/templateService';
@@ -62,8 +70,10 @@ import { BorderRotate } from './ui/animated-gradient-border';
 import { ShinyButton } from './ui/shiny-button';
 import { TypewriterWithPen } from './ui/typewriter-pen';
 import { CircularGallery, GalleryItem } from './ui/circular-gallery';
+import ParallaxUnfurlingGallery, { ParallaxGalleryItem } from './ui/3d-parallax-unfurling-gallery';
 import MemoryMatchGame from './MemoryMatchGame';
 import LoveQuizGame from './LoveQuizGame';
+import CatchLoveGame from './CatchLoveGame';
 
 // Helper for image optimization
 const optimizeImage = (url: string, width: number = 800, quality: number = 70) => {
@@ -207,7 +217,7 @@ const CountdownTimer = React.memo(({ targetDate, colors }: { targetDate: Date, c
                   strokeDasharray="163.36"
                   strokeDashoffset={163.36 - (163.36 * percentage) / 100}
                   className="transition-all duration-1000 ease-linear"
-                  style={{ color: colors.primary }}
+                  style={{ color: colors.accent || colors.primary }}
                 />
               </svg>
               {/* Value Text */}
@@ -583,79 +593,268 @@ const PhotoViewer: React.FC<{
   initialPhoto: string;
   onClose: () => void;
   optimizeImage: (url: string, w: number, q?: number) => string;
-}> = ({ photos, initialPhoto, onClose, optimizeImage }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const initialIndex = photos.indexOf(initialPhoto);
-  const [currentIndex, setCurrentIndex] = useState(Math.max(0, initialIndex));
+  themeColors: {
+    primary: string;
+    secondary: string;
+    accent?: string;
+  };
+}> = ({ photos, initialPhoto, onClose, optimizeImage, themeColors }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [entered, setEntered] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const mountedRef = useRef(false);
 
-  const scrollToIndex = (index: number) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTo({
-        left: scrollContainerRef.current.clientWidth * index,
-        behavior: 'smooth'
-      });
+  // Derive dynamic accent colors from theme
+  const { primary, secondary } = themeColors;
+  const accent = themeColors.accent || secondary;
+
+  // Blend helpers using tiny HSL shifts to get variants without hardcoded colors
+  const lighter = (hex: string, amt = 0.22) => {
+    try {
+      const c = hex.replace("#", "");
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      const nr = Math.min(255, Math.round(r + (255 - r) * amt));
+      const ng = Math.min(255, Math.round(g + (255 - g) * amt));
+      const nb = Math.min(255, Math.round(b + (255 - b) * amt));
+      return `rgb(${nr}, ${ng}, ${nb})`;
+    } catch {
+      return hex;
+    }
+  };
+  const darker = (hex: string, amt = 0.2) => {
+    try {
+      const c = hex.replace("#", "");
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      const nr = Math.max(0, Math.round(r * (1 - amt)));
+      const ng = Math.max(0, Math.round(g * (1 - amt)));
+      const nb = Math.max(0, Math.round(b * (1 - amt)));
+      return `rgb(${nr}, ${ng}, ${nb})`;
+    } catch {
+      return hex;
     }
   };
 
-  // Scroll to initial index when component mounts
+  const glow1 = lighter(primary, 0.35);
+  const glow2 = lighter(secondary, 0.35);
+  const glow3 = accent ? lighter(accent, 0.45) : lighter(primary, 0.5);
+  const shadowColor1 = darker(primary, 0.05);
+  const shadowColor2 = darker(secondary, 0.08);
+
+  // Preload image eagerly
+  const finalSrc = useMemo(
+    () => optimizeImage(initialPhoto, 1600, 85),
+    [initialPhoto, optimizeImage]
+  );
+
+  // Close handler with smooth exit animation
+  const handleClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
+    // Wait for the smooth exit transition before actually unmounting
+    window.setTimeout(() => {
+      if (mountedRef.current) onClose();
+    }, 520);
+  }, [closing, onClose]);
+
   useEffect(() => {
-    // Small timeout to ensure the container is rendered
-    setTimeout(() => {
-      scrollToIndex(initialIndex);
-    }, 100);
-  }, [initialIndex]);
+    mountedRef.current = true;
+    // Kick off image prefetch immediately
+    try {
+      const img = new Image();
+      img.src = finalSrc;
+      img.onload = () => { if (mountedRef.current) setLoaded(true); };
+      img.onerror = () => { if (mountedRef.current) setLoaded(true); };
+    } catch {}
+    // Smooth enter animation — spring-feel via multiple rAFs (slight delay to be gentle)
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setEntered(true));
+      });
+    });
+    return () => {
+      mountedRef.current = false;
+      cancelAnimationFrame(raf);
+    };
+  }, [finalSrc]);
 
-  const handleScroll = () => {
-    if (scrollContainerRef.current) {
-      const newIndex = Math.round(
-        scrollContainerRef.current.scrollLeft / scrollContainerRef.current.clientWidth
-      );
-      if (newIndex !== currentIndex) {
-        setCurrentIndex(newIndex);
-      }
-    }
-  };
+  // Close on Escape key
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleClose]);
+
+  // Prevent page scroll while viewer open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    const prevTouch = document.body.style.touchAction as string | undefined;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prev;
+      if (prevTouch !== undefined) document.body.style.touchAction = prevTouch;
+      else (document.body.style as any).touchAction = "";
+    };
+  }, []);
+
+  // Compute enter/exit state
+  const show = entered && !closing;
+  const enterFactor = show ? 1 : 0;
 
   return (
-    <div className="fixed inset-0 z-[110] bg-black/95 animate-fade-in">
-      <button 
-        onClick={onClose}
-        className="absolute top-6 right-6 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white z-[120] hover:bg-white/20 transition-colors"
+    <div
+      className={
+        "fixed inset-0 z-[110] flex items-center justify-center will-change-[backdrop-filter,opacity,background-color] "
+      }
+      onClick={handleClose}
+      style={{
+        // Smooth opacity fade
+        opacity: enterFactor,
+        transition:
+          "opacity 520ms cubic-bezier(0.22, 1, 0.36, 1), backdrop-filter 620ms cubic-bezier(0.22, 1, 0.36, 1), background-color 620ms cubic-bezier(0.22, 1, 0.36, 1), -webkit-backdrop-filter 620ms cubic-bezier(0.22, 1, 0.36, 1)",
+        // Progressive backdrop blur (0 → very strong)
+        backdropFilter: show
+          ? `blur(30px) saturate(145%)`
+          : `blur(0px) saturate(100%)`,
+        WebkitBackdropFilter: show
+          ? `blur(30px) saturate(145%)`
+          : `blur(0px) saturate(100%)`,
+        backgroundColor: show ? "rgba(0,0,0,0.74)" : "rgba(0,0,0,0)",
+        // Radial halo tuned to theme primary/secondary
+        backgroundImage: show
+          ? `radial-gradient(ellipse at center, ${darker(primary, 0.82)} 0%, rgba(0,0,0,0.88) 100%)`
+          : "none",
+      }}
+    >
+      {/* Dynamic ambient glows — pulled directly from theme colors */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none overflow-hidden"
+        style={{
+          opacity: 0.55 * enterFactor,
+          transition: "opacity 600ms ease-out",
+        }}
       >
-        <X className="h-8 w-8" />
-      </button>
-      
-      <div 
-        ref={scrollContainerRef}
-        className="h-full w-full flex overflow-x-auto snap-x snap-mandatory no-scrollbar"
-        onScroll={handleScroll}
-      >
-        {photos.map((photo, i) => (
-          <div key={i} className="flex-shrink-0 w-full h-full flex items-center justify-center snap-center p-4">
-            <img 
-              src={optimizeImage(photo, 1200, 80)} 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" 
-              alt={`Gallery View ${i}`} 
-              loading="lazy"
-            />
-          </div>
-        ))}
+        <div
+          className="absolute -top-24 -left-20 w-[30rem] h-[30rem] rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${glow1} 0%, transparent 68%)` }}
+        />
+        <div
+          className="absolute -bottom-28 -right-14 w-[34rem] h-[34rem] rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${glow2} 0%, transparent 68%)` }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[28rem] h-[28rem] rounded-full blur-3xl"
+          style={{ background: `radial-gradient(circle, ${glow3} 0%, transparent 72%)` }}
+        />
       </div>
-      
-      <div className="absolute bottom-10 left-0 right-0 flex justify-center space-x-2 z-[120]">
-        {photos.map((photo, i) => (
-          <div 
-            key={i} 
-            className={`w-2 h-2 rounded-full transition-colors cursor-pointer ${
-              i === currentIndex ? 'bg-purple-500' : 'bg-white/20'
-            }`}
-            onClick={() => {
-              setCurrentIndex(i);
-              scrollToIndex(i);
+
+      {/* Close button — glassmorphism, soft zoom */}
+      <button
+        onClick={(e) => { e.stopPropagation(); handleClose(); }}
+        className="absolute top-4 sm:top-6 right-4 sm:right-6 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white z-[120] will-change-transform active:scale-95"
+        style={{
+          opacity: 0.2 + 0.8 * enterFactor,
+          transform: `scale(${0.7 + 0.3 * enterFactor})`,
+          transition:
+            "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out",
+          background: "rgba(255,255,255,0.1)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          border: `1px solid ${lighter(primary, 0.5)}33`,
+          boxShadow: `0 10px 30px -10px ${darker(primary, 0.3)}66, 0 8px 24px -12px rgba(0,0,0,0.55)`,
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.18)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)"; }}
+        aria-label="Fermer"
+      >
+        <X className="h-6 w-6 sm:h-7 sm:w-7" />
+      </button>
+
+      {/* Single photo container — smooth cubic-bezier zoom (scale 0.7 → 1) */}
+      <div
+        className="relative px-3 sm:px-6 md:px-10 py-4 sm:py-8 max-w-full max-h-full flex items-center justify-center z-[115] will-change-transform"
+        style={{
+          transform: `scale(${0.7 + 0.3 * enterFactor}) translateY(${(-18) * (1 - enterFactor)}px)`,
+          opacity: 0.15 + 0.85 * enterFactor,
+          transformOrigin: "center center",
+          transition:
+            "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 520ms ease-out",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Decorative frame with dynamic theme glow */}
+        <div
+          className="relative rounded-2xl sm:rounded-3xl overflow-hidden"
+          style={{
+            boxShadow: show
+              ? `0 45px 140px -20px ${shadowColor1}55, 0 30px 80px -18px ${shadowColor2}55, 0 25px 70px -12px rgba(0,0,0,0.85)`
+              : "0 10px 30px -10px rgba(0,0,0,0.5)",
+            border: `1px solid ${lighter(primary, 0.55)}22`,
+            transition: "box-shadow 700ms cubic-bezier(0.22, 1, 0.36, 1), border-color 500ms ease-out",
+          }}
+        >
+          {/* Loading shimmer — gentle, not jarring */}
+          {!loaded && (
+            <div
+              className="absolute inset-0 rounded-2xl sm:rounded-3xl"
+              style={{
+                background: `linear-gradient(90deg, ${lighter(primary, 0.75)}10, ${lighter(secondary, 0.7)}22, ${lighter(primary, 0.75)}10)`,
+                backgroundSize: "200% 100%",
+                animation: "shimmerX 1.6s ease-in-out infinite",
+                opacity: enterFactor,
+                transition: "opacity 300ms ease-out",
+              }}
+            />
+          )}
+
+          <img
+            src={finalSrc}
+            alt="Agrandissement photo"
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
+            className={
+              "max-w-full w-auto h-auto object-contain select-none will-change-[opacity,transform] "
+            }
+            style={{
+              maxHeight: "min(84vh, 900px)",
+              // Extra smooth photo zoom-in to amplify the gentle feel
+              transform: `scale(${0.96 + 0.04 * (loaded ? enterFactor : 0.2)})`,
+              opacity: loaded ? (0.4 + 0.6 * enterFactor) : 0,
+              filter: `saturate(${0.92 + 0.08 * enterFactor}) contrast(${0.96 + 0.04 * enterFactor})`,
+              transition:
+                "opacity 480ms ease-out, transform 820ms cubic-bezier(0.22, 1, 0.36, 1), filter 620ms ease-out",
+            }}
+            draggable={false}
+            loading="eager"
+            decoding="async"
+          />
+
+          {/* Subtle premium inner vignette */}
+          <div
+            className="absolute inset-0 pointer-events-none rounded-2xl sm:rounded-3xl"
+            style={{
+              boxShadow: `inset 0 0 140px ${darker(primary, 0.8)}33, inset 0 0 60px rgba(0,0,0,0.3)`,
+              opacity: enterFactor,
+              transition: "opacity 520ms ease-out",
             }}
           />
-        ))}
+        </div>
       </div>
+
+      {/* Inline keyframes for shimmer */}
+      <style>{`
+        @keyframes shimmerX {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
     </div>
   );
 };
@@ -670,6 +869,41 @@ const InvitationPreview: React.FC<{ embedded?: boolean; embeddedModel?: UserMode
   );
 };
 
+// --- HELPERS DE CACHE LOCALSTORAGE (URGENCE DÉGRADÉ FIREBASE) ---
+const INVITE_CACHE_PREFIX = 'furaha_invite_cache_v1_';
+const CACHE_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 30; // 30 jours de cache (mariages urgents)
+
+interface InviteCacheEntry {
+  invite: Invite;
+  userModel: UserModel;
+  savedAt: number;
+}
+
+const getCachedInviteData = (inviteId: string): InviteCacheEntry | null => {
+  try {
+    const raw = localStorage.getItem(INVITE_CACHE_PREFIX + inviteId);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as InviteCacheEntry;
+    if (!parsed?.savedAt) return null;
+    const age = Date.now() - parsed.savedAt;
+    if (age > CACHE_MAX_AGE_MS) return null;
+    return parsed;
+  } catch (e) {
+    console.warn('[Cache] Erreur lecture cache:', e);
+    return null;
+  }
+};
+
+const setCachedInviteData = (inviteId: string, invite: Invite, userModel: UserModel) => {
+  try {
+    const entry: InviteCacheEntry = { invite, userModel, savedAt: Date.now() };
+    localStorage.setItem(INVITE_CACHE_PREFIX + inviteId, JSON.stringify(entry));
+  } catch (e) {
+    console.warn('[Cache] Erreur écriture cache:', e);
+  }
+};
+// ------------------------------------------------------------------
+
 const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: UserModel | null }> = ({ embedded = false, embeddedModel = null }) => {
   const { inviteId } = useParams<{ inviteId: string }>();
   const navigate = useNavigate();
@@ -677,6 +911,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
   const { token, permission, requestPermission, isLoading: isNotificationLoading, error, isFCMSupported } = useNotifications();
   const [userModel, setUserModel] = useState<UserModel | null>(embedded ? embeddedModel : null);
   const [dataError, setDataError] = useState<string | null>(null);
+  // États d'urgence : mode dégradé + réessa automatique
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     if (embedded && embeddedModel) {
@@ -723,6 +960,11 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
   const invitationTextRef = useRef<HTMLParagraphElement | null>(null);
   const typingTimerRef = useRef<number | null>(null);
+  // Refs synchronisées pour maj cache dans callbacks de subscription (URGENCE FIREBASE)
+  const userModelRef = useRef<UserModel | null>(embedded ? embeddedModel : null);
+  const inviteRef = useRef<Invite | null>(null);
+  useEffect(() => { userModelRef.current = userModel; }, [userModel]);
+  useEffect(() => { inviteRef.current = invite; }, [invite]);
   
   // Refs pour les sections de navigation
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -732,18 +974,6 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     sectionRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
   
-  // Liste des sections pour la navigation
-  const sections = [
-    { id: 'header', label: 'Accueil' },
-    { id: 'mainContent', label: 'Invitation' },
-    { id: 'countdown', label: 'Compte à rebours' },
-    { id: 'gallery', label: 'Galerie' },
-    { id: 'rsvp', label: 'RSVP' },
-    { id: 'drinks', label: 'Boissons' },
-    ...(games && games.filter(g => g.isEnabled).length > 0 ? [{ id: 'games', label: 'Jeux' }] : []),
-    { id: 'qr', label: 'QR Code' }
-  ];
-
   // Sécurité anti-crash - Déclarer safeUserModel et safeInvite D'ABORD pour éviter l'erreur de variable non initialisée
    const safeUserModel = userModel || {
      invitationTitleSubtitle: '',
@@ -767,6 +997,23 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
      etat: 'simple' 
    };
 
+  // Liste des sections pour la navigation (après safeUserModel pour condition accommodation)
+  const accommodationVisible =
+    ((safeUserModel as any).accommodationEnabled && Array.isArray((safeUserModel as any).accommodations) && (safeUserModel as any).accommodations.length > 0) ||
+    ((safeUserModel as any).usefulAddressesEnabled && Array.isArray((safeUserModel as any).usefulAddresses) && (safeUserModel as any).usefulAddresses.length > 0);
+
+  const sections = [
+    { id: 'header', label: 'Accueil' },
+    { id: 'mainContent', label: 'Invitation' },
+    { id: 'countdown', label: 'Compte à rebours' },
+    ...(accommodationVisible ? [{ id: 'accommodation', label: 'Hébergements' }] : []),
+    { id: 'gallery', label: 'Galerie' },
+    { id: 'rsvp', label: 'RSVP' },
+    { id: 'drinks', label: 'Boissons' },
+    ...(games && games.filter(g => g.isEnabled).length > 0 ? [{ id: 'games', label: 'Jeux' }] : []),
+    { id: 'qr', label: 'QR Code' }
+  ];
+
   useEffect(() => {
     if (embedded) {
       setIsLoading(false);
@@ -778,9 +1025,22 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
       return;
     }
 
+    // 1) CHARGEMENT OPTIMISTE depuis le cache LOCAL (même avant Firebase) — sauve les invités déjà venus
+    const cached = getCachedInviteData(inviteId);
+    if (cached) {
+      setInvite(cached.invite);
+      setUserModel(cached.userModel);
+      setInviteDocPath(cached.invite.userId ? `users/${cached.invite.userId}/invites/${cached.invite.id}` : null);
+      setIsConfirmed(!!cached.invite.confirmed);
+      setSelectedDrink((cached.invite as any).selectedDrink ? (cached.invite as any).selectedDrink.split(', ') : []);
+      setIsLoading(false); // On affiche tout de suite depuis le cache
+      setIsOfflineMode(true);
+    }
+
     let unsubInvite: (() => void) | null = null;
     let unsubUserModel: (() => void) | null = null;
     let isSubscribing = true;
+    let retryTimer: ReturnType<typeof setInterval> | null = null;
 
     const init = async () => {
       try {
@@ -799,6 +1059,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               setInvite(updatedInvite);
               setIsConfirmed(updatedInvite.confirmed);
               setSelectedDrink((updatedInvite as any).selectedDrink ? (updatedInvite as any).selectedDrink.split(', ') : []);
+              // Mise à jour du cache à chaque modification live
+              const currentUM = userModelRef.current;
+              if (currentUM) setCachedInviteData(inviteId, updatedInvite, currentUM);
             }
           });
 
@@ -806,6 +1069,13 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           const models = await UserModelService.getUserModels(inviteData.userId);
           if (models.length > 0) {
             setUserModel(models[0]);
+            // =================================================
+            // 💾 SAUVEGARDE DANS LE CACHE (clé : inviteId)
+            // =================================================
+            setCachedInviteData(inviteId, inviteData, models[0]);
+            // On sort du mode offline si on a réussi
+            setIsOfflineMode(false);
+            setRetryCountdown(null);
             // Preload initial images
             const initialImagesToPreload = [
               models[0].backgroundImage,
@@ -816,6 +1086,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               models[0].rsvpDrinksSectionBackground,
               models[0].gamesSectionBackground,
               models[0].qrFooterSectionBackground,
+              models[0].accommodationSectionBackground,
               ...(models[0].eventPhotos || []),
             ].filter(Boolean) as string[];
             initialImagesToPreload.forEach((imgUrl) => {
@@ -826,7 +1097,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             unsubUserModel = UserModelService.subscribeUserModel(inviteData.userId, models[0].id, (updatedModel) => {
               if (updatedModel) {
                 setUserModel(updatedModel);
-                // Preload any new images
+                // Mise à jour cache sur modif live du modèle
+                const currentInv = inviteRef.current;
+                if (currentInv) setCachedInviteData(inviteId, currentInv, updatedModel);
                 const imagesToPreload = [
                   updatedModel.backgroundImage,
                   updatedModel.headerSectionBackground,
@@ -836,6 +1109,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   updatedModel.rsvpDrinksSectionBackground,
                   updatedModel.gamesSectionBackground,
                   updatedModel.qrFooterSectionBackground,
+                  updatedModel.accommodationSectionBackground,
                   ...(updatedModel.eventPhotos || []),
                 ].filter(Boolean) as string[];
                 imagesToPreload.forEach((imgUrl) => {
@@ -845,18 +1119,53 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               }
             });
           } else {
-            setDataError("Aucun design d'invitation trouvé pour cet événement.");
+            // Si on a du cache on ne montre pas d'erreur, on continue en offline
+            if (!getCachedInviteData(inviteId)) {
+              setDataError("Aucun design d'invitation trouvé pour cet événement.");
+            }
           }
         } else {
-          setDataError("Invitation introuvable. Veuillez vérifier le lien.");
+          if (!getCachedInviteData(inviteId)) {
+            setDataError("Invitation introuvable. Veuillez vérifier le lien.");
+          }
         }
       } catch (e) {
         console.error(e);
-        setDataError("Erreur de chargement. Veuillez actualiser la page.");
+        // ==== CHUTE DE SECOURS CRITIQUE : Cache offline ====
+        const existingCache = getCachedInviteData(inviteId);
+        if (existingCache) {
+          // On AFFICHE depuis le cache — AUCUNE erreur affichée à l'invité
+          setInvite(existingCache.invite);
+          setUserModel(existingCache.userModel);
+          setInviteDocPath(existingCache.invite.userId ? `users/${existingCache.invite.userId}/invites/${existingCache.invite.id}` : null);
+          setIsConfirmed(!!existingCache.invite.confirmed);
+          setSelectedDrink((existingCache.invite as any).selectedDrink ? (existingCache.invite as any).selectedDrink.split(', ') : []);
+          setIsOfflineMode(true);
+          setDataError(null);
+          // Compte à rebours de réessai automatique toutes les 30s
+          setRetryCountdown(30);
+        } else {
+          setDataError("Erreur de chargement. Veuillez actualiser la page.");
+        }
       } finally {
         setIsLoading(false);
       }
     };
+
+    // Lancer le compte à rebours de réessa automatique si on est en offline
+    if (isOfflineMode && !retryTimer) {
+      retryTimer = setInterval(() => {
+        setRetryCountdown(prev => {
+          if (prev === null) return null;
+          if (prev <= 1) {
+            // Relance init() pour retenter Firebase
+            init();
+            return 30;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
 
     init();
 
@@ -864,7 +1173,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
       isSubscribing = false;
       unsubInvite?.();
       unsubUserModel?.();
+      if (retryTimer) clearInterval(retryTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inviteId, embedded]);
 
   // Auto-expand love quiz when games modal opens
@@ -902,11 +1213,12 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         const completedSet = new Set<string>();
 
         for (const game of loadedGames) {
-          if (game.type === 'memory-match' || game.type === 'love-quiz') {
+          if (game.type === 'memory-match' || game.type === 'love-quiz' || game.type === 'catch-love') {
             try {
               const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
               resultsMap[game.id] = results;
-              // Check if current guest has played this game type
+              // Check if current guest has a result FOR THIS EXACT GAME INSTANCE
+              // results are already scoped to this gameId by getPuzzleResults; still enforce game.type match
               if (results.some(res => res.guestName === invite?.nom && res.gameType === game.type)) {
                 completedSet.add(game.id);
               }
@@ -937,7 +1249,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     if (!currentGameId || !invite?.userId || !userModel?.id) return;
 
     const game = games.find(g => g.id === currentGameId);
-    if (game && (game.type === 'memory-match' || game.type === 'love-quiz') && !gameResults[currentGameId]) {
+    if (game && (game.type === 'memory-match' || game.type === 'love-quiz' || game.type === 'catch-love') && !gameResults[currentGameId]) {
       const loadResults = async () => {
         try {
           const results = await GameService.getPuzzleResults(invite.userId, userModel.id, currentGameId);
@@ -993,16 +1305,13 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
    const optimizedRsvpDrinksSectionBg = useMemo(() => safeUserModel.rsvpDrinksSectionBackground ? optimizeImage(safeUserModel.rsvpDrinksSectionBackground, 1200, 80) : null, [safeUserModel.rsvpDrinksSectionBackground]);
    const optimizedGamesSectionBg = useMemo(() => safeUserModel.gamesSectionBackground ? optimizeImage(safeUserModel.gamesSectionBackground, 1200, 80) : null, [safeUserModel.gamesSectionBackground]);
    const optimizedQrFooterSectionBg = useMemo(() => safeUserModel.qrFooterSectionBackground ? optimizeImage(safeUserModel.qrFooterSectionBackground, 1200, 80) : null, [safeUserModel.qrFooterSectionBackground]);
+   const optimizedAccommodationSectionBg = useMemo(() => (safeUserModel as any).accommodationSectionBackground ? optimizeImage((safeUserModel as any).accommodationSectionBackground, 1200, 80) : null, [(safeUserModel as any).accommodationSectionBackground]);
    
    const customizations = (safeUserModel as any).customizations || {};
    const colors = customizations.colors || safeUserModel.colors || { primary: '#f59e0b', secondary: '#d946ef', accent: '#fbbf24' };
    
    const galleryPhotos = useMemo(() => {
      const photos = [];
-     if (safeUserModel.invitationPhoto) photos.push(safeUserModel.invitationPhoto);
-     if (safeUserModel.eventPhoto1) photos.push(safeUserModel.eventPhoto1);
-     if (safeUserModel.eventPhoto2) photos.push(safeUserModel.eventPhoto2);
-     if (safeUserModel.eventPhoto3) photos.push(safeUserModel.eventPhoto3);
      if (Array.isArray(safeUserModel.eventPhotos)) photos.push(...safeUserModel.eventPhotos);
      return photos.length > 0 ? photos : [photoCouple];
    }, [safeUserModel]);
@@ -1045,16 +1354,46 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
      }));
    }, [galleryPhotos]);
 
+   const parallaxGalleryItems = useMemo<ParallaxGalleryItem[]>(() => {
+     return galleryPhotos.map((photo, index) => ({
+       src: optimizeImage(photo, 900, 78),
+       alt: `Moment précieux ${index + 1}`,
+     }));
+   }, [galleryPhotos]);
+
   // Souscription aux messages du livre d'or
   useEffect(() => {
     const userId = invite?.userId || (userModel as any)?.userId;
     if (userId) {
-      const unsub = InviteService.subscribeAllGuestMessages(userId, (messages) => {
-        // Trier les messages par timestamp pour s'assurer que les plus récents sont à la fin
+      const unsub = InviteService.subscribeAllGuestMessages(userId, async (messages) => {
         const sortedMessages = [...messages].sort((a, b) => 
           new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
-        setGuestBookMessages(sortedMessages);
+
+        const withReplies = await Promise.all(
+          sortedMessages.map(async (msg: any) => {
+            try {
+              const [legacy, modern] = await Promise.all([
+                InviteService.getLegacyMessageReplies(userId, msg.inviteId, msg.id).catch(() => []),
+                InviteService.getMessageReplies(userId, msg.inviteId, msg.id).catch(() => [])
+              ]);
+              const seen = new Set<string>();
+              const combined: any[] = [];
+              [...legacy, ...modern].forEach((r: any) => {
+                if (!r || !r.id) return;
+                if (seen.has(r.id)) return;
+                seen.add(r.id);
+                combined.push(r);
+              });
+              combined.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+              return { ...msg, replies: combined };
+            } catch (e) {
+              return { ...msg, replies: [] };
+            }
+          })
+        );
+
+        setGuestBookMessages(withReplies);
       });
       return () => unsub();
     }
@@ -1461,20 +1800,54 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
   }
 
   if (dataError) {
+    // Aucun cache dispo : on affiche une erreur RASSURANTE avec retry auto
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-center">
-        <div className="max-w-md bg-white rounded-3xl p-8 shadow-2xl border-2 border-amber-500">
-          <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Info className="h-8 w-8" />
+      <div className="min-h-screen flex items-center justify-center p-6 text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #fafafa 0%, #fff7ed 50%, #fdf4ff 100%)' }}>
+        {/* Background ambiance douce */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl opacity-30" style={{ background: '#f59e0b' }}></div>
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-20" style={{ background: '#d946ef' }}></div>
+        </div>
+
+        <div className="relative z-10 max-w-md bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/60">
+          {/* Logo Furaha en haut pour la confiance */}
+          <img 
+            src={furahaLogo} 
+            alt="Furaha Digital" 
+            className="w-32 h-auto mx-auto mb-6 opacity-90"
+          />
+          {/* Loader élégant */}
+          <div className="flex items-center justify-center gap-2 mb-5">
+            {[0, 1, 2].map((i) => (
+              <div 
+                key={i}
+                className="w-3 h-3 rounded-full"
+                style={{ 
+                  background: 'linear-gradient(135deg, #f59e0b, #d946ef)',
+                  animation: 'pulse 1.4s ease-in-out infinite',
+                  animationDelay: `${i * 0.2}s`
+                }}
+              ></div>
+            ))}
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">Désolé</h2>
-          <p className="text-slate-600 mb-6">{dataError}</p>
+          <h2 className="text-xl font-bold text-slate-800 mb-2">Mise à jour en cours…</h2>
+          <p className="text-sm text-slate-500 mb-1 font-medium">
+            {dataError}
+          </p>
+          <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+            Nos équipes sont sur le pont. Merci de votre confiance — la page va tenter de se reconnecter automatiquement.
+          </p>
+          {/* Bouton retry manuel */}
           <button 
             onClick={() => window.location.reload()} 
-            className="w-full py-3 bg-amber-500 text-white rounded-xl font-bold hover:bg-amber-600 transition-colors"
+            className="w-full py-3 text-white rounded-xl font-bold hover:opacity-90 transition-all active:scale-95 shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #f59e0b, #d946ef)' }}
           >
-            Réessayer
+            Recharger l'invitation maintenant
           </button>
+          <style>{`
+            @keyframes pulse { 0%, 100% { opacity: 0.2; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1); } }
+          `}</style>
         </div>
       </div>
     );
@@ -1503,10 +1876,31 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         msOverflowStyle: 'none'
       }}
     >
+      {/* === BANNIÈRE DISCRÈTE MODE HORS-LIGNE (URGENCE FIREBASE) === */}
+      {isOfflineMode && (
+        <div className="fixed top-0 left-0 right-0 z-[100] flex justify-center pointer-events-none px-3 pt-2">
+          <div 
+            className="backdrop-blur-xl rounded-full px-4 py-1.5 shadow-lg border border-white/10 flex items-center gap-2 pointer-events-auto"
+            style={{ background: 'rgba(251, 191, 36, 0.18)' }}
+          >
+            <RefreshCw 
+              className="h-3 w-3 text-amber-200" 
+              style={{ animation: retryCountdown !== null ? 'spin 1.5s linear infinite' : 'none' }} 
+            />
+            <span className="text-[10px] font-semibold text-amber-100 tracking-wide uppercase whitespace-nowrap">
+              {retryCountdown !== null 
+                ? `Reconnexion automatique dans ${retryCountdown}s…` 
+                : 'Connexion en cours de rétablissement…'}
+            </span>
+          </div>
+        </div>
+      )}
+
       <style>{`
         ::-webkit-scrollbar {
           display: none;
         }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       `}</style>
       {/* Background Overlay to darken and blur */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] pointer-events-none z-0"></div>
@@ -1522,12 +1916,8 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
       )}
 
       {/* HEADER + MAIN CONTENT COMBINED */}
-      <motion.div 
+      <div 
         ref={(el) => sectionRefs.current.header = el}
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
         className="relative w-full overflow-hidden flex flex-col items-center justify-start snap-start"
       >
         <div className="relative w-full h-[92vh] z-0">
@@ -1620,40 +2010,82 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           ref={(el) => sectionRefs.current.mainContent = el}
           className="relative z-10 flex justify-center mt-12 px-4 w-full"
         >
-        <div className="bg-white rounded-t-[120px] rounded-b-none w-full max-w-lg p-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)]">
-          <div className="space-y-6">
-            
-            <RevealOnScroll className="relative">
-              {/* Circular Couple Photo */}
-              <div className="relative inline-block mb-8">
-                <div 
-                  className="absolute inset-0 rounded-full blur-2xl"
-                  style={{ background: `linear-gradient(to br, ${colors.primary}33, ${colors.secondary}33)` }}
-                ></div>
-                <BorderRotate
-                  borderRadius={100}
-                  borderWidth={3}
-                  animationSpeed={3}
-                  gradientColors={{
-                    primary: colors.primary,
-                    secondary: colors.secondary,
-                    accent: colors.accent || '#ffffff'
+        <div className="bg-white rounded-t-[120px] rounded-b-none w-full max-w-lg p-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)] relative">
+          {/* Decorative paper background (notebook lines + discreet hearts) - clipped to card rounded corners */}
+          <div aria-hidden className="absolute inset-0 pointer-events-none z-0 rounded-t-[120px] overflow-hidden">
+            <div
+              className="absolute inset-0"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(to bottom, transparent 0 27px, rgba(236,72,153,0.07) 27px 28px)',
+              }}
+            />
+            <div className="absolute inset-0 select-none">
+              {[
+                { l: '6%',  t: '18%', s: 14, o: 0.07, c: '#ec4899' },
+                { l: '90%', t: '22%', s: 12, o: 0.08, c: '#d946ef' },
+                { l: '10%', t: '36%', s: 18, o: 0.06, c: '#ec4899' },
+                { l: '82%', t: '42%', s: 11, o: 0.09, c: '#f472b6' },
+                { l: '18%', t: '56%', s: 13, o: 0.07, c: '#d946ef' },
+                { l: '72%', t: '62%', s: 16, o: 0.06, c: '#ec4899' },
+                { l: '6%',  t: '78%', s: 12, o: 0.08, c: '#f472b6' },
+                { l: '88%', t: '84%', s: 15, o: 0.07, c: '#d946ef' },
+                { l: '46%', t: '28%', s: 10, o: 0.06, c: '#ec4899' },
+                { l: '52%', t: '72%', s: 11, o: 0.07, c: '#f472b6' },
+              ].map((h, i) => (
+                <svg
+                  key={`ph-${i}`}
+                  width={h.s}
+                  height={h.s}
+                  viewBox="0 0 24 24"
+                  fill={h.c}
+                  style={{
+                    position: 'absolute',
+                    left: h.l,
+                    top: h.t,
+                    opacity: h.o,
+                    transform: `rotate(${(i * 13) % 30 - 15}deg)`,
                   }}
-                  backgroundColor="#ffffff"
-                  className="relative z-10 -mt-24 p-[2px]"
                 >
-                  <img 
-                    src={optimizeImage(safeUserModel.invitationPhoto || photoCouple, 400, 70)} 
-                    className="w-48 h-48 rounded-full object-cover shadow-2xl" 
-                    alt="Couple" 
-                    loading="lazy"
-                  />
-                </BorderRotate>
-              </div>
+                  <path d="M12 21s-7-4.35-9.5-8.5C.9 10.2 2.4 6 6.2 6c2 0 3.4 1.1 4.3 2.6.9-1.5 2.3-2.6 4.3-2.6 3.8 0 5.3 4.2 3.7 6.5C19 16.65 12 21 12 21z" />
+                </svg>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6 relative z-10">
+
+            {/* Circular Couple Photo - FROZEN (no Reveal entrance, rotating circular border restored) */}
+            <div className="relative inline-block mb-4">
+              <div
+                className="absolute inset-0 rounded-full blur-2xl"
+                style={{ background: `linear-gradient(to br, ${colors.primary}33, ${colors.secondary}33)` }}
+              />
+              <BorderRotate
+                borderRadius={100}
+                borderWidth={3}
+                animationSpeed={3}
+                gradientColors={{
+                  primary: colors.primary,
+                  secondary: colors.secondary,
+                  accent: colors.accent || '#ffffff'
+                }}
+                backgroundColor="#ffffff"
+                className="relative z-10 -mt-24 p-[2px]"
+              >
+                <img
+                  src={optimizeImage(safeUserModel.invitationPhoto || photoCouple, 400, 70)}
+                  className="w-48 h-48 rounded-full object-cover shadow-2xl"
+                  alt="Couple"
+                  loading="lazy"
+                />
+              </BorderRotate>
+            </div>
+
+            <RevealOnScroll className="relative">
 
               {/* Subtitle above title */}
               {safeUserModel.invitationTitleSubtitle && (
-                <p 
+                <p
                   className="text-lg font-normal font-bold mb-2"
                   style={{ color: colors.primary }}
                 >
@@ -1661,9 +2093,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </p>
               )}
               {/* Title Style as requested */}
-              <h1 
-                className="text-3xl font-luxury font-medium leading-tight mb-8"
-                style={{ color: colors.primary }}
+              <h1
+                className="text-3xl font-luxury font-medium leading-tight mb-4"
+                style={{ color: colors.secondary }}
               >
                 {safeUserModel.title}
               </h1>
@@ -1676,9 +2108,9 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               {/* Reduced text size and handled BBCode/HTML with Typewriter effect */}
               <div className="flex flex-col items-center justify-center w-full">
                 <TypewriterWithPen 
-                  className="text-base md:text-lg text-slate-700 leading-normal font-poppins px-4 max-w-md"
+                  className="text-sm md:text-base text-slate-700 leading-snug font-poppins px-4 max-w-md"
                   penImage={plume}
-                  speed={80}
+                  speed={48}
                   htmlContent={(safeUserModel.invitationText || '')
                     .replace(/\[b\]/g, '<strong>').replace(/\[\/b\]/g, '</strong>')
                     .replace(/\[color=(.*?)\]/g, `<span style="color: $1">`).replace(/\[\/color\]/g, '</span>')}
@@ -1724,15 +2156,11 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           </div>
         </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* UNIFIED COUNTDOWN & MAPS CONTAINER - Redesigned 3D Card Style */}
-      <motion.div 
+      <div 
         ref={(el) => sectionRefs.current.countdown = el}
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative z-10 w-full mt-4 px-0 min-h-screen flex items-center justify-center snap-start overflow-hidden"
       >
         {/* Section Background */}
@@ -1748,12 +2176,8 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             )}
         {/* Falling Dots */}
         <FallingDots colors={colors} />
-        {/* Main 3D Card Container with manual tilt effect */}
-        <motion.div 
-          className="w-full max-w-lg px-4"
-          whileHover={{ scale: 1.02 }}
-          transition={{ duration: 0.3 }}
-        >
+        {/* Main 3D Card Container - removed heavy hover tilt */}
+        <div className="w-full max-w-lg px-4">
           <div 
             className="w-full bg-black/50 backdrop-blur-2xl border-2 p-4 shadow-[0_0_80px_rgba(0,0,0,0.6),inset_0_0_60px_rgba(0,0,0,0.4)] flex flex-col items-center rounded-[30px] relative overflow-hidden"
             style={{ 
@@ -1767,13 +2191,8 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
             <div className="w-full space-y-4 relative z-10">
               
-              {/* Countdown Circles */}
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                whileInView={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-                className="space-y-2"
-              >
+              {/* Countdown Circles - removed heavy scale animation */}
+              <div className="space-y-2">
                 <h2 
                   className="text-center font-luxury tracking-[0.8em] text-xs uppercase"
                   style={{ color: colors.primary }}
@@ -1782,21 +2201,17 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 </h2>
                 
                 <CountdownTimer targetDate={targetEventDate} colors={colors} />
-              </motion.div>
+              </div>
 
-              {/* 3 Photos with JJ, MM, AA (Compact 3D Style) */}
-              <RevealOnScroll className="grid grid-cols-3 gap-2 w-full">
+              {/* 3 Photos with JJ, MM, AA - removed rotate, scale entry animations */}
+              <div className="grid grid-cols-3 gap-2 w-full">
                 {[
                   { img: safeUserModel.eventPhoto1 || photoCouple, val: eventDay },
                   { img: safeUserModel.eventPhoto2 || photoCouple, val: eventMonth },
                   { img: safeUserModel.eventPhoto3 || photoCouple, val: eventYear }
                 ].map((item, i) => (
-                  <motion.div 
+                  <div 
                     key={i} 
-                    initial={{ y: 20, opacity: 0, rotate: -5 }}
-                    whileInView={{ y: 0, opacity: 1, rotate: 0 }}
-                    viewport={{ once: false }}
-                    transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
                     className="relative aspect-[3/4] overflow-hidden shadow-2xl border-2 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.4)] group"
                     style={{
                       borderColor: `${colors.primary}60`
@@ -1812,29 +2227,21 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     />
                     <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/80"></div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <motion.span 
-                        initial={{ scale: 0.5 }}
-                        whileInView={{ scale: 1 }}
-                        viewport={{ once: false }}
-                        transition={{ duration: 0.5, delay: 0.4 + i * 0.1 }}
+                      <span 
                         className="text-4xl md:text-5xl font-luxury text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.5)]"
                       >
                         {item.val}
-                      </motion.span>
+                      </span>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
-              </RevealOnScroll>
+              </div>
 
-              {/* MAPS & LOCATION - Enhanced 3D Style */}
-              <RevealOnScroll className="space-y-2 pt-0">
+              {/* MAPS & LOCATION - removed heavy spring/rotate/scale animations */}
+              <div className="space-y-2 pt-0">
                 <div className="flex flex-col items-center space-y-2">
                   {/* Enhanced Floating Location Icon */}
-                  <motion.div 
-                    initial={{ scale: 0, rotate: 180 }}
-                    whileInView={{ scale: 1, rotate: 0 }}
-                    viewport={{ once: false }}
-                    transition={{ duration: 0.6, type: "spring" }}
+                  <div 
                     className="relative group cursor-pointer mx-auto"
                     onClick={() => {
                       const query = safeUserModel.eventAddress || safeUserModel.eventLocation;
@@ -1844,39 +2251,28 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       window.open(url, '_blank');
                     }}
                   >
-                    {/* Premium Location Pin */}
+                    {/* Premium Location Pin - removed spring whileHover, keep subtle */}
                     <motion.div 
-                      whileHover={{ scale: 1.2, rotate: 5 }}
                       whileTap={{ scale: 0.95 }}
-                      className="w-12 h-12 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-3 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-500 mx-auto"
+                      className="w-12 h-12 bg-gradient-to-br from-white/20 to-white/5 flex items-center justify-center border-3 shadow-[0_0_60px_rgba(255,255,255,0.5)] relative animate-bounce rounded-full transition-all duration-300 mx-auto"
                       style={{ 
-                        borderColor: colors.primary,
-                        boxShadow: `0 0 40px ${colors.primary}60`
+                        borderColor: colors.accent || colors.primary,
+                        boxShadow: `0 0 40px ${colors.accent || colors.primary}60`
                       }}
                     >
-                      <div className="absolute inset-1.5 rounded-full bg-gradient-to-br" style={{ background: `linear-gradient(145deg, ${colors.primary}, ${colors.secondary})` }}></div>
+                      <div className="absolute inset-1.5 rounded-full bg-gradient-to-br" style={{ background: `linear-gradient(145deg, ${colors.accent || colors.primary}, ${colors.secondary})` }}></div>
                       <MapPin className="h-5 w-5 relative z-10 text-white drop-shadow-lg" />
                     </motion.div>
                     {/* CTA text below pin */}
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: false }}
-                      transition={{ duration: 0.5, delay: 0.5 }}
-                      className="mt-2 text-center"
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.primary }}>
+                    <div className="mt-2 text-center">
+                      <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.accent || colors.primary }}>
                         Ouvrir dans Maps
                       </p>
-                    </motion.div>
-                  </motion.div>
+                    </div>
+                  </div>
                   
-                  {/* Enhanced "Lieu de réception" card */}
-                  <motion.div 
-                    initial={{ y: 20, opacity: 0 }}
-                    whileInView={{ y: 0, opacity: 1 }}
-                    viewport={{ once: false }}
-                    transition={{ duration: 0.5, delay: 0.6 }}
+                  {/* Enhanced "Lieu de réception" card - removed entry animation */}
+                  <div 
                     className="cursor-pointer group w-full"
                     onClick={() => {
                       const query = safeUserModel.eventAddress || safeUserModel.eventLocation;
@@ -1886,7 +2282,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                       window.open(url, '_blank');
                     }}
                   >
-                    <div className="relative overflow-hidden text-center p-3 w-full rounded-[20px] border-2 transition-all duration-500 group-hover:scale-[1.02] shadow-[0_0_50px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_80px_rgba(255,255,255,0.2)]"
+                    <div className="relative overflow-hidden text-center p-3 w-full rounded-[20px] border-2 transition-all duration-400 group-hover:scale-[1.02] shadow-[0_0_50px_rgba(255,255,255,0.1)] group-hover:shadow-[0_0_80px_rgba(255,255,255,0.2)]"
                          style={{ 
                            borderColor: `${colors.primary}40`,
                            background: `linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))`
@@ -1902,75 +2298,321 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                        )}
                        <div className="inline-flex items-center justify-center space-x-1.5 mb-1" style={{ color: colors.primary }}>
                          <Clock className="h-4 w-4" />
-                         <p className="font-bold text-sm drop-shadow-lg">{safeUserModel.eventTime || '18h30'}</p>
+                         <p className="font-bold text-sm drop-shadow-lg" style={{ color: colors.primary }}>{safeUserModel.eventTime || '18h30'}</p>
                        </div>
                      </div>
-                  </motion.div>
+                  </div>
                 </div>
-              </RevealOnScroll>
+              </div>
             </div>
-          </div>
-        </motion.div>
-      </motion.div>
-
-      {/* Galerie Circulaire */}
-      <motion.div 
-        ref={(el) => sectionRefs.current.gallery = el}
-        initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-        className="relative z-10 w-full mt-0 px-0 min-h-screen flex items-center justify-start pt-0 snap-start overflow-hidden"
-      >
-        {/* Section Background */}
-        {optimizedGallerySectionBg && (
-          <div className="absolute inset-0 z-0 transition-all duration-700 ease-in-out">
-            <img 
-              src={optimizedGallerySectionBg} 
-              alt="Background" 
-              className="w-full h-full object-cover transition-transform duration-700 ease-in-out" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
-          </div>
-        )}
-        {/* Falling Dots */}
-        <FallingDots colors={colors} />
-        <div className="relative w-full h-[500px] md:h-[650px] lg:h-[700px] overflow-hidden">
-          {/* Fond semi-transparent avec gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-black/20 to-black/40 backdrop-blur-sm border-y border-white/10"></div>
-          
-          {/* Contenu de la galerie */}
-          <div className="relative z-10 w-full h-full">
-            <div className="text-center mb-2 pt-0 px-4">
-              <h2 className="text-xl font-bold text-white mb-1" style={{ color: colors.primary }}>Nos Moments Précieux</h2>
-              <p className="text-white/60 text-xs">Faites glisser pour explorer notre galerie</p>
-            </div>
-            <CircularGallery 
-              items={galleryItems}
-              radius={350}
-              autoRotateSpeed={0.05}
-              className="w-full h-[calc(100%-60px)]"
-              onImageClick={(item) => {
-                // Get index from the stored value
-                const index = parseInt(item.photo.by, 10);
-                if (!isNaN(index) && index >= 0 && index < galleryPhotos.length) {
-                  setSelectedGalleryPhoto(galleryPhotos[index]);
-                } else {
-                  setSelectedGalleryPhoto(galleryPhotos[0]);
-                }
-              }}
-            />
           </div>
         </div>
-      </motion.div>
+      </div>
+
+      {/* ===== SECTION HÉBERGEMENTS & ADRESSES UTILES ===== */}
+      {((safeUserModel as any).accommodationEnabled && Array.isArray((safeUserModel as any).accommodations) && (safeUserModel as any).accommodations.length > 0) ||
+       ((safeUserModel as any).usefulAddressesEnabled && Array.isArray((safeUserModel as any).usefulAddresses) && (safeUserModel as any).usefulAddresses.length > 0) ? (
+      <div
+        ref={(el) => { sectionRefs.current.accommodation = el; }}
+        className="relative z-10 w-full mt-0 px-0 snap-start overflow-hidden min-h-[100dvh] sm:min-h-[auto] flex items-center"
+      >
+        {optimizedAccommodationSectionBg && (
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-20 mix-blend-overlay transition-all duration-700">
+            <img
+              src={optimizedAccommodationSectionBg}
+              alt="Background"
+              className="w-full h-full object-cover transition-transform duration-700"
+            />
+          </div>
+        )}
+        <div className="w-full max-w-lg mx-auto px-4 py-10 sm:py-14 relative z-10">
+          {/* Titre Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-6 sm:mb-8"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-semibold text-white/70 mb-2 sm:mb-3">
+              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: colors.primary }} />
+              Pratique
+              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: colors.secondary }} />
+            </div>
+            <h2
+              className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight mb-1 sm:mb-2 bg-clip-text text-transparent"
+              style={{
+                backgroundImage: `linear-gradient(135deg, #ffffff 0%, ${colors.primary} 50%, #ffffff 100%)`,
+              }}
+            >
+              Où dormir ?
+            </h2>
+            <p className="text-white/50 text-[11px] sm:text-sm font-medium max-w-md mx-auto leading-relaxed">
+              Quelques adresses recommandées à proximité de la salle
+            </p>
+          </motion.div>
+
+          {/* Liste Hébergements */}
+          {((safeUserModel as any).accommodationEnabled && Array.isArray((safeUserModel as any).accommodations) && (safeUserModel as any).accommodations.length > 0) && (
+            <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
+              {[...(safeUserModel as any).accommodations]
+                .sort((a: any, b: any) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+                .filter((a: any) => a.name && a.address)
+                .map((acc: any, idx: number) => (
+                <motion.div
+                  key={acc.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: Math.min(idx * 0.08, 0.5) }}
+                >
+                  <div
+                    className="relative w-full bg-black/45 backdrop-blur-2xl border-2 shadow-xl rounded-[20px] p-2.5 sm:p-4 overflow-hidden group transition-all duration-300 hover:scale-[1.01]"
+                    style={{
+                      borderColor: `${colors.primary}50`,
+                      background: `linear-gradient(145deg, rgba(0,0,0,0.55), rgba(0,0,0,0.25))`
+                    }}
+                  >
+                    {/* Glow */}
+                    <div className="absolute -top-10 -left-10 w-28 h-28 rounded-full blur-2xl pointer-events-none" style={{ backgroundColor: colors.primary, opacity: 0.12 }}></div>
+                    <div className="absolute -bottom-10 -right-10 w-28 h-28 rounded-full blur-2xl pointer-events-none" style={{ backgroundColor: colors.secondary, opacity: 0.12 }}></div>
+
+                    <div className="relative z-10 space-y-2 sm:space-y-3">
+                      {/* Header : Nom + Badge + Prix */}
+                      <div className="flex items-start gap-2 sm:gap-2.5">
+                        <div
+                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 shadow"
+                          style={{ background: `linear-gradient(145deg, ${colors.primary}, ${colors.secondary})` }}
+                        >
+                          <Hotel className="h-4 w-4 sm:h-5 sm:w-5 text-white drop-shadow" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                            <h3 className="font-bold text-sm sm:text-base text-white truncate drop-shadow">{acc.name}</h3>
+                            {acc.badge && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black tracking-wide uppercase flex-shrink-0"
+                                style={{
+                                  backgroundColor: `${colors.primary}30`,
+                                  color: colors.accent || colors.primary,
+                                  border: `1px solid ${colors.primary}50`
+                                }}
+                              >
+                                {acc.badge}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[11px] sm:text-sm text-white/80 mt-0.5">
+                            <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" style={{ color: colors.primary }} />
+                            <span className="truncate">{acc.address}</span>
+                          </div>
+                          {acc.priceHint && (
+                            <div className="text-[11px] font-bold mt-0.5" style={{ color: colors.accent || colors.primary }}>
+                              {acc.priceHint}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Boutons Actions */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 pt-0.5">
+                        {/* Maps */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = /iPhone|iPad|iPod/.test(navigator.userAgent)
+                              ? `maps://?q=${encodeURIComponent(acc.address)}`
+                              : `https://www.google.com/maps?q=${encodeURIComponent(acc.address)}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="flex items-center justify-center gap-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-all active:scale-95 text-white border"
+                          style={{
+                            backgroundColor: `${colors.primary}25`,
+                            borderColor: `${colors.primary}50`
+                          }}
+                        >
+                          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          <span>Maps</span>
+                        </button>
+
+                        {/* Email réservation */}
+                        {acc.email ? (
+                          <a
+                            href={`mailto:${acc.email}?subject=${encodeURIComponent(`Réservation - Mariage ${safeUserModel.title?.replace?.(/Mariage (de|d')?\s*/i, '') || ''}`)}&body=${encodeURIComponent(
+`Bonjour,
+
+Je souhaiterais réserver une chambre pour le mariage.
+
+Cordialement,`
+                            )}`}
+                            className="flex items-center justify-center gap-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-all active:scale-95 text-white border"
+                            style={{
+                              backgroundColor: `${colors.secondary}30`,
+                              borderColor: `${colors.secondary}60`
+                            }}
+                          >
+                            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span>Réserver</span>
+                          </a>
+                        ) : (
+                          <div className="flex items-center justify-center gap-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold text-white/40 bg-white/5 border border-white/10">
+                            <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span>—</span>
+                          </div>
+                        )}
+
+                        {/* Site web */}
+                        {acc.websiteUrl ? (
+                          <a
+                            href={acc.websiteUrl && !/^https?:\/\//i.test(acc.websiteUrl) ? `https://${acc.websiteUrl.replace(/^\/+/, '')}` : acc.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1 py-2 sm:py-2.5 px-1.5 sm:px-2 rounded-lg sm:rounded-xl text-[11px] sm:text-sm font-semibold transition-all active:scale-95 text-white border"
+                            style={{
+                              backgroundColor: `${colors.accent || colors.primary}25`,
+                              borderColor: `${colors.accent || colors.primary}50`
+                            }}
+                          >
+                            <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            <span>Site web</span>
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {/* Liste Adresses Utiles */}
+          {((safeUserModel as any).usefulAddressesEnabled && Array.isArray((safeUserModel as any).usefulAddresses) && (safeUserModel as any).usefulAddresses.length > 0) && (
+            <div className="space-y-3 sm:space-y-4">
+              <div className="text-center mb-3 sm:mb-4">
+                <h3 className="text-sm sm:text-base font-bold tracking-[0.15em] uppercase text-white/70">
+                  ✦ Autres adresses utiles ✦
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                {[...(safeUserModel as any).usefulAddresses]
+                  .sort((a: any, b: any) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
+                  .filter((a: any) => a.name)
+                  .map((ua: any, idx: number) => {
+                    const IconMap: Record<string, any> = {
+                      plane: Plane,
+                      train: Train,
+                      car: Car,
+                      taxi: CarTaxiFront,
+                      info: Info
+                    };
+                    const IconComp = IconMap[ua.icon || 'info'] || Info;
+                    return (
+                      <motion.div
+                        key={ua.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: Math.min(idx * 0.06, 0.4) }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!ua.address) return;
+                            const url = /iPhone|iPad|iPod/.test(navigator.userAgent)
+                              ? `maps://?q=${encodeURIComponent(ua.address + ' ' + ua.name)}`
+                              : `https://www.google.com/maps?q=${encodeURIComponent(ua.address + ' ' + ua.name)}`;
+                            window.open(url, '_blank');
+                          }}
+                          className="w-full text-left p-3 sm:p-4 rounded-2xl bg-black/40 backdrop-blur-xl border transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]"
+                          style={{ borderColor: `${colors.primary}30` }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow"
+                              style={{
+                                background: `linear-gradient(145deg, ${colors.primary}90, ${colors.secondary}90)`
+                              }}
+                            >
+                              <IconComp className="h-4 w-4 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-sm text-white truncate">{ua.name}</h4>
+                              {ua.address && <p className="text-[11px] text-white/70 truncate mt-0.5">{ua.address}</p>}
+                              {ua.details && <p className="text-[10px] font-semibold mt-0.5" style={{ color: colors.accent || colors.primary }}>{ua.details}</p>}
+                            </div>
+                          </div>
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      ) : null}
+
+      {/* Galerie 3D Parallax */}
+      <div
+        ref={(el) => (sectionRefs.current.gallery = el)}
+        className="relative z-10 w-full mt-0 px-0 snap-start overflow-hidden min-h-[100dvh] sm:min-h-[auto]"
+      >
+        {/* Section Background (si l'utilisateur en a uploadé un, on l'affiche en overlay teinté) */}
+        {optimizedGallerySectionBg && (
+          <div className="absolute inset-0 z-0 pointer-events-none opacity-20 mix-blend-overlay transition-all duration-700">
+            <img
+              src={optimizedGallerySectionBg}
+              alt="Background"
+              className="w-full h-full object-cover transition-transform duration-700"
+            />
+          </div>
+        )}
+
+        {/* Titre en-tête */}
+        <div className="relative z-40 flex flex-col items-center justify-center pt-8 sm:pt-12 md:pt-14 pb-4 sm:pb-5 md:pb-6 px-4 pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-center"
+          >
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 backdrop-blur-md border border-white/10 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-semibold text-white/70 mb-2 sm:mb-3">
+              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: colors.primary }} />
+              Gallery
+              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: colors.primary }} />
+            </div>
+            <h2
+              className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight mb-1 sm:mb-2 bg-clip-text text-transparent"
+              style={{
+                backgroundImage: `linear-gradient(135deg, #ffffff 0%, ${colors.primary} 50%, #ffffff 100%)`,
+              }}
+            >
+              Nos Moments Précieux
+            </h2>
+            <p className="text-white/50 text-[11px] sm:text-sm font-medium max-w-md mx-auto leading-relaxed">
+              C'est à tes côtés que je veux construire ma vie
+            </p>
+          </motion.div>
+        </div>
+
+        {/* Parallax Gallery Component (taille normale) */}
+        <div className="relative z-10">
+          <ParallaxUnfurlingGallery
+            items={parallaxGalleryItems}
+            className="w-full"
+            onImageClick={(_item, index) => {
+              const safeIndex =
+                !isNaN(index) && index >= 0 && index < galleryPhotos.length ? index : 0;
+              setSelectedGalleryPhoto(galleryPhotos[safeIndex]);
+            }}
+          />
+        </div>
+      </div>
 
         {/* COMBINED RSVP + DRINKS */}
-        <motion.div 
+        <div 
             ref={(el) => sectionRefs.current.rsvp = el}
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
             className="min-h-screen flex flex-col items-center justify-start pt-16 pb-12 snap-start space-y-12 relative overflow-hidden w-full mt-12"
           >
             {/* Section Background */}
@@ -2010,7 +2652,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         <div 
           ref={(el) => sectionRefs.current.drinks = el}
         >
-        <RevealOnScroll className="w-full">
+        <div className="w-full">
         <BorderRotate
           borderRadius={40}
           borderWidth={2}
@@ -2043,18 +2685,14 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             </div>
             
             <div className="grid grid-cols-3 gap-2">
-              {safeUserModel.drinkOptions.map((drink, index) => (
-                <motion.button
+              {safeUserModel.drinkOptions.map((drink) => (
+                <button
                   key={drink}
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: false }}
-                  transition={{ duration: 0.4, delay: 0.1 * index, ease: "easeOut" }}
                   onClick={() => handleDrinkSelection(drink)}
-                  className={`flex items-center space-x-1.5 px-2 py-2.5 rounded-xl transition-all text-left group h-full ${
+                  className={`flex items-center space-x-1.5 px-2 py-2.5 rounded-xl transition-all duration-200 text-left group h-full ${
                     selectedDrink.includes(drink)
                       ? 'bg-white shadow-lg ring-2 ring-white scale-[1.02]'
-                      : 'bg-white text-slate-800 hover:bg-white/90'
+                      : 'bg-white text-slate-800 hover:bg-white/90 active:scale-95'
                   }`}
                   style={{ color: selectedDrink.includes(drink) ? colors.primary : undefined }}
                 >
@@ -2063,24 +2701,20 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                     style={{ color: selectedDrink.includes(drink) ? colors.primary : '#94a3b8' }} 
                   />
                   <span className="text-[10px] font-bold leading-tight break-words uppercase">{drink}</span>
-                </motion.button>
+                </button>
               ))}
             </div>
           </div>
         </BorderRotate>
-        </RevealOnScroll>
         </div>
         </div>
-        </motion.div>
+        </div>
+        </div>
 
         {/* JEUX INTERACTIFS (AMÉLIORÉS) */}
         {games && games.filter((g: GameConfiguration) => g.isEnabled).length > 0 && (
-          <motion.div 
+          <div 
             ref={(el) => sectionRefs.current.games = el}
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
             className="min-h-screen flex items-center justify-center py-12 snap-start relative overflow-hidden"
           >
             {/* Section Background */}
@@ -2096,147 +2730,262 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             )}
             <FallingDots colors={colors} />
             <div className="relative z-10 w-full max-w-lg px-4">
-            <RevealOnScroll className="relative w-full">
-            <BorderRotate
-              borderRadius={40}
-              borderWidth={2}
-              animationSpeed={3}
-              gradientColors={{
-                primary: colors.primary,
-                secondary: colors.secondary,
-                accent: colors.accent || '#ffffff'
+            <div className="relative w-full">
+            <div
+              className="relative w-full"
+              style={{
+                perspective: "1200px",
+                transformStyle: "preserve-3d",
               }}
-              backgroundColor="transparent"
-              className="w-full"
             >
-              <div
-                className="w-full rounded-[40px] p-6 space-y-6 relative overflow-hidden"
-                style={{ background: `linear-gradient(135deg, ${colors.primary}dd, ${colors.secondary}dd)` }}
+              <BorderRotate
+                borderRadius={36}
+                borderWidth={3}
+                animationSpeed={2.5}
+                gradientColors={{
+                  primary: colors.primary,
+                  secondary: colors.secondary,
+                  accent: colors.accent || '#ffffff'
+                }}
+                backgroundColor="transparent"
+                className="w-full"
               >
-                {/* Animated subtle glow background */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                  {/* Soft gradients */}
-                  <div className="absolute top-0 left-0 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: colors.primary, opacity: 0.2 }}></div>
-                  <div className="absolute bottom-0 right-0 w-40 h-40 rounded-full blur-3xl" style={{ backgroundColor: colors.secondary, opacity: 0.2 }}></div>
-                </div>
+                <div
+                  className="w-full rounded-[36px] relative overflow-hidden"
+                  style={{
+                    transformStyle: "preserve-3d",
+                    background: `linear-gradient(160deg, ${colors.primary}ff 0%, ${colors.secondary}f5 50%, ${colors.primary}ee 100%)`,
+                    boxShadow: `
+                      0 40px 80px -20px rgba(0,0,0,0.5),
+                      0 25px 50px -12px rgba(0,0,0,0.4),
+                      inset 0 2px 0 rgba(255,255,255,0.35),
+                      inset 0 -2px 0 rgba(255,255,255,0.08)
+                    `
+                  }}
+                >
+                  {/* 3D layered depth shadows */}
+                  <div className="absolute -bottom-3 left-2 right-2 h-6 rounded-[30px] opacity-40 blur-sm" style={{ background: colors.secondary, transform: "translateZ(-20px)" }}></div>
+                  <div className="absolute -bottom-6 left-4 right-4 h-6 rounded-[28px] opacity-25 blur-md" style={{ background: colors.primary, transform: "translateZ(-40px)" }}></div>
 
-                <div className="text-center relative z-10">
-                  <motion.div 
-                    animate={{ 
-                      rotate: [0, -10, 10, 0], 
-                      scale: [1, 1.15, 1],
-                      y: [0, -5, 0]
+                  {/* Light overlay — brightens entire card */}
+                  <div
+                    className="absolute inset-0 pointer-events-none z-[5]"
+                    style={{
+                      background: `
+                        radial-gradient(ellipse 80% 50% at 30% 0%, rgba(255,255,255,0.45) 0%, transparent 60%),
+                        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255,255,255,0.22) 0%, transparent 55%)
+                      `,
+                      mixBlendMode: "screen",
                     }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-full mb-4 shadow-lg" 
-                    style={{ boxShadow: `0 10px 30px rgba(0,0,0,0.2)` }}
+                  ></div>
+
+                  {/* Animated glow background — boosted brightness (primary + secondary only) */}
+                  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    {/* Soft gradients — increased opacity & size */}
+                    <div className="absolute -top-20 -left-16 w-72 h-72 rounded-full blur-3xl" style={{ backgroundColor: colors.primary, opacity: 0.55 }}></div>
+                    <div className="absolute top-20 -right-20 w-80 h-80 rounded-full blur-3xl" style={{ backgroundColor: colors.secondary, opacity: 0.5 }}></div>
+                    <div className="absolute -bottom-20 -left-10 w-64 h-64 rounded-full blur-3xl" style={{ backgroundColor: colors.primary, opacity: 0.45 }}></div>
+                  </div>
+
+                  {/* Scanlines overlay — arcade CRT effect (reduced darkness) */}
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.035] z-20"
+                    style={{
+                      backgroundImage: `repeating-linear-gradient(0deg, transparent 0px, transparent 2px, rgba(0,0,0,0.6) 2px, rgba(0,0,0,0.6) 4px)`,
+                    }}
+                  ></div>
+
+                  {/* Top arcade console bar — lighter, glass effect */}
+                  <div
+                    className="relative z-10 flex items-center justify-between px-5 pt-4 pb-3"
+                    style={{
+                      background: `linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 60%, transparent 100%)`,
+                      borderBottom: `1px solid rgba(255,255,255,0.2)`,
+                      transform: "translateZ(20px)",
+                    }}
                   >
-                    <Gamepad2 className="w-8 h-8 text-white" />
-                  </motion.div>
-                  <motion.h2 
-                    animate={{ scale: [1, 1.03, 1] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="text-2xl md:text-3xl font-luxury text-white mb-3 drop-shadow-lg"
-                  >
-                    Jeux & Fun
-                  </motion.h2>
-                  <p className="text-white/90 text-sm font-medium">
-                    Ajoutez une touche de magie à cette journée
-                  </p>
-                </div>
-                
-                <div className="space-y-4 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: colors.primary, boxShadow: `0 0 10px ${colors.primary}` }}></div>
+                      <div className="w-2.5 h-2.5 rounded-full animate-pulse" style={{ backgroundColor: colors.secondary, boxShadow: `0 0 10px ${colors.secondary}`, animationDelay: "0.3s" }}></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 10px #34d399", animationDelay: "0.6s" }}></div>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/25">
+                      <Star className="w-3 h-3" style={{ color: colors.primary }} fill={colors.primary} />
+                      <span className="text-[10px] font-black tracking-[0.2em] text-white uppercase drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">Pour la soirée</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                      <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                      <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                    </div>
+                  </div>
+
+                  {/* Corner brackets — arcade cabinet style (brighter, primary/secondary only) */}
+                  <div className="absolute top-14 left-3 w-6 h-6 border-l-2 border-t-2 rounded-tl-md pointer-events-none z-10" style={{ borderColor: colors.primary, opacity: 0.85, transform: "translateZ(30px)", filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))" }}></div>
+                  <div className="absolute top-14 right-3 w-6 h-6 border-r-2 border-t-2 rounded-tr-md pointer-events-none z-10" style={{ borderColor: colors.secondary, opacity: 0.85, transform: "translateZ(30px)", filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))" }}></div>
+                  <div className="absolute bottom-3 left-3 w-6 h-6 border-l-2 border-b-2 rounded-bl-md pointer-events-none z-10" style={{ borderColor: colors.secondary, opacity: 0.85, transform: "translateZ(30px)", filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))" }}></div>
+                  <div className="absolute bottom-3 right-3 w-6 h-6 border-r-2 border-b-2 rounded-br-md pointer-events-none z-10" style={{ borderColor: colors.primary, opacity: 0.85, transform: "translateZ(30px)", filter: "drop-shadow(0 0 4px rgba(255,255,255,0.4))" }}></div>
+
+                  <div className="relative z-10 p-5 space-y-5">
+                    <div className="text-center relative" style={{ transform: "translateZ(40px)" }}>
+                      {/* Floating gamepad with 3D elevated platform */}
+                      <div className="relative inline-block mb-4">
+                        {/* 3D pedestal under icon */}
+                        <motion.div
+                          animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.6, 0.4] }}
+                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                          className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-20 h-6 rounded-full blur-md"
+                          style={{ background: `radial-gradient(ellipse, ${colors.primary} 0%, transparent 70%)` }}
+                        ></motion.div>
+                        <motion.div
+                          animate={{
+                            rotate: [0, -10, 10, 0],
+                            scale: [1, 1.15, 1],
+                            y: [0, -8, 0],
+                          }}
+                          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                          className="relative inline-flex items-center justify-center"
+                          style={{
+                            width: "72px",
+                            height: "72px",
+                            borderRadius: "22px",
+                            background: `linear-gradient(145deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 100%)`,
+                            backdropFilter: "blur(8px)",
+                            border: `2px solid rgba(255,255,255,0.25)`,
+                            boxShadow: `
+                              0 18px 35px -8px rgba(0,0,0,0.5),
+                              0 8px 15px -4px rgba(0,0,0,0.3),
+                              inset 0 1px 0 rgba(255,255,255,0.4)
+                            `,
+                            transformStyle: "preserve-3d",
+                          }}
+                        >
+                          <div className="absolute inset-0 rounded-[20px] overflow-hidden opacity-50" style={{ background: `linear-gradient(135deg, ${colors.primary}40 0%, ${colors.secondary}40 100%)` }}></div>
+                          <Gamepad2 className="w-9 h-9 text-white relative z-10 drop-shadow-lg" strokeWidth={2.2} />
+                        </motion.div>
+                      </div>
+
+                      {/* Title with 3D depth */}
+                      <motion.h2
+                        animate={{ y: [0, -2, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-3xl md:text-4xl font-black font-luxury mb-3"
+                        style={{
+                          color: "#fff",
+                          letterSpacing: "0.02em",
+                          textShadow: `
+                            0 2px 0 rgba(0,0,0,0.25),
+                            0 4px 12px ${colors.primary}80,
+                            0 6px 24px ${colors.secondary}50,
+                            0 -1px 0 rgba(255,255,255,0.25)
+                          `,
+                          transform: "translateZ(30px)",
+                        }}
+                      >
+                        Jeux & Fun
+                      </motion.h2>
+                      <p
+                        className="text-white/85 text-sm font-semibold tracking-wide"
+                        style={{
+                          transform: "translateZ(20px)",
+                          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        Régalez-vous avant la soirée
+                      </p>
+
+                      {/* Divider arcade style */}
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        <div className="h-px w-12" style={{ background: `linear-gradient(90deg, transparent, ${colors.primary})` }}></div>
+                        <div className="flex items-center gap-1 px-3 py-1 rounded-full backdrop-blur-sm" style={{ background: `linear-gradient(90deg, ${colors.primary}60, ${colors.secondary}60)`, border: `1px solid rgba(255,255,255,0.3)` }}>
+                          <HelpCircle className="w-3 h-3 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
+                          <span className="text-[10px] font-black tracking-[0.25em] text-white uppercase drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">Jouez</span>
+                        </div>
+                        <div className="h-px w-12" style={{ background: `linear-gradient(90deg, ${colors.secondary}, transparent)` }}></div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 relative z-10" style={{ transform: "translateZ(25px)" }}>
                   {games.filter((g: GameConfiguration) => g.isEnabled && g.type !== 'puzzle').map((game: GameConfiguration, index) => {
                     const gameInfo = AVAILABLE_GAMES.find(g => g.type === game.type);
-                    const isCompleted = completedGames.has(game.id);
+                    const resultsForGame = gameResults[game.id] || [];
+                    const hasResultForThisGame = resultsForGame.some(  
+                      res => res.guestName === invite?.nom && res.gameType === game.type
+                    );
+                    const isCompleted = completedGames.has(game.id) || hasResultForThisGame;
 
                     return (
-                      <motion.div 
+                      <div 
                         key={game.id}
-                        initial={{ opacity: 0, y: 30, scale: 0.8, rotate: -3 }}
-                        whileInView={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
-                        whileHover={{ scale: 1.03, y: -8, boxShadow: '0 30px 60px -15px rgba(0, 0, 0, 0.6)' }}
-                        viewport={{ once: false }}
-                        transition={{ duration: 0.5, delay: 0.1 * index, ease: "easeOut" }}
-                        className="bg-white/10 backdrop-blur-xl rounded-[30px] overflow-hidden border border-white/10 shadow-xl transition-all duration-500 hover:shadow-2xl hover:bg-white/15 group"
+                        className="bg-white/22 backdrop-blur-xl rounded-[30px] overflow-hidden border border-white/30 shadow-lg transition-all duration-300 hover:shadow-2xl hover:bg-white/30 hover:scale-[1.02] group relative active:scale-[0.99]"
+                        style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 10px 30px -10px rgba(0,0,0,0.35)` }}
                       >
+                        {/* Inner glow light */}
+                        <div className="absolute inset-0 pointer-events-none opacity-60" style={{ background: `radial-gradient(ellipse at 30% 0%, rgba(255,255,255,0.25) 0%, transparent 55%)` }}></div>
                         <button
                           onClick={() => setCurrentGameId(game.id)}
-                          className="w-full px-6 py-5"
+                          className="w-full px-6 py-5 relative z-10"
                         >
                           <div className="flex items-center gap-5">
-                            <motion.div 
-                              animate={{ 
-                                rotate: [0, -8, 8, 0], 
-                                scale: [1, 1.12, 1],
-                                y: [0, -3, 0]
+                            <div 
+                              className="w-14 h-14 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-115 transition-transform duration-250 flex-shrink-0"
+                              style={{
+                                background: `linear-gradient(145deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.2) 100%)`,
+                                border: `1.5px solid rgba(255,255,255,0.45)`,
+                                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6), 0 8px 20px -6px rgba(0,0,0,0.3)`,
                               }}
-                              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: index * 0.3 }}
-                              className="w-14 h-14 bg-white/25 rounded-[24px] flex items-center justify-center text-3xl shadow-lg group-hover:scale-115 transition-transform duration-300 flex-shrink-0"
                             >
                               {gameInfo?.icon || '🎮'}
-                            </motion.div>
+                            </div>
                             <div className="flex-1 text-center px-2">
-                              <motion.h3 
-                                animate={{ color: [undefined, colors.primary, undefined] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: index * 0.5 }}
-                                className="text-white font-bold text-base md:text-lg mb-2 break-words"
+                              <h3 
+                                className="text-white font-extrabold text-base md:text-lg mb-2 break-words drop-shadow-[0_1px_2px_rgba(0,0,0,0.35)] group-hover:brightness-110 transition-all"
                               >
                                 {game.title}
-                              </motion.h3>
-                              <p className="text-white/80 text-xs md:text-sm line-clamp-2">{game.description}</p>
+                              </h3>
+                              <p className="text-white/90 text-xs md:text-sm font-medium line-clamp-2 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">{game.description}</p>
                             </div>
-                            <motion.div 
-                              animate={{ 
-                                x: [0, 6, 0], 
-                                scale: [1, 1.1, 1]
+                            <div 
+                              className="w-10 h-10 rounded-full flex items-center justify-center shadow-lg group-hover:scale-120 group-hover:translate-x-1 transition-all duration-250 flex-shrink-0"
+                              style={{
+                                background: `linear-gradient(145deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.22) 100%)`,
+                                border: `1.5px solid rgba(255,255,255,0.4)`,
+                                boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 14px -4px rgba(0,0,0,0.3)`,
                               }}
-                              transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                              className="w-10 h-10 bg-white/25 rounded-full flex items-center justify-center shadow-lg group-hover:scale-120 group-hover:bg-white/40 transition-all duration-300 flex-shrink-0"
                             >
-                              <ChevronRight className="text-white w-6 h-6" />
-                            </motion.div>
+                              <ChevronRight className="text-white w-6 h-6 drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]" strokeWidth={2.8} />
+                            </div>
                           </div>
                           {isCompleted && (
                             <div className="mt-4 flex justify-center">
-                              <motion.div 
-                                animate={{ 
-                                  scale: [1, 1.08, 1], 
-                                  boxShadow: ['0 0 0 rgba(16, 185, 129, 0)', '0 0 15px rgba(16, 185, 129, 0.5)', '0 0 0 rgba(16, 185, 129, 0)']
-                                }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                              <div 
                                 className="inline-flex items-center gap-2 bg-emerald-400/30 px-5 py-2 rounded-full border border-emerald-300/40"
                               >
-                                <motion.div 
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 5, repeat: Infinity, ease: "linear" }}
-                                >
+                                <div>
                                   <Check className="text-emerald-200 w-5 h-5" />
-                                </motion.div>
+                                </div>
                                 <span className="text-emerald-100 text-xs font-bold uppercase tracking-widest">Terminé</span>
-                              </motion.div>
+                              </div>
                             </div>
                           )}
                         </button>
-                      </motion.div>
+                      </div>
                     );
                   })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </BorderRotate>
-          </RevealOnScroll>
+              </BorderRotate>
+            </div>
           </div>
-          </motion.div>
+          </div>
+          </div>
         )}
 
         {/* QR CODE SECTION (Compact) + FOOTER */}
-        <motion.div 
+        <div 
           ref={(el) => sectionRefs.current.qr = el}
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
-          className="min-h-screen flex flex-col items-center justify-center py-12 snap-start relative overflow-hidden"
+          className="min-h-screen flex flex-col items-center justify-start py-16 pt-48 pb-36 snap-start relative overflow-hidden"
         >
           {/* Section Background */}
           {optimizedQrFooterSectionBg && (
@@ -2251,17 +3000,17 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           )}
           {/* Falling Dots */}
           <FallingDots colors={colors} />
-          <RevealOnScroll className="relative w-full max-w-lg px-4">
+          <RevealOnScroll className="relative w-full max-w-lg px-4 z-10">
           <div 
-            className="bg-black/40 backdrop-blur-xl rounded-[30px] p-6 shadow-xl flex flex-col items-center border-2 mb-6"
+            className="bg-black/40 backdrop-blur-xl rounded-[30px] p-5 shadow-xl flex flex-col items-center border-2 mb-6"
             style={{ borderColor: `${colors.primary}40` }}
           >
-            <div className="flex items-center space-x-2 mb-6">
-              <QrCode className="h-6 w-6" style={{ color: colors.primary }} />
-              <h3 className="text-lg font-bold" style={{ color: colors.primary }}>Code d'Invitation</h3>
+            <div className="flex items-center space-x-2 mb-5">
+              <QrCode className="h-5 w-5" style={{ color: colors.primary }} />
+              <h3 className="text-base font-bold" style={{ color: colors.primary }}>Code d'Invitation</h3>
             </div>
 
-            <div className="bg-white p-4 rounded-[20px] shadow-inner mb-6 w-full max-w-[250px] aspect-square flex items-center justify-center">
+            <div className="bg-white p-3 rounded-[20px] shadow-inner mb-5 w-full max-w-[200px] aspect-square flex items-center justify-center">
               {qrCodeDataUrl ? (
                 <img src={qrCodeDataUrl} className="w-full h-full object-contain" alt="QR Code" />
               ) : (
@@ -2271,44 +3020,65 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
             <button
                 onClick={downloadQRCode}
-                className="w-full py-4 rounded-[20px] font-bold text-sm shadow-lg flex items-center justify-center space-x-3 hover:scale-[1.03] transition-all duration-300 relative overflow-hidden group border border-white/20 active:scale-95 text-white"
+                className="w-full py-3 rounded-[20px] font-bold text-xs shadow-lg flex items-center justify-center space-x-3 hover:scale-[1.03] transition-all duration-300 relative overflow-hidden group border border-white/20 active:scale-95 text-white"
                 style={{ 
                   background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`
                 }}
               >
-              <Download className="h-5 w-5" />
+              <Download className="h-4 w-4" />
               <span className="uppercase tracking-[0.15em]">Télécharger</span>
             </button>
           </div>
+        </RevealOnScroll>
 
-          {/* FOOTER (As per Image) */}
-          <div className="pt-4 pb-8 flex justify-center w-full">
-            <div className="bg-white/90 backdrop-blur-md px-4 py-2 flex items-center justify-center space-x-2 shadow-xl border border-white/20 w-full max-w-lg">
-              <Heart className="h-4 w-4 text-rose-500 fill-rose-500" />
-              <p className="text-slate-600 text-xs font-medium text-center">
-                Réalisé par <a 
-                  href="https://www.furaha-digital.net/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="font-bold hover:underline transition-all"
-                  style={{ color: colors.primary }}
-                >
-                  Furaha Digital
-                </a>
-              </p>
-              <Sparkles className="h-3 w-3 text-amber-400" />
+          {/* FOOTER - fixé en bas de la section */}
+          <div className="absolute bottom-0 left-0 right-0 pb-6 pt-4 flex justify-center w-full z-20 px-4">
+            <div className="bg-white/90 backdrop-blur-md px-3 py-2.5 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 shadow-xl border border-white/20 w-full max-w-md rounded-2xl">
+              <div className="flex items-center justify-center gap-2">
+                <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500" />
+                <p className="text-slate-600 text-[11px] font-medium text-center">
+                  Réalisé par <a 
+                    href="https://www.furaha-digital.net/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="font-bold hover:underline transition-all"
+                    style={{ color: colors.primary }}
+                  >
+                    Furaha Digital
+                  </a>
+                </p>
+                <Sparkles className="h-3 w-3 text-amber-400" />
+              </div>
+              <div className="h-[1px] w-16 bg-slate-300/70 sm:h-4 sm:w-[1px]"></div>
+              <a 
+                href="https://wa.me/243844333917" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 group"
+              >
+                <svg className="h-4 w-4 text-emerald-500 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                <span className="text-[11px] font-semibold text-emerald-600 hover:underline transition-all">
+                  Contactez-nous sur WhatsApp
+                </span>
+              </a>
             </div>
           </div>
-        </RevealOnScroll>
-        </motion.div>
+        </div>
 
-      {/* FULL SCREEN PHOTO VIEWER (Scrollable) */}
+      {/* FULL SCREEN PHOTO VIEWER */}
       {selectedGalleryPhoto && (
         <PhotoViewer 
           photos={galleryPhotos} 
           initialPhoto={selectedGalleryPhoto} 
           onClose={() => setSelectedGalleryPhoto(null)} 
           optimizeImage={optimizeImage}
+          themeColors={{
+            primary: colors.primary,
+            secondary: colors.secondary,
+            accent: colors.tertiary,
+          }}
         />
       )}
 
@@ -2590,6 +3360,50 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                                 "{msg.message}"
                               </p>
                             )}
+
+                            {msg.replies && msg.replies.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {msg.replies.map((r: any, rIdx: number) => {
+                                  const isAdminReply = r.authorInviteId && r.authorInviteId === invite?.userId;
+                                  const adminName = isAdminReply ? (safeUserModel.title || 'Organisateur') : (r.authorName || 'Invité');
+                                  return (
+                                    <div
+                                      key={r.id || rIdx}
+                                      className={`relative border-l-[3px] pl-2.5 py-1 ${!isMe ? 'animate-slide-up' : ''}`}
+                                      style={{ borderColor: isMe ? 'rgba(255,255,255,0.5)' : colors.primary }}
+                                    >
+                                      <div className="flex items-center justify-between mb-0.5 gap-2">
+                                        <span
+                                          className="text-[9px] font-bold uppercase tracking-[0.14em]"
+                                          style={{ color: isMe ? 'rgba(255,255,255,0.9)' : colors.primary }}
+                                        >
+                                          {adminName}
+                                        </span>
+                                        <span
+                                          className="text-[7.5px] font-medium flex items-center gap-0.5 whitespace-nowrap"
+                                          style={{ color: isMe ? 'rgba(255,255,255,0.65)' : (style.text + '88') }}
+                                        >
+                                          <Clock className="h-1.5 w-1.5" />
+                                          {r.createdAt ? new Date(r.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                        </span>
+                                      </div>
+                                      <p
+                                        className="leading-relaxed whitespace-pre-wrap"
+                                        style={{
+                                          fontSize: '11px',
+                                          color: isMe ? 'rgba(255,255,255,0.92)' : style.text,
+                                          opacity: 0.85,
+                                          fontFamily: "'Georgia', 'Times New Roman', serif",
+                                          fontStyle: 'italic'
+                                        }}
+                                      >
+                                        {r.content}
+                                      </p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                             
                             {/* Romantic accent line */}
                             <div 
@@ -2695,8 +3509,11 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
 
         const gameInfo = AVAILABLE_GAMES.find(g => g.type === game.type);
         const currentGameResults = gameResults[game.id] || [];
-        const isCompleted = completedGames.has(game.id) || currentGameResults.some(res => res.guestName === invite?.nom);
-        const playerScore = currentGameResults.find(res => res.guestName === invite?.nom)?.score;
+        const playerResult = currentGameResults.find(
+          res => res.guestName === invite?.nom && res.gameType === game.type
+        );
+        const isCompleted = completedGames.has(game.id) || !!playerResult;
+        const playerScore = playerResult?.score;
 
         const handleGameComplete = async (score: number, data: any) => {
           setCompletedGames(prev => new Set([...prev, game.id]));
@@ -2745,6 +3562,19 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
           }
         };
 
+        const handleCatchLoveComplete = async (score: number) => {
+          setCompletedGames(prev => new Set([...prev, game.id]));
+          if (invite?.userId && userModel?.id) {
+            try {
+              await GameService.addPuzzleResult(invite.userId, userModel.id, game.id, inviteId || '', invite?.nom || 'Invité', score, 'catch-love');
+              const results = await GameService.getPuzzleResults(invite.userId, userModel.id, game.id);
+              setGameResults(prev => ({ ...prev, [game.id]: results }));
+            } catch (e) {
+              console.error("Error saving catch love result:", e);
+            }
+          }
+        };
+
         const renderGameContent = () => {
           switch (game.type) {
             case 'couple-quiz':
@@ -2784,6 +3614,21 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   inviteId={inviteId || ''}
                   guestName={invite?.nom || 'Invité'}
                   onSaveResult={handleMemoryComplete}
+                  leaderboard={currentGameResults}
+                  colors={colors}
+                  isCompleted={isCompleted}
+                  playerScore={playerScore}
+                />
+              );
+            case 'catch-love':
+              return (
+                <CatchLoveGame
+                  config={game as any}
+                  userId={invite?.userId || ''}
+                  modelId={userModel?.id || ''}
+                  inviteId={inviteId || ''}
+                  guestName={invite?.nom || 'Invité'}
+                  onSaveResult={handleCatchLoveComplete}
                   leaderboard={currentGameResults}
                   colors={colors}
                   isCompleted={isCompleted}

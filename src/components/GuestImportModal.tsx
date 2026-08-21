@@ -150,40 +150,84 @@ const GuestImportModal = ({ isOpen, onClose, onImport, categories, tables, exist
     XLSX.writeFile(workbook, 'modele_import_invites.xlsx');
   };
 
+  const goldRing = 'rgba(251,191,36,0.5)';
+  const inputBg = 'rgba(255,255,255,0.03)';
+  const inputBorder = 'rgba(255,255,255,0.08)';
+  const textMuted = 'rgba(255,255,255,0.6)';
+  const textSoft = 'rgba(255,255,255,0.8)';
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60] animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-luxury max-w-3xl w-full max-h-[90vh] flex flex-col animate-slide-up">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-[60] animate-fade-in">
+      <div 
+        className="rounded-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-slide-up border"
+        style={{
+          background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.06) inset',
+        }}
+      >
         {/* Header */}
-        <div className="p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="bg-amber-100 p-2 rounded-lg mr-3">
-                <FileSpreadsheet className="h-6 w-6 text-amber-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Importer des Invités</h2>
-                <p className="text-slate-600 text-sm">Ajout massif via fichier Excel</p>
-              </div>
+        <div 
+          className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center flex-shrink-0"
+          style={{
+            borderColor: 'rgba(255,255,255,0.06)',
+            background: 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+          }}
+        >
+          <div className="flex items-center min-w-0">
+            <div className="relative mr-3 flex-shrink-0" style={{ color: '#fcd34d' }}>
+              <FileSpreadsheet className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
-              <X className="h-5 w-5 text-neutral-500" />
-            </button>
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white truncate">
+                Importer des Invités
+              </h2>
+              <p className="text-xs sm:text-sm mt-0.5" style={{ color: textMuted }}>
+                Ajout massif via fichier Excel
+              </p>
+            </div>
           </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 rounded-lg transition-all duration-200 flex-shrink-0"
+            style={{ background: 'rgba(255,255,255,0.04)', color: textMuted }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = textMuted; }}
+            aria-label="Fermer"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
+        {/* Content scrollable */}
+        <div className="px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto flex-1">
           {!file ? (
-            <div className="space-y-6">
+            <div className="space-y-5 sm:space-y-6">
+              {/* Zone de dépôt / sélection */}
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-neutral-300 rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition-all group"
+                className="border-2 border-dashed rounded-2xl p-6 sm:p-10 flex flex-col items-center justify-center cursor-pointer transition-all group text-center"
+                style={{
+                  borderColor: 'rgba(255,255,255,0.12)',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,0,0,0) 100%)',
+                }}
+                onMouseEnter={(e) => { 
+                  e.currentTarget.style.borderColor = 'rgba(251,191,36,0.55)'; 
+                  e.currentTarget.style.background = 'linear-gradient(180deg, rgba(251,191,36,0.06) 0%, rgba(0,0,0,0) 100%)'; 
+                }}
+                onMouseLeave={(e) => { 
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; 
+                  e.currentTarget.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.015) 0%, rgba(0,0,0,0) 100%)'; 
+                }}
               >
-                <div className="bg-amber-50 p-4 rounded-full mb-4 group-hover:scale-110 transition-transform">
-                  <Upload className="h-8 w-8 text-amber-600" />
+                <div 
+                  className="p-3 sm:p-4 rounded-full mb-3 sm:mb-4 group-hover:scale-110 transition-transform"
+                  style={{ background: 'rgba(251,191,36,0.12)' }}
+                >
+                  <Upload className="h-7 w-7 sm:h-8 sm:w-8" style={{ color: '#fcd34d' }} />
                 </div>
-                <p className="text-slate-900 font-semibold mb-1">Cliquez pour sélectionner un fichier</p>
-                <p className="text-slate-500 text-sm">Excel (.xlsx, .xls)</p>
+                <p className="text-white font-bold text-sm sm:text-base mb-1">Cliquez pour sélectionner un fichier</p>
+                <p className="text-xs sm:text-sm" style={{ color: textMuted }}>Excel (.xlsx, .xls)</p>
                 <input 
                   type="file" 
                   ref={fileInputRef} 
@@ -193,18 +237,28 @@ const GuestImportModal = ({ isOpen, onClose, onImport, categories, tables, exist
                 />
               </div>
 
-              <div className="bg-blue-50 rounded-xl p-4 border border-blue-100 flex items-start">
-                <Info className="h-5 w-5 text-blue-600 mr-3 mt-0.5" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-1">Conseils pour l'import :</p>
-                  <ul className="list-disc ml-4 space-y-1">
-                    <li>Utilisez des colonnes nommées : <b>Nom</b>, <b>Catégorie</b>, <b>Table</b>, <b>Statut</b>.</li>
+              {/* Conseils */}
+              <div 
+                className="rounded-xl p-3 sm:p-4 border flex items-start"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(59,130,246,0.08) 0%, rgba(59,130,246,0.02) 100%)',
+                  borderColor: 'rgba(59,130,246,0.18)',
+                }}
+              >
+                <Info className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" style={{ color: '#93c5fd' }} />
+                <div className="text-xs sm:text-sm" style={{ color: textSoft }}>
+                  <p className="font-bold mb-1 text-white">Conseils pour l'import :</p>
+                  <ul className="list-disc ml-4 space-y-1" style={{ color: textSoft }}>
+                    <li>Utilisez des colonnes nommées : <b className="text-white">Nom</b>, <b className="text-white">Catégorie</b>, <b className="text-white">Table</b>, <b className="text-white">Statut</b>.</li>
                     <li>Le statut peut être : "En attente", "Confirmé" ou "Décliné".</li>
-                    <li>Pour les couples, vous pouvez ajouter une colonne <b>Type</b> avec la valeur "couple".</li>
+                    <li>Pour les couples, ajoutez une colonne <b className="text-white">Type</b> avec la valeur "couple".</li>
                   </ul>
                   <button 
                     onClick={downloadTemplate}
-                    className="mt-3 flex items-center text-blue-700 hover:text-blue-900 font-medium"
+                    className="mt-3 flex items-center font-semibold transition-colors"
+                    style={{ color: '#fcd34d' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
                   >
                     <Download className="h-4 w-4 mr-1" />
                     Télécharger un modèle Excel
@@ -213,98 +267,186 @@ const GuestImportModal = ({ isOpen, onClose, onImport, categories, tables, exist
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between bg-neutral-50 p-3 rounded-xl border border-neutral-200">
-                <div className="flex items-center">
-                  <FileSpreadsheet className="h-5 w-5 text-green-600 mr-2" />
-                  <span className="text-sm font-medium text-slate-700">{file.name}</span>
+            <div className="space-y-4 sm:space-y-6">
+              {/* Fichier sélectionné */}
+              <div 
+                className="flex items-center justify-between p-3 rounded-xl border"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(52,211,153,0.08) 0%, rgba(52,211,153,0.02) 100%)',
+                  borderColor: 'rgba(52,211,153,0.22)',
+                }}
+              >
+                <div className="flex items-center min-w-0">
+                  <FileSpreadsheet className="h-4 w-4 sm:h-5 sm:w-5 mr-2 flex-shrink-0" style={{ color: '#6ee7b7' }} />
+                  <span className="text-xs sm:text-sm font-semibold text-white truncate">{file.name}</span>
                 </div>
                 <button 
-                  onClick={() => { setFile(null); setPreviewData([]); }}
-                  className="text-xs text-rose-600 hover:underline font-medium"
+                  onClick={() => { setFile(null); setPreviewData([]); setImportReport(null); setError(null); }}
+                  className="text-xs font-bold transition-colors ml-2 flex-shrink-0"
+                  style={{ color: '#fda4af' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; e.currentTarget.style.color = '#fecdd3'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; e.currentTarget.style.color = '#fda4af'; }}
                 >
-                  Changer de fichier
+                  Changer
                 </button>
               </div>
 
               {isParsing ? (
-                <div className="py-10 text-center">
-                  <div className="animate-spin h-8 w-8 border-4 border-amber-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p className="text-slate-600">Analyse du fichier...</p>
+                <div className="py-8 sm:py-10 text-center">
+                  <div className="animate-spin h-8 w-8 border-4 rounded-full mx-auto mb-4"
+                       style={{
+                         borderColor: 'rgba(251,191,36,0.25)',
+                         borderTopColor: '#fcd34d',
+                       }}
+                  ></div>
+                  <p className="text-xs sm:text-sm" style={{ color: textSoft }}>Analyse du fichier...</p>
                 </div>
               ) : error ? (
-                <div className="bg-rose-50 p-4 rounded-xl border border-rose-100 flex items-center text-rose-800">
-                  <AlertCircle className="h-5 w-5 mr-3" />
-                  <p className="text-sm">{error}</p>
+                <div 
+                  className="p-3 sm:p-4 rounded-xl border flex items-center"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(244,63,94,0.08) 0%, rgba(244,63,94,0.02) 100%)',
+                    borderColor: 'rgba(244,63,94,0.25)',
+                    color: '#fecdd3',
+                  }}
+                >
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 flex-shrink-0" />
+                  <p className="text-xs sm:text-sm">{error}</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-5 sm:space-y-6">
                   {/* Rapport détaillé */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
-                      <div className="text-emerald-600 font-bold text-2xl mb-1">{importReport?.new.length}</div>
-                      <div className="text-emerald-800 text-xs font-semibold uppercase tracking-wider">Nouveaux</div>
-                      <p className="text-emerald-600/70 text-[10px] mt-1">Serront ajoutés à votre liste</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div 
+                      className="p-3 sm:p-4 rounded-2xl border"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(52,211,153,0.1) 0%, rgba(52,211,153,0.025) 100%)',
+                        borderColor: 'rgba(52,211,153,0.25)',
+                      }}
+                    >
+                      <div className="font-black text-2xl sm:text-3xl mb-1" style={{ color: '#6ee7b7' }}>{importReport?.new.length}</div>
+                      <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-300/90">Nouveaux</div>
+                      <p className="text-[10px] sm:text-[11px] mt-1" style={{ color: 'rgba(110,231,183,0.6)' }}>Seront ajoutés à votre liste</p>
                     </div>
-                    <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                      <div className="text-amber-600 font-bold text-2xl mb-1">{importReport?.duplicates.length}</div>
-                      <div className="text-amber-800 text-xs font-semibold uppercase tracking-wider">Doublons</div>
-                      <p className="text-amber-600/70 text-[10px] mt-1">Déjà présents, seront ignorés</p>
+                    <div 
+                      className="p-3 sm:p-4 rounded-2xl border"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(251,191,36,0.1) 0%, rgba(251,191,36,0.025) 100%)',
+                        borderColor: 'rgba(251,191,36,0.25)',
+                      }}
+                    >
+                      <div className="font-black text-2xl sm:text-3xl mb-1" style={{ color: '#fcd34d' }}>{importReport?.duplicates.length}</div>
+                      <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-300/90">Doublons</div>
+                      <p className="text-[10px] sm:text-[11px] mt-1" style={{ color: 'rgba(252,211,77,0.6)' }}>Déjà présents, seront ignorés</p>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
-                      <div className="text-blue-600 font-bold text-2xl mb-1">{importReport?.totalSeats}</div>
-                      <div className="text-blue-800 text-xs font-semibold uppercase tracking-wider">Places totales</div>
-                      <p className="text-blue-600/70 text-[10px] mt-1">Incluant les doubles pour couples</p>
+                    <div 
+                      className="p-3 sm:p-4 rounded-2xl border"
+                      style={{
+                        background: 'linear-gradient(180deg, rgba(59,130,246,0.1) 0%, rgba(59,130,246,0.025) 100%)',
+                        borderColor: 'rgba(59,130,246,0.25)',
+                      }}
+                    >
+                      <div className="font-black text-2xl sm:text-3xl mb-1" style={{ color: '#93c5fd' }}>{importReport?.totalSeats}</div>
+                      <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-300/90">Places totales</div>
+                      <p className="text-[10px] sm:text-[11px] mt-1" style={{ color: 'rgba(147,197,253,0.6)' }}>Incluant les doubles pour couples</p>
                     </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-slate-900">Aperçu des données</h3>
-                      <div className="text-xs text-slate-500 italic">Affichage des 10 premiers invités</div>
+                  {/* Aperçu tableau */}
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="font-bold text-white text-sm sm:text-base">Aperçu des données</h3>
+                      <div className="text-[11px] sm:text-xs italic" style={{ color: textMuted }}>Affichage des 10 premiers invités</div>
                     </div>
                     
-                    <div className="border border-neutral-200 rounded-xl overflow-hidden">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-neutral-50 border-b border-neutral-200">
-                          <tr>
-                            <th className="px-4 py-2 font-semibold text-slate-700">Nom</th>
-                            <th className="px-4 py-2 font-semibold text-slate-700">Catégorie</th>
-                            <th className="px-4 py-2 font-semibold text-slate-700">Type</th>
-                            <th className="px-4 py-2 font-semibold text-slate-700">Statut</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100">
-                          {previewData.slice(0, 10).map((row, idx) => {
-                            const isDuplicate = existingGuests.some(eg => eg.nom.trim().toLowerCase() === row.nom.trim().toLowerCase());
-                            return (
-                              <tr key={idx} className={`hover:bg-neutral-50/50 ${isDuplicate ? 'opacity-50 bg-amber-50/30' : ''}`}>
-                                <td className="px-4 py-2 text-slate-700 flex items-center">
-                                  {row.nom}
-                                  {isDuplicate && <span className="ml-2 text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded uppercase font-bold">Doublon</span>}
-                                </td>
-                                <td className="px-4 py-2 text-slate-600">{row.category || '—'}</td>
-                                <td className="px-4 py-2 text-slate-600">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${row.etat === 'couple' ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-600'}`}>
-                                    {row.etat}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-2">
-                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                    String(row.statut || '').toLowerCase().includes('conf') ? 'bg-emerald-100 text-emerald-700' :
-                                    String(row.statut || '').toLowerCase().includes('decl') ? 'bg-rose-100 text-rose-700' :
-                                    'bg-amber-100 text-amber-700'
-                                  }`}>
-                                    {row.statut}
-                                  </span>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                    <div 
+                      className="rounded-xl overflow-hidden border"
+                      style={{ borderColor: inputBorder, background: inputBg }}
+                    >
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-[11px] sm:text-sm text-left min-w-full">
+                          <thead 
+                            className="border-b"
+                            style={{ 
+                              borderColor: inputBorder, 
+                              background: 'linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+                            }}
+                          >
+                            <tr>
+                              <th className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-white whitespace-nowrap">Nom</th>
+                              <th className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-white whitespace-nowrap">Catégorie</th>
+                              <th className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-white whitespace-nowrap">Type</th>
+                              <th className="px-3 sm:px-4 py-2 sm:py-2.5 font-bold text-white whitespace-nowrap">Statut</th>
+                            </tr>
+                          </thead>
+                          <tbody style={{ color: textSoft }}>
+                            {previewData.slice(0, 10).map((row, idx) => {
+                              const isDuplicate = existingGuests.some(eg => eg.nom.trim().toLowerCase() === row.nom.trim().toLowerCase());
+                              return (
+                                <tr 
+                                  key={idx} 
+                                  className="border-t last:border-t-0"
+                                  style={{
+                                    borderColor: 'rgba(255,255,255,0.04)',
+                                    background: isDuplicate ? 'rgba(251,191,36,0.05)' : 'transparent',
+                                    opacity: isDuplicate ? 0.7 : 1,
+                                  }}
+                                >
+                                  <td className="px-3 sm:px-4 py-2 text-white flex items-center gap-2 flex-wrap whitespace-nowrap">
+                                    <span>{row.nom}</span>
+                                    {isDuplicate && (
+                                      <span 
+                                        className="px-1.5 py-0.5 rounded uppercase font-black text-[9px] sm:text-[10px]"
+                                        style={{ background: 'rgba(251,191,36,0.18)', color: '#fcd34d' }}
+                                      >
+                                        Doublon
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 sm:px-4 py-2 whitespace-nowrap" style={{ color: textSoft }}>{row.category || '—'}</td>
+                                  <td className="px-3 sm:px-4 py-2 whitespace-nowrap">
+                                    <span 
+                                      className="px-2 py-0.5 rounded font-black uppercase text-[9px] sm:text-[10px]"
+                                      style={row.etat === 'couple' ? { 
+                                        background: 'rgba(244,63,94,0.15)', 
+                                        color: '#fda4af' 
+                                      } : { 
+                                        background: 'rgba(255,255,255,0.06)', 
+                                        color: textSoft 
+                                      }}
+                                    >
+                                      {row.etat}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 sm:px-4 py-2 whitespace-nowrap">
+                                    <span 
+                                      className="px-2 py-0.5 rounded-full font-black uppercase text-[9px] sm:text-[10px]"
+                                      style={
+                                        String(row.statut || '').toLowerCase().includes('conf') 
+                                          ? { background: 'rgba(52,211,153,0.15)', color: '#6ee7b7' }
+                                          : String(row.statut || '').toLowerCase().includes('decl')
+                                            ? { background: 'rgba(244,63,94,0.15)', color: '#fda4af' }
+                                            : { background: 'rgba(251,191,36,0.15)', color: '#fcd34d' }
+                                      }
+                                    >
+                                      {row.statut}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
                       {previewData.length > 10 && (
-                        <div className="p-2 bg-neutral-50 text-center text-xs text-slate-500 border-t border-neutral-200">
+                        <div 
+                          className="p-2 text-center text-[11px] sm:text-xs border-t"
+                          style={{ 
+                            background: 'rgba(255,255,255,0.02)', 
+                            borderColor: 'rgba(255,255,255,0.06)', 
+                            color: textMuted 
+                          }}
+                        >
                           Et {previewData.length - 10} autres invités...
                         </div>
                       )}
@@ -317,30 +459,54 @@ const GuestImportModal = ({ isOpen, onClose, onImport, categories, tables, exist
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-neutral-200/50 flex space-x-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all font-medium"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleImport}
-            disabled={!file || isParsing || isImporting || previewData.length === 0}
-            className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all font-semibold shadow-glow-amber disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isImporting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                Importation...
-              </>
-            ) : (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Confirmer l'import
-              </>
-            )}
-          </button>
+        <div 
+          className="px-4 sm:px-6 py-4 border-t flex-shrink-0"
+          style={{
+            borderColor: 'rgba(255,255,255,0.06)',
+            background: 'linear-gradient(0deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 100%)',
+          }}
+        >
+          <div className="flex flex-col-reverse sm:flex-row sm:space-x-3 gap-2 sm:gap-0">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-300 font-medium border text-xs sm:text-sm"
+              style={{
+                background: inputBg,
+                borderColor: inputBorder,
+                color: 'rgba(255,255,255,0.75)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = inputBg; e.currentTarget.style.borderColor = inputBorder; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleImport}
+              disabled={!file || isParsing || isImporting || previewData.length === 0}
+              className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex items-center justify-center"
+              style={{
+                background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                color: '#0b0f17',
+                boxShadow: (!file || isParsing || isImporting || previewData.length === 0) 
+                  ? 'none' 
+                  : `0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px ${goldRing}, 0 10px 24px -10px rgba(251,191,36,0.65)`,
+              }}
+              onMouseEnter={(e) => { if (file && !isParsing && !isImporting && previewData.length > 0) { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+            >
+              {isImporting ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#0b0f17]/30 border-t-[#0b0f17] rounded-full animate-spin mr-2"></div>
+                  <span className="text-xs sm:text-sm">Importation...</span>
+                </div>
+              ) : (
+                <>
+                  <Check className="h-4 w-4 mr-2" />
+                  Confirmer l'import
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

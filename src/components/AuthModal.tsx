@@ -150,79 +150,111 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
   if (showResetPassword) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-        <div className="bg-white rounded-3xl shadow-luxury max-w-md w-full animate-slide-up relative overflow-hidden">
-          <div className="relative p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <div className="relative mr-3">
-                  <img src={furahaLogo} alt="Furaha Event Logo" className="h-8 w-8 object-contain animate-glow drop-shadow-lg" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                    Mot de passe oublié
-                  </h2>
-                  <p className="text-slate-600 text-sm">
-                    Saisissez votre email pour recevoir un lien de réinitialisation
-                  </p>
-                </div>
+      <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
+           style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
+        <div className="w-full max-w-md animate-slide-up relative rounded-2xl sm:rounded-3xl overflow-hidden"
+             style={{
+               background: 'linear-gradient(180deg, #111727 0%, #0b0f17 100%)',
+               border: '1px solid rgba(167,139,250,0.35)',
+               boxShadow: '0 50px 120px -30px rgba(0,0,0,0.85), 0 0 0 1px rgba(251,191,36,0.06) inset, 0 0 0 1px rgba(167,139,250,0.12), 0 0 32px rgba(167,139,250,0.35), 0 0 72px rgba(167,139,250,0.2)',
+             }}>
+          <div
+            aria-hidden
+            className="absolute -top-20 left-1/2 -translate-x-1/2 w-[85%] h-40 rounded-full blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.28) 0%, transparent 70%)' }}
+          />
+          <div className="relative p-5 sm:p-6 flex justify-between items-center border-b"
+               style={{
+                 borderColor: 'rgba(255,255,255,0.06)',
+                 background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+               }}>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <img src={furahaLogo} alt="Furaha Event Logo" className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
+                     style={{ filter: 'drop-shadow(0 0 12px rgba(251,191,36,0.45))' }} />
               </div>
-              <button
-                onClick={() => setShowResetPassword(false)}
-                className="p-2 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
-              >
-                <X className="h-5 w-5 text-neutral-500" />
-              </button>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                  Mot de passe oublié
+                </h2>
+                <p className="text-[11px] sm:text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.48)' }}>
+                  Saisissez votre email pour recevoir un lien
+                </p>
+              </div>
             </div>
+            <button
+              onClick={() => setShowResetPassword(false)}
+              className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.55)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(244,63,94,0.15)'; e.currentTarget.style.color = '#fda4af'; e.currentTarget.style.borderColor = 'rgba(244,63,94,0.35)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
-          <form onSubmit={handleResetPassword} className="relative p-6">
-            <div className="space-y-4">
+          <form onSubmit={handleResetPassword} className="relative p-5 sm:p-6">
+            <div className="space-y-4 sm:space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                   Adresse email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                      errors.email ? 'border-rose-500' : 'border-neutral-300'
-                    }`}
+                    className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                    style={{
+                      background: errors.email ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${errors.email ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = errors.email ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="votre@email.com"
                     required
                   />
                 </div>
                 {errors.email && (
-                  <p className="text-rose-500 text-xs mt-1">{errors.email}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.email}</p>
                 )}
               </div>
 
               {error && (
-                <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-                  <p className="text-rose-700 text-sm">{error}</p>
+                <div className="rounded-xl p-4"
+                     style={{
+                       background: 'rgba(244,63,94,0.08)',
+                       border: '1px solid rgba(244,63,94,0.3)',
+                     }}>
+                  <p className="text-xs sm:text-sm" style={{ color: '#fda4af' }}>{error}</p>
                 </div>
               )}
             </div>
 
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 sm:mt-7 space-y-4">
               <button
                 type="submit"
                 disabled={isLoading}
-               className="w-full bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-500 text-slate-900 py-3 rounded-xl hover:from-yellow-500 hover:via-amber-500 hover:to-yellow-600 transition-all duration-500 font-bold shadow-lg hover:shadow-2xl transform hover:scale-105 relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none border border-yellow-300/50"
+                className="w-full py-2.5 sm:py-3 rounded-xl font-black text-sm sm:text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                style={{
+                  background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                  color: '#0b0f17',
+                  boxShadow: '0 1px 0 rgba(255,255,255,0.35) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 14px 36px -12px rgba(251,191,36,0.7), 0 0 48px rgba(251,191,36,0.22)',
+                }}
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin mr-2"></div>
+                    <div className="w-5 h-5 border-2 rounded-full animate-spin mr-2"
+                         style={{ borderColor: 'rgba(11,15,23,0.3)', borderTopColor: '#0b0f17' }}></div>
                     Envoi en cours...
                   </div>
                 ) : (
-                  <>
-                    Envoyer le lien de réinitialisation
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  </>
+                  'Envoyer le lien de réinitialisation'
                 )}
               </button>
 
@@ -230,9 +262,10 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <button
                   type="button"
                   onClick={() => setShowResetPassword(false)}
-                  className="text-amber-600 hover:text-amber-700 transition-colors duration-300 font-medium"
+                  className="font-bold text-xs sm:text-sm transition-colors duration-300 hover:underline"
+                  style={{ color: '#fcd34d' }}
                 >
-                  Retour à la connexion
+                  ← Retour à la connexion
                 </button>
               </div>
             </div>
@@ -243,85 +276,113 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-luxury max-w-md w-full animate-slide-up relative overflow-hidden">
-        {/* Background decorative elements */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-200/20 to-purple-200/20 rounded-full blur-2xl"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-rose-200/20 to-amber-200/20 rounded-full blur-2xl"></div>
-        
+    <div className="fixed inset-0 flex items-center justify-center p-4 z-50 animate-fade-in"
+         style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }}>
+      <div className="w-full max-w-md animate-slide-up relative rounded-2xl sm:rounded-3xl overflow-hidden max-h-[92vh] overflow-y-auto no-scrollbar"
+           style={{
+             background: 'linear-gradient(180deg, #111727 0%, #0b0f17 100%)',
+             border: '1px solid rgba(167,139,250,0.35)',
+             boxShadow: '0 50px 120px -30px rgba(0,0,0,0.85), 0 0 0 1px rgba(251,191,36,0.06) inset, 0 0 0 1px rgba(167,139,250,0.12), 0 0 32px rgba(167,139,250,0.35), 0 0 72px rgba(167,139,250,0.2)',
+           }}>
+        {/* Effets backlight radiaux */}
+        <div
+          aria-hidden
+          className="absolute -top-20 -right-8 w-48 h-48 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.28) 0%, transparent 70%)' }}
+        />
+        <div
+          aria-hidden
+          className="absolute -bottom-16 -left-8 w-44 h-44 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(167,139,250,0.22) 0%, transparent 70%)' }}
+        />
+
         {/* Header */}
-       <div className="relative p-6 border-b border-yellow-200/50 bg-gradient-to-r from-yellow-50 via-amber-50 to-yellow-100/50">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="relative mr-3">
-               <img src={furahaLogo} alt="Furaha Event Logo" className="h-8 w-8 object-contain animate-glow drop-shadow-lg" />
-                <div className="absolute inset-0 animate-pulse opacity-30">
-                  <img src={furahaLogo} alt="Furaha Event Logo pulse" className="h-8 w-8 object-contain" />
-                </div>
-              </div>
-              <div>
-               <h2 className="text-2xl font-bold bg-gradient-to-r from-yellow-700 via-amber-700 to-yellow-800 bg-clip-text text-transparent">
-                  {isLoginMode ? 'Connexion' : 'Inscription'}
-                </h2>
-                <p className="text-slate-600 text-sm">
-                  {isLoginMode ? 'Accédez à votre espace personnel' : 'Créez votre compte Furaha-Event'}
-                </p>
-              </div>
+        <div className="relative p-5 sm:p-6 flex justify-between items-center border-b"
+             style={{
+               borderColor: 'rgba(255,255,255,0.06)',
+               background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 100%)',
+             }}>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <img src={furahaLogo} alt="Furaha Event Logo" className="h-8 w-8 sm:h-9 sm:w-9 object-contain"
+                   style={{ filter: 'drop-shadow(0 0 12px rgba(251,191,36,0.45))' }} />
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
-            >
-              <X className="h-5 w-5 text-neutral-500" />
-            </button>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {isLoginMode ? 'Connexion' : 'Inscription'}
+              </h2>
+              <p className="text-[11px] sm:text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.48)' }}>
+                {isLoginMode ? 'Accédez à votre espace personnel' : 'Créez votre compte Furaha-Event'}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-all duration-200 hover:scale-110"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'rgba(255,255,255,0.55)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(244,63,94,0.15)'; e.currentTarget.style.color = '#fda4af'; e.currentTarget.style.borderColor = 'rgba(244,63,94,0.35)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="relative p-6">
-          <div className="space-y-4">
-            {/* Prénom et Nom (inscription seulement) */}
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit} className="relative p-5 sm:p-6">
+          <div className="space-y-4 sm:space-y-5">
             {!isLoginMode && allowSignup && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                     Prénom
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                     <input
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => handleInputChange('firstName', e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                        errors.firstName ? 'border-rose-500' : 'border-neutral-300'
-                      }`}
+                      className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                      style={{
+                        background: errors.firstName ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${errors.firstName ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = errors.firstName ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                       placeholder="Votre prénom"
                     />
                   </div>
                   {errors.firstName && (
-                    <p className="text-rose-500 text-xs mt-1">{errors.firstName}</p>
+                    <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.firstName}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                     Nom
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                     <input
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => handleInputChange('lastName', e.target.value)}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                        errors.lastName ? 'border-rose-500' : 'border-neutral-300'
-                      }`}
+                      className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                      style={{
+                        background: errors.lastName ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                        border: `1px solid ${errors.lastName ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                      }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = errors.lastName ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                       placeholder="Votre nom"
                     />
                   </div>
                   {errors.lastName && (
-                    <p className="text-rose-500 text-xs mt-1">{errors.lastName}</p>
+                    <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.lastName}</p>
                   )}
                 </div>
               </div>
@@ -329,114 +390,139 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 Adresse email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                    errors.email ? 'border-rose-500' : 'border-neutral-300'
-                  }`}
+                  className="w-full pl-10 sm:pl-11 pr-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                  style={{
+                    background: errors.email ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${errors.email ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = errors.email ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="votre@email.com"
                 />
               </div>
               {errors.email && (
-                <p className="text-rose-500 text-xs mt-1">{errors.email}</p>
+                <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.email}</p>
               )}
             </div>
 
             {/* Mot de passe */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                    errors.password ? 'border-rose-500' : 'border-neutral-300'
-                  }`}
+                  className="w-full pl-10 sm:pl-11 pr-12 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                  style={{
+                    background: errors.password ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${errors.password ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = errors.password ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                  style={{ color: 'rgba(255,255,255,0.4)' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? <EyeOff className="h-4 sm:h-5 w-4 sm:w-5" /> : <Eye className="h-4 sm:h-5 w-4 sm:w-5" />}
                 </button>
               </div>
               {errors.password && (
-                <p className="text-rose-500 text-xs mt-1">{errors.password}</p>
+                <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.password}</p>
               )}
             </div>
 
-            {/* Confirmation mot de passe (inscription seulement) */}
+            {/* Confirmation mot de passe */}
             {!isLoginMode && allowSignup && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: 'rgba(255,255,255,0.55)' }}>
                   Confirmer le mot de passe
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-neutral-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5" style={{ color: 'rgba(251,191,36,0.55)' }} />
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 ${
-                      errors.confirmPassword ? 'border-rose-500' : 'border-neutral-300'
-                    }`}
+                    className="w-full pl-10 sm:pl-11 pr-12 py-2.5 sm:py-3 rounded-xl transition-all duration-200 text-sm outline-none placeholder:text-white/25 text-white"
+                    style={{
+                      background: errors.confirmPassword ? 'rgba(244,63,94,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${errors.confirmPassword ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = errors.confirmPassword ? 'rgba(244,63,94,0.45)' : 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors duration-200"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors duration-200"
+                    style={{ color: 'rgba(255,255,255,0.4)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showConfirmPassword ? <EyeOff className="h-4 sm:h-5 w-4 sm:w-5" /> : <Eye className="h-4 sm:h-5 w-4 sm:w-5" />}
                   </button>
                 </div>
                 {errors.confirmPassword && (
-                  <p className="text-rose-500 text-xs mt-1">{errors.confirmPassword}</p>
+                  <p className="text-[11px] mt-1.5" style={{ color: '#fda4af' }}>{errors.confirmPassword}</p>
                 )}
               </div>
             )}
 
             {/* Erreur générale */}
             {(errors.general || error) && (
-              <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-                <p className="text-rose-700 text-sm">{errors.general || error}</p>
+              <div className="rounded-xl p-4"
+                   style={{
+                     background: 'rgba(244,63,94,0.08)',
+                     border: '1px solid rgba(244,63,94,0.3)',
+                   }}>
+                <p className="text-xs sm:text-sm" style={{ color: '#fda4af' }}>{errors.general || error}</p>
               </div>
             )}
           </div>
 
           {/* Boutons */}
-          <div className="mt-6 space-y-4">
+          <div className="mt-6 sm:mt-7 space-y-4">
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-amber-500 via-amber-600 to-amber-500 text-slate-900 py-3 rounded-xl hover:from-amber-600 hover:via-amber-700 hover:to-amber-600 transition-all duration-500 font-semibold shadow-glow-amber hover:shadow-luxury transform hover:scale-105 relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full py-2.5 sm:py-3 rounded-xl font-black text-sm sm:text-base transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] relative disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              style={{
+                background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                color: '#0b0f17',
+                boxShadow: '0 1px 0 rgba(255,255,255,0.35) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 14px 36px -12px rgba(251,191,36,0.7), 0 0 48px rgba(251,191,36,0.22)',
+              }}
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-slate-900/30 border-t-slate-900 rounded-full animate-spin mr-2"></div>
+                  <div className="w-5 h-5 border-2 rounded-full animate-spin mr-2"
+                       style={{ borderColor: 'rgba(11,15,23,0.3)', borderTopColor: '#0b0f17' }}></div>
                   {isLoginMode ? 'Connexion...' : 'Inscription...'}
                 </div>
               ) : (
-                <>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                  <span className="relative flex items-center justify-center">
-                    <Sparkles className="h-5 w-5 mr-2" />
-                    {isLoginMode ? 'Se connecter' : 'Créer mon compte'}
-                  </span>
-                </>
+                <span className="flex items-center justify-center">
+                  <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 mr-2" />
+                  {isLoginMode ? 'Se connecter' : 'Créer mon compte'}
+                </span>
               )}
             </button>
 
@@ -445,10 +531,11 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
                 <button
                   type="button"
                   onClick={switchMode}
-                  className="text-amber-600 hover:text-amber-700 transition-colors duration-300 font-medium"
+                  className="font-bold text-xs sm:text-sm transition-colors duration-300 hover:underline"
+                  style={{ color: '#fcd34d' }}
                 >
-                  {isLoginMode 
-                    ? "Pas encore de compte ? S'inscrire" 
+                  {isLoginMode
+                    ? "Pas encore de compte ? S'inscrire"
                     : "Déjà un compte ? Se connecter"
                   }
                 </button>
@@ -456,13 +543,16 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
             )}
           </div>
 
-          {/* Mot de passe oublié (connexion seulement) */}
+          {/* Mot de passe oublié */}
           {isLoginMode && (
             <div className="mt-4 text-center">
               <button
                 type="button"
                 onClick={() => setShowResetPassword(true)}
-                className="text-slate-500 hover:text-slate-700 transition-colors duration-300 text-sm"
+                className="text-xs sm:text-sm transition-colors duration-300 hover:underline"
+                style={{ color: 'rgba(255,255,255,0.5)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
               >
                 Mot de passe oublié ?
               </button>
@@ -470,18 +560,40 @@ const AuthModal = ({ isOpen, onClose, onSuccess }: AuthModalProps) => {
           )}
         </form>
 
-        {/* Footer */}
-        <div className="relative px-6 pb-6">
-          <div className="bg-gradient-to-r from-amber-50 to-rose-50 rounded-2xl p-4 border border-amber-200/50">
-            <div className="flex items-center mb-2">
+        {/* Footer Avantages membre */}
+        <div className="relative px-5 sm:px-6 pb-5 sm:pb-6">
+          <div className="relative rounded-2xl p-4 overflow-hidden"
+               style={{
+                 background: 'linear-gradient(180deg, rgba(251,191,36,0.08) 0%, rgba(251,191,36,0.03) 100%)',
+                 border: '1px solid rgba(251,191,36,0.22)',
+                 boxShadow: '0 0 40px -12px rgba(251,191,36,0.18) inset',
+               }}>
+            <div
+              aria-hidden
+              className="absolute -top-8 -right-4 w-24 h-24 rounded-full blur-2xl pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.3) 0%, transparent 70%)' }}
+            />
+            <div className="relative z-10 flex items-center mb-2.5">
               <img src={furahaLogo} alt="Furaha" className="h-4 w-4 mr-2 object-contain" />
-              <h4 className="text-amber-800 font-semibold text-sm">Avantages membre</h4>
+              <h4 className="font-black text-sm" style={{ color: '#fcd34d' }}>Avantages membre</h4>
             </div>
-            <ul className="text-amber-700 text-xs space-y-1">
-              <li>• Accès à tous les modèles premium</li>
-              <li>• Personnalisation complète</li>
-              <li>• Gestion de vos événements</li>
-              <li>• Support prioritaire</li>
+            <ul className="text-xs sm:text-[13px] space-y-1.5 relative z-10" style={{ color: 'rgba(255,255,255,0.72)' }}>
+              <li className="flex items-start gap-2">
+                <span style={{ color: '#fcd34d' }}>•</span>
+                Accès à tous les modèles premium
+              </li>
+              <li className="flex items-start gap-2">
+                <span style={{ color: '#fcd34d' }}>•</span>
+                Personnalisation complète
+              </li>
+              <li className="flex items-start gap-2">
+                <span style={{ color: '#fcd34d' }}>•</span>
+                Gestion de vos événements
+              </li>
+              <li className="flex items-start gap-2">
+                <span style={{ color: '#fcd34d' }}>•</span>
+                Support prioritaire
+              </li>
             </ul>
           </div>
         </div>

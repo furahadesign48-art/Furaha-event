@@ -5,12 +5,10 @@ import Header from './components/Header';
 import NewHeroSection from './components/NewHeroSection';
 import ServicesSection from './components/ServicesSection';
 import WhyChooseSection from './components/WhyChooseSection';
-import PricingSection from './components/PricingSection';
+import DemoVideoSection from './components/DemoVideoSection';
 import Footer from './components/Footer';
 import Dashboard from './components/Dashboard';
 import WeddingTemplate from './components/WeddingTemplate';
-import BirthdayTemplate from './components/BirthdayTemplate';
-import GraduationTemplate from './components/GraduationTemplate';
 import AuthModal from './components/AuthModal';
 import InvitationPreview from './components/InvitationPreview';
 import GuestCheckin from './components/GuestCheckin';
@@ -44,6 +42,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   createdAt: string;
+  role?: 'admin' | 'user';
 }
 
 function AppContent() {
@@ -52,8 +51,6 @@ function AppContent() {
   const { language } = useLanguage();
   const [showDashboard, setShowDashboard] = useState(false);
   const [showWeddingTemplate, setShowWeddingTemplate] = useState(false);
-  const [showBirthdayTemplate, setShowBirthdayTemplate] = useState(false);
-  const [showGraduationTemplate, setShowGraduationTemplate] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateData | null>(null);
   const [pendingTemplate, setPendingTemplate] = useState<TemplateData | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -93,8 +90,6 @@ function AppContent() {
     await logout();
     setShowDashboard(false);
     setShowWeddingTemplate(false);
-    setShowBirthdayTemplate(false);
-    setShowGraduationTemplate(false);
     setSelectedTemplate(null);
     setPendingTemplate(null);
   };
@@ -107,8 +102,6 @@ function AppContent() {
     }
     setSelectedTemplate(templateData);
     setShowWeddingTemplate(false);
-    setShowBirthdayTemplate(false);
-    setShowGraduationTemplate(false);
     setShowDashboard(true);
   };
 
@@ -135,28 +128,8 @@ function AppContent() {
     );
   }
 
-  if (showBirthdayTemplate) {
-    return (
-      <BirthdayTemplate 
-        onBack={() => setShowBirthdayTemplate(false)}
-        onSelectTemplate={handleTemplateSelection}
-        isAuthenticated={isAuthenticated}
-      />
-    );
-  }
-
-  if (showGraduationTemplate) {
-    return (
-      <GraduationTemplate 
-        onBack={() => setShowGraduationTemplate(false)}
-        onSelectTemplate={handleTemplateSelection}
-        isAuthenticated={isAuthenticated}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-amber-50/30 to-purple-50/20 dark:from-slate-900 dark:via-slate-800/30 dark:to-slate-900 font-elegant transition-colors duration-300">
+    <div className="min-h-screen bg-[#0b0f17] font-elegant transition-colors duration-300">
       <Header 
         onLogin={handleLogin}
       />
@@ -164,11 +137,9 @@ function AppContent() {
         <NewHeroSection />
         <ServicesSection 
           onViewWeddingTemplate={() => setShowWeddingTemplate(true)}
-          onViewBirthdayTemplate={() => setShowBirthdayTemplate(true)}
-          onViewGraduationTemplate={() => setShowGraduationTemplate(true)}
         />
         <WhyChooseSection />
-        <PricingSection />
+        <DemoVideoSection />
       </main>
       <Footer />
       

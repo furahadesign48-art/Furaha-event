@@ -117,7 +117,8 @@ export type GameType =
   | 'wedding-trivia'     // Trivia sur le mariage
   | 'guest-book-prompt'  // Livre d'or avec prompts fun
   | 'love-quiz'          // Quiz romantique sur le couple
-  | 'memory-match';      // Memory Match avec photos de couple
+  | 'memory-match'      // Memory Match avec photos de couple
+  | 'catch-love';        // Attrape l'Amour - jeu de reflexes
 
 // Question de quiz
 export interface QuizQuestion {
@@ -195,6 +196,14 @@ export interface MemoryMatchConfig extends GameConfig {
   showLeaderboard: boolean; // Afficher le classement des meilleurs temps
 }
 
+// Configuration spécifique au Catch Love
+export interface CatchLoveConfig extends GameConfig {
+  type: 'catch-love';
+  totalGameTime: number; // Temps total du jeu en secondes (30-120)
+  difficulty: 'easy' | 'normal' | 'hard';
+  showLeaderboard: boolean; // Afficher le classement
+}
+
 // Union type pour toutes les configurations de jeux
 export type GameConfiguration = 
   | CoupleQuizConfig
@@ -204,7 +213,8 @@ export type GameConfiguration =
   | WeddingTriviaConfig
   | GuestBookPromptConfig
   | LoveQuizConfig
-  | MemoryMatchConfig;
+  | MemoryMatchConfig
+  | CatchLoveConfig;
 
 // Résultat d'un jeu par invité
 export interface GameResult {
@@ -244,6 +254,13 @@ export const AVAILABLE_GAMES: {
     title: 'Love Quiz',
     description: 'Testez vos connaissances sur le couple avec ce quiz romantique !',
     icon: '🎮',
+    category: 'wedding'
+  },
+  {
+    type: 'catch-love',
+    title: 'Attrape l\'Amour',
+    description: 'Jeu de réflexes : attrapez cœurs, alliances et bouquets avant qu\'ils ne tombent !',
+    icon: '💖',
     category: 'wedding'
   }
 ];
@@ -935,6 +952,36 @@ export class InviteService {
     }
   }
 
+  static async deleteLegacyMessageReply(
+    userId: string,
+    inviteId: string,
+    messageId: string,
+    replyId: string
+  ): Promise<void> {
+    try {
+      const replyRef = doc(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'message', messageId, 'replies', replyId);
+      await deleteDoc(replyRef);
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la réponse (legacy):', error);
+      throw new Error('Impossible de supprimer la réponse');
+    }
+  }
+
+  static async deleteMessageReply(
+    userId: string,
+    inviteId: string,
+    messageId: string,
+    replyId: string
+  ): Promise<void> {
+    try {
+      const replyRef = doc(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'guestMessages', messageId, 'replies', replyId);
+      await deleteDoc(replyRef);
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la réponse:', error);
+      throw new Error('Impossible de supprimer la réponse');
+    }
+  }
+
   static async updateGuestMessage(
     userId: string,
     inviteId: string,
@@ -984,15 +1031,15 @@ export class InviteService {
     userId: string,
     inviteId: string,
     messageId: string
-  ): Promise<Array<{ id: string; content: string; authorName: string; createdAt: string }>> {
+  ): Promise<Array<{ id: string; content: string; authorName: string; authorInviteId?: string; createdAt: string }>> {
     try {
       const repliesRef = collection(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'guestMessages', messageId, 'replies');
       const repliesSnap = await getDocs(repliesRef);
-      const results: Array<{ id: string; content: string; authorName: string; createdAt: string }> = [];
+      const results: Array<{ id: string; content: string; authorName: string; authorInviteId?: string; createdAt: string }> = [];
       repliesSnap.forEach((r) => {
-        const d = r.data() as { createdAt?: Timestamp; content?: string; authorName?: string };
+        const d = r.data() as { createdAt?: Timestamp; content?: string; authorName?: string; authorInviteId?: string };
         const created = d.createdAt instanceof Timestamp ? d.createdAt.toDate().toISOString() : new Date().toISOString();
-        results.push({ id: r.id, content: d.content ?? '', authorName: d.authorName ?? 'Invité', createdAt: created });
+        results.push({ id: r.id, content: d.content ?? '', authorName: d.authorName ?? 'Invité', authorInviteId: d.authorInviteId, createdAt: created });
       });
       results.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       return results;
@@ -1006,15 +1053,15 @@ export class InviteService {
     userId: string,
     inviteId: string,
     messageId: string
-  ): Promise<Array<{ id: string; content: string; authorName: string; createdAt: string }>> {
+  ): Promise<Array<{ id: string; content: string; authorName: string; authorInviteId?: string; createdAt: string }>> {
     try {
       const repliesRef = collection(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'message', messageId, 'replies');
       const repliesSnap = await getDocs(repliesRef);
-      const results: Array<{ id: string; content: string; authorName: string; createdAt: string }> = [];
+      const results: Array<{ id: string; content: string; authorName: string; authorInviteId?: string; createdAt: string }> = [];
       repliesSnap.forEach((r) => {
-        const d = r.data() as { createdAt?: Timestamp; content?: string; authorName?: string };
+        const d = r.data() as { createdAt?: Timestamp; content?: string; authorName?: string; authorInviteId?: string };
         const created = d.createdAt instanceof Timestamp ? d.createdAt.toDate().toISOString() : new Date().toISOString();
-        results.push({ id: r.id, content: d.content ?? '', authorName: d.authorName ?? 'Invité', createdAt: created });
+        results.push({ id: r.id, content: d.content ?? '', authorName: d.authorName ?? 'Invité', authorInviteId: d.authorInviteId, createdAt: created });
       });
       results.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       return results;
@@ -1721,6 +1768,19 @@ export class GameService {
           createdAt: null,
           updatedAt: null
         } as MemoryMatchConfig;
+
+      case 'catch-love':
+        return {
+          ...baseConfig,
+          type: 'catch-love',
+          totalGameTime: 45,
+          difficulty: 'normal',
+          showLeaderboard: true,
+          id: '',
+          createdAt: null,
+          updatedAt: null
+        } as CatchLoveConfig;
+
       default:
         return {
           ...baseConfig,
@@ -2014,7 +2074,7 @@ export class GameService {
       // First get the game config to know the type
       const modelRef = doc(db, this.USERS_COLLECTION, userId, 'UserModel', modelId);
       const modelSnap = await getDoc(modelRef);
-      let gameType: 'puzzle' | 'memory-match' | 'love-quiz' | null = null;
+      let gameType: 'puzzle' | 'memory-match' | 'love-quiz' | 'catch-love' | null = null;
       if (modelSnap.exists()) {
         const games = modelSnap.data().games as GameConfiguration[];
         const game = games.find(g => g.id === gameId);
@@ -2022,7 +2082,8 @@ export class GameService {
           gameType = game.type as any;
         }
       }
-      const q = query(resultsRef, orderBy('score', gameType === 'love-quiz' ? 'desc' : 'asc')); 
+      const scoreOrder = gameType === 'love-quiz' || gameType === 'catch-love' ? 'desc' : 'asc'
+      const q = query(resultsRef, orderBy('score', scoreOrder)); 
       const snapshot = await getDocs(q);
       const results: GameResult[] = [];
       snapshot.forEach(doc => {

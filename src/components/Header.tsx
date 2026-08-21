@@ -3,9 +3,9 @@ import { Menu, X, Crown, User, LogOut, Settings } from 'lucide-react';
 import furahaLogo from '../images/FURAHA-GOLD.png';
 import { useAuth } from './AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
-import ThemeToggle from './ThemeToggle';
 import LanguageSelector from './LanguageSelector';
 import { useLanguage } from '../contexts/LanguageContext';
+import ConfirmationModal from './ConfirmationModal';
 
 
 interface HeaderProps {
@@ -18,6 +18,8 @@ const Header = ({ onLogin }: HeaderProps) => {
   const { t } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Fermer le menu utilisateur en cliquant à l'extérieur
   React.useEffect(() => {
@@ -34,13 +36,25 @@ const Header = ({ onLogin }: HeaderProps) => {
     };
   }, []);
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
     setShowUserMenu(false);
-    await logout();
+    setIsMenuOpen(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+    }
   };
 
   return (
-<header className="fixed top-0 left-0 right-0 bg-gradient-to-r from-neutral-50/95 via-amber-50/90 to-neutral-50/95 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/95 backdrop-blur-xl shadow-luxury border-b border-amber-200/30 dark:border-slate-600/30 z-50 animate-fade-in transition-colors duration-300">
+    <>
+<header className="fixed top-0 left-0 right-0 bg-[#0b0f17]/80 backdrop-blur-xl border-b border-white/5 z-50 animate-fade-in">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="flex items-center justify-between h-16">
       
@@ -50,40 +64,31 @@ const Header = ({ onLogin }: HeaderProps) => {
           <img 
             src={furahaLogo}
             alt="Furaha Event Logo" 
-            className="h-12 w-12 object-contain drop-shadow-lg animate-glow"
+            className="h-10 w-10 object-contain drop-shadow-lg"
           />
-          <div className="absolute inset-0 animate-pulse opacity-50">
-            <img 
-              src={furahaLogo}
-              alt="Furaha Event Logo pulse" 
-              className="h-12 w-12 object-contain"
-            />
-          </div>
         </div>
 
-        <span className="text-2xl font-bold bg-gradient-to-r from-slate-900 via-amber-700 to-slate-900 dark:from-slate-100 dark:via-amber-300 dark:to-slate-100 bg-clip-text text-transparent">
+        <span className="text-xl font-bold bg-clip-text text-transparent"
+              style={{
+                backgroundImage: 'linear-gradient(135deg,#ffffff 0%, #fde68a 50%, #fbbf24 100%)',
+              }}
+        >
           Furaha-Event
         </span>
         </div>
 
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="/" className="text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-all duration-300 font-medium relative group">
+          <nav className="hidden md:flex items-center space-x-7">
+            <a href="/" className="text-white/70 hover:text-amber-300 transition-all duration-300 text-sm font-medium">
               {t('home') || 'Accueil'}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 group-hover:w-full transition-all duration-300"></span>
             </a>
-            <a href="#services" className="text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-all duration-300 font-medium relative group">
+            <a href="#services" className="text-white/70 hover:text-amber-300 transition-all duration-300 text-sm font-medium">
               {t('templates') || 'Modèles'}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 group-hover:w-full transition-all duration-300"></span>
             </a>
-            <a href="#pricing" className="text-slate-700 dark:text-slate-300 hover:text-amber-600 dark:hover:text-amber-400 transition-all duration-300 font-medium relative group">
-              {t('pricing') || 'Prix'}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 group-hover:w-full transition-all duration-300"></span>
+            <a href="#features" className="text-white/70 hover:text-amber-300 transition-all duration-300 text-sm font-medium">
+              {t('features') || 'Fonctionnalités'}
             </a>
-            
-            {/* Bouton de basculement du thème */}
-            <ThemeToggle />
             
             {/* Sélecteur de langue */}
             <LanguageSelector />
@@ -93,9 +98,20 @@ const Header = ({ onLogin }: HeaderProps) => {
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center space-x-3 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-900 px-4 py-2 rounded-full hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-medium shadow-glow-amber hover:shadow-luxury transform hover:scale-105"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-md transition-all duration-300 font-medium text-sm"
+                  style={{
+                    border: '1px solid rgba(251,191,36,0.35)',
+                    background:
+                      'linear-gradient(180deg, rgba(251,191,36,0.14), rgba(251,191,36,0.04))',
+                    color: '#fde68a',
+                  }}
                 >
-                  <div className="w-8 h-8 bg-slate-900 rounded-full flex items-center justify-center text-amber-400 font-bold text-sm">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
+                       style={{
+                         background: 'linear-gradient(145deg,#fbbf24,#d97706)',
+                         color: '#0b0f17',
+                       }}
+                  >
                     {user.firstName[0]}{user.lastName[0]}
                   </div>
                   <span className="hidden sm:block">{user.firstName}</span>
@@ -103,15 +119,23 @@ const Header = ({ onLogin }: HeaderProps) => {
                 
                 {/* Menu déroulant utilisateur */}
                 {showUserMenu && (
-                  <div className="user-menu absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-luxury border border-neutral-200/50 dark:border-slate-600/50 py-2 z-50 animate-slide-up">
-                    <div className="px-4 py-3 border-b border-neutral-200/50 dark:border-slate-600/50">
+                  <div className="user-menu absolute right-0 mt-2 w-64 rounded-xl py-2 z-50 animate-slide-up"
+                       style={{
+                         background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+                         border: '1px solid rgba(255,255,255,0.08)',
+                         boxShadow: '0 20px 60px -20px rgba(0,0,0,0.8)',
+                       }}
+                  >
+                    <div className="px-4 py-3 border-b border-white/5">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-rose-500 rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                             style={{ background: 'linear-gradient(145deg,#f59e0b,#d946ef)' }}
+                        >
                           {user.firstName[0]}{user.lastName[0]}
                         </div>
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">{user.firstName} {user.lastName}</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{user.email}</p>
+                          <p className="font-semibold text-white">{user.firstName} {user.lastName}</p>
+                          <p className="text-sm text-white/50">{user.email}</p>
                         </div>
                       </div>
                     </div>
@@ -123,40 +147,20 @@ const Header = ({ onLogin }: HeaderProps) => {
                           setShowUserMenu(false);
                           onLogin && onLogin();
                         }}
-                        className="w-full flex items-center px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-slate-700 hover:text-amber-700 dark:hover:text-amber-400 transition-all duration-200"
+                        className="w-full flex items-center px-4 py-2 text-white/80 hover:bg-white/5 hover:text-amber-300 transition-all duration-200 text-sm"
                       >
                         <User className="h-4 w-4 mr-3" />
                         {t('dashboard')}
                       </button>
                       
-                      {/* Affichage du plan et des invitations restantes */}
-                      {subscription && (
-                        <div className="px-4 py-2 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 mx-2 rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                                Plan {subscription.plan === 'free' ? 'Gratuit' : subscription.plan}
-                              </p>
-                              {subscription.plan === 'free' && (
-                                <p className="text-xs text-amber-600 dark:text-amber-400">
-                                  {getRemainingInvites()} invitations restantes
-                                </p>
-                              )}
-                            </div>
-                            <Crown className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                          </div>
-                        </div>
-                      )}
-                      
-                      <hr className="my-2 border-neutral-200/50 dark:border-slate-600/50" />
+                      <hr className="my-2 border-white/5" />
                       
                       <button
                         onClick={() => {
                           console.log('Clic sur Se déconnecter');
-                          setShowUserMenu(false);
-                          handleLogout();
+                          handleLogoutClick();
                         }}
-                        className="w-full flex items-center px-4 py-2 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-700 dark:hover:text-rose-300 transition-all duration-200"
+                        className="w-full flex items-center px-4 py-2 text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-all duration-200 text-sm"
                       >
                         <LogOut className="h-4 w-4 mr-3" />
                         {t('logout')}
@@ -168,10 +172,15 @@ const Header = ({ onLogin }: HeaderProps) => {
             ) : (
               <button 
                 onClick={onLogin}
-               className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-500 text-slate-900 px-6 py-2 rounded-full hover:from-yellow-500 hover:via-amber-500 hover:to-yellow-600 transition-all duration-300 font-medium shadow-lg hover:shadow-2xl transform hover:scale-105 relative overflow-hidden group border border-yellow-300/50"
+                className="px-4 py-2 rounded-md text-sm font-semibold transition-all duration-300 hover:scale-[1.03]"
+                style={{
+                  background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                  color: '#0b0f17',
+                  boxShadow:
+                    '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 24px -8px rgba(251,191,36,0.5)',
+                }}
               >
-               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-               <span className="relative font-semibold">
+               <span className="font-semibold">
                 {t('login') || 'Connexion'}
                </span>
               </button>
@@ -180,61 +189,61 @@ const Header = ({ onLogin }: HeaderProps) => {
 
           {/* Mobile Menu Button */}
           <button
-            className="md:hidden p-2"
+            className="md:hidden p-2 rounded-md hover:bg-white/5 transition-colors"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {isMenuOpen ? (
-              <X className="h-6 w-6 text-slate-900" />
+              <X className="h-5 w-5 text-white" />
             ) : (
-              <Menu className="h-6 w-6 text-slate-900" />
+              <Menu className="h-5 w-5 text-white" />
             )}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 animate-slide-up bg-gradient-to-r from-neutral-50/95 via-amber-50/90 to-neutral-50/95 dark:from-slate-800/95 dark:via-slate-700/90 dark:to-slate-800/95 backdrop-blur-xl">
-            <nav className="flex flex-col space-y-4">
-              <a href="#" className="text-slate-700 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 transition-colors duration-300 font-medium px-4 py-2">
+          <div className="md:hidden py-4 animate-slide-up"
+               style={{
+                 background: 'rgba(11,15,23,0.98)',
+                 borderTop: '1px solid rgba(255,255,255,0.06)',
+                 backdropFilter: 'blur(20px)',
+               }}
+          >
+            <nav className="flex flex-col space-y-1">
+              <a href="#" className="text-white/80 hover:text-amber-300 hover:bg-white/5 transition-colors duration-300 font-medium px-4 py-2.5 rounded-md text-sm">
                 {t('home') || 'Accueil'}
               </a>
-              <a href="#" className="text-slate-700 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 transition-colors duration-300 font-medium px-4 py-2">
+              <a href="#services" className="text-white/80 hover:text-amber-300 hover:bg-white/5 transition-colors duration-300 font-medium px-4 py-2.5 rounded-md text-sm">
                 {t('templates') || 'Modèles'}
               </a>
-              <a href="#" className="text-slate-700 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 transition-colors duration-300 font-medium px-4 py-2">
-                {t('pricing') || 'Prix'}
+              <a href="#features" className="text-white/80 hover:text-amber-300 hover:bg-white/5 transition-colors duration-300 font-medium px-4 py-2.5 rounded-md text-sm">
+                {t('features') || 'Fonctionnalités'}
               </a>
               
-              {/* Bouton de basculement du thème mobile */}
-              <div className="px-4 py-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 font-medium">{t('theme')}</span>
-                  <ThemeToggle />
-                </div>
-              </div>
-              
               {/* Sélecteur de langue mobile */}
-              <div className="px-4 py-2">
+              <div className="px-4 py-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-700 dark:text-slate-300 font-medium">{t('language')}</span>
+                  <span className="text-white/70 text-sm font-medium">{t('language')}</span>
                   <LanguageSelector />
                 </div>
               </div>
               
               {isAuthenticated && user ? (
-                <div className="mx-4 space-y-2">
-                  <div className="flex items-center space-x-3 px-4 py-2 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 rounded-xl">
-                    <div className="w-8 h-8 bg-gradient-to-r from-amber-500 to-rose-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                <div className="mx-4 mt-2 space-y-2">
+                  <div className="flex items-center space-x-3 px-3 py-3 rounded-lg"
+                       style={{
+                         background: 'linear-gradient(180deg, rgba(251,191,36,0.12), rgba(251,191,36,0.04))',
+                         border: '1px solid rgba(251,191,36,0.18)',
+                       }}
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                         style={{ background: 'linear-gradient(145deg,#f59e0b,#d946ef)' }}
+                    >
                       {user.firstName[0]}{user.lastName[0]}
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm">{user.firstName} {user.lastName}</p>
-                      <p className="text-xs text-slate-600 dark:text-slate-400">{user.email}</p>
-                      {subscription?.plan === 'free' && (
-                        <p className="text-xs text-amber-600 dark:text-amber-400">
-                          {getRemainingInvites()}/5 invitations
-                        </p>
-                      )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-white text-sm truncate">{user.firstName} {user.lastName}</p>
+                      <p className="text-xs text-white/50 truncate">{user.email}</p>
                     </div>
                   </div>
                   
@@ -245,7 +254,10 @@ const Header = ({ onLogin }: HeaderProps) => {
                         onLogin();
                       }
                     }}
-                    className="w-full bg-amber-500 text-slate-900 px-4 py-2 rounded-xl hover:bg-amber-600 transition-all duration-300 font-medium flex items-center justify-center"
+                    className="w-full text-[#0b0f17] px-4 py-2.5 rounded-lg transition-all duration-300 font-medium flex items-center justify-center text-sm"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                    }}
                   >
                     <User className="h-4 w-4 mr-2" />
                     {t('dashboard')}
@@ -253,10 +265,9 @@ const Header = ({ onLogin }: HeaderProps) => {
                   
                   <button
                     onClick={() => {
-                      setIsMenuOpen(false);
-                      handleLogout();
+                      handleLogoutClick();
                     }}
-                    className="w-full bg-rose-500 text-white px-4 py-2 rounded-xl hover:bg-rose-600 transition-all duration-300 font-medium flex items-center justify-center"
+                    className="w-full bg-rose-500/90 text-white px-4 py-2.5 rounded-lg hover:bg-rose-500 transition-all duration-300 font-medium flex items-center justify-center text-sm"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     {t('logout')}
@@ -268,10 +279,12 @@ const Header = ({ onLogin }: HeaderProps) => {
                     setIsMenuOpen(false);
                     onLogin?.();
                   }}
-                 className="bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-500 text-slate-900 px-6 py-2 rounded-full hover:from-yellow-500 hover:via-amber-500 hover:to-yellow-600 transition-all duration-300 font-semibold shadow-lg hover:shadow-2xl mx-4 border border-yellow-300/50 relative overflow-hidden group"
+                  className="mx-4 mt-2 px-5 py-2.5 rounded-lg transition-all duration-300 font-semibold text-sm text-[#0b0f17]"
+                  style={{
+                    background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                  }}
                 >
-                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                 <span className="relative">
+                 <span>
                   {t('login') || 'Connexion'}
                  </span>
                 </button>
@@ -281,6 +294,19 @@ const Header = ({ onLogin }: HeaderProps) => {
         )}
       </div>
     </header>
+
+    <ConfirmationModal
+      isOpen={showLogoutConfirm}
+      onClose={() => setShowLogoutConfirm(false)}
+      onConfirm={handleLogoutConfirm}
+      title="Se déconnecter ?"
+      message="Vous allez être déconnecté de votre compte. Voulez-vous continuer ?"
+      confirmText="Se déconnecter"
+      cancelText="Annuler"
+      type="warning"
+      isLoading={isLoggingOut}
+    />
+    </>
   );
 };
 

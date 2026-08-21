@@ -401,217 +401,322 @@ const GuestExportModal = ({ isOpen, onClose, guests, tables, categories = [] }: 
 
   const tablesWithGuests = getTablesWithGuests();
 
+  const goldRing = 'rgba(251,191,36,0.5)';
+  const goldSoft = 'rgba(251,191,36,0.45)';
+  const inputBg = 'rgba(255,255,255,0.03)';
+  const inputBorder = 'rgba(255,255,255,0.08)';
+  const textMuted = 'rgba(255,255,255,0.6)';
+  const textSoft = 'rgba(255,255,255,0.8)';
+
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-luxury max-w-md w-full max-h-[85vh] overflow-y-auto animate-slide-up">
-        {/* Header */}
-        <div className="p-6 border-b border-neutral-200/50 bg-gradient-to-r from-neutral-50 to-amber-50/30">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="relative mr-3">
-                <Download className="h-6 w-6 text-amber-500 animate-glow drop-shadow-lg" />
-                <div className="absolute inset-0 animate-pulse">
-                  <Download className="h-6 w-6 text-amber-300 opacity-30" />
-                </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 animate-fade-in">
+      <div 
+        className="rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-slide-up border"
+        style={{
+          background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          boxShadow: '0 40px 120px -30px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.06) inset',
+        }}
+      >
+        <div className="flex flex-col max-h-[85vh]">
+          {/* Header */}
+          <div 
+            className="px-4 sm:px-6 py-4 sm:py-5 border-b flex justify-between items-center flex-shrink-0"
+            style={{
+              borderColor: 'rgba(255,255,255,0.06)',
+              background: 'linear-gradient(135deg, rgba(251,191,36,0.1) 0%, rgba(255,255,255,0) 70%)',
+            }}
+          >
+            <div className="flex items-center min-w-0">
+              <div className="relative mr-3 flex-shrink-0">
+                <Download className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: '#fcd34d' }} />
               </div>
-              <div>
-                <h2 className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white truncate">
                   Exporter les Invités
                 </h2>
-                <p className="text-slate-600 text-sm">
+                <p className="text-xs sm:text-sm mt-0.5" style={{ color: textMuted }}>
                   Téléchargez la liste par table
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-neutral-100 rounded-lg transition-colors duration-200"
+              className="p-2 rounded-lg transition-all duration-200 flex-shrink-0"
+              style={{ background: 'rgba(255,255,255,0.04)', color: textMuted }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = textMuted; }}
+              aria-label="Fermer"
             >
-              <X className="h-5 w-5 text-neutral-500" />
+              <X className="h-5 w-5" />
             </button>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <div className="space-y-6">
-            {/* Sélection du format */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">
-                Format d'export
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => setSelectedFormat('pdf')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    selectedFormat === 'pdf'
-                      ? 'border-amber-400 bg-amber-50 text-amber-700'
-                      : 'border-neutral-200 hover:border-amber-300 text-slate-600'
-                  }`}
-                >
-                  <FileText className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">PDF</div>
-                  <div className="text-xs opacity-75">Document imprimable</div>
-                </button>
-
-                <button
-                  onClick={() => setSelectedFormat('excel')}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                    selectedFormat === 'excel'
-                      ? 'border-emerald-400 bg-emerald-50 text-emerald-700'
-                      : 'border-neutral-200 hover:border-emerald-300 text-slate-600'
-                  }`}
-                >
-                  <FileSpreadsheet className="h-8 w-8 mx-auto mb-2" />
-                  <div className="text-sm font-medium">Excel</div>
-                  <div className="text-xs opacity-75">Feuille de calcul</div>
-                </button>
-              </div>
-            </div>
-
-            {selectedFormat === 'pdf' && (
+          {/* Content scrollable */}
+          <div className="px-4 sm:px-6 py-4 sm:py-6 overflow-y-auto flex-1">
+            <div className="space-y-5 sm:space-y-6">
+              {/* Sélection du format */}
               <div>
-                <button
-                  onClick={() => setShowAdvancedOptions(v => !v)}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-neutral-200 text-slate-700 hover:border-amber-300 transition-all duration-200 font-medium"
-                >
-                  {showAdvancedOptions ? 'Masquer les options PDF avancées' : 'Afficher les options PDF avancées'}
-                </button>
-                {showAdvancedOptions && (
-                  <div className="mt-4 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-3">Orientation</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setPdfOrientation('portrait')}
-                          className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                            pdfOrientation === 'portrait'
-                              ? 'border-amber-400 bg-amber-50 text-amber-700'
-                              : 'border-neutral-200 hover:border-amber-300 text-slate-600'
-                          }`}
-                        >
-                          <FileText className="h-8 w-8 mx-auto mb-2" />
-                          <div className="text-sm font-medium">Portrait</div>
-                          <div className="text-xs opacity-75">Page verticale</div>
-                        </button>
-                        <button
-                          onClick={() => setPdfOrientation('landscape')}
-                          className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                            pdfOrientation === 'landscape'
-                              ? 'border-amber-400 bg-amber-50 text-amber-700'
-                              : 'border-neutral-200 hover:border-amber-300 text-slate-600'
-                          }`}
-                        >
-                          <FileText className="h-8 w-8 mx-auto mb-2" />
-                          <div className="text-sm font-medium">Paysage</div>
-                          <div className="text-xs opacity-75">Page horizontale</div>
-                        </button>
-                      </div>
-                    </div>
+                <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3">
+                  Format d'export
+                </label>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <button
+                    onClick={() => setSelectedFormat('pdf')}
+                    className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-300 ${
+                      selectedFormat === 'pdf' ? '' : ''
+                    }`}
+                    style={selectedFormat === 'pdf' ? {
+                      background: 'linear-gradient(180deg, rgba(251,191,36,0.16) 0%, rgba(251,191,36,0.05) 100%)',
+                      borderColor: 'rgba(251,191,36,0.5)',
+                      color: '#fcd34d',
+                      boxShadow: '0 0 0 1px rgba(251,191,36,0.18) inset',
+                    } : {
+                      background: inputBg,
+                      borderColor: inputBorder,
+                      color: textSoft,
+                    }}
+                    onMouseEnter={(e) => { if (selectedFormat !== 'pdf') { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; } }}
+                    onMouseLeave={(e) => { if (selectedFormat !== 'pdf') { e.currentTarget.style.borderColor = inputBorder; } }}
+                  >
+                    <FileText className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                    <div className="text-xs sm:text-sm font-semibold">PDF</div>
+                    <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Document imprimable</div>
+                  </button>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-3">Densité du tableau</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          onClick={() => setPdfDensity('normal')}
-                          className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                            pdfDensity === 'normal'
-                              ? 'border-amber-400 bg-amber-50 text-amber-700'
-                              : 'border-neutral-200 hover:border-amber-300 text-slate-600'
-                          }`}
-                        >
-                          <Table className="h-8 w-8 mx-auto mb-2" />
-                          <div className="text-sm font-medium">Normal</div>
-                          <div className="text-xs opacity-75">Lisible, espacement standard</div>
-                        </button>
-                        <button
-                          onClick={() => setPdfDensity('compact')}
-                          className={`p-4 rounded-xl border-2 transition-all duration-300 ${
-                            pdfDensity === 'compact'
-                              ? 'border-amber-400 bg-amber-50 text-amber-700'
-                              : 'border-neutral-200 hover:border-amber-300 text-slate-600'
-                          }`}
-                        >
-                          <Table className="h-8 w-8 mx-auto mb-2" />
-                          <div className="text-sm font-medium">Compact</div>
-                          <div className="text-xs opacity-75">Plus d'invités par page</div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-3">Taille de police</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="range"
-                          min={7}
-                          max={12}
-                          step={1}
-                          value={pdfFontSize}
-                          onChange={(e) => setPdfFontSize(Number(e.target.value))}
-                          className="flex-1 accent-amber-500"
-                        />
-                        <span className="text-sm text-slate-700 w-10 text-right">{pdfFontSize}pt</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Sélection de la catégorie */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3 flex items-center">
-                <Tag className="h-4 w-4 mr-2 text-amber-500" />
-                Filtrer par catégorie
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full pl-4 pr-10 py-3 bg-white border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 appearance-none transition-all duration-200"
-                >
-                  <option value="all">Toutes les catégories</option>
-                  {availableCategories.map(catName => (
-                    <option key={catName} value={catName}>{catName}</option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-neutral-500">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <button
+                    onClick={() => setSelectedFormat('excel')}
+                    className={`p-3 sm:p-4 rounded-xl border-2 transition-all duration-300`}
+                    style={selectedFormat === 'excel' ? {
+                      background: 'linear-gradient(180deg, rgba(52,211,153,0.14) 0%, rgba(52,211,153,0.04) 100%)',
+                      borderColor: 'rgba(52,211,153,0.45)',
+                      color: '#6ee7b7',
+                      boxShadow: '0 0 0 1px rgba(52,211,153,0.16) inset',
+                    } : {
+                      background: inputBg,
+                      borderColor: inputBorder,
+                      color: textSoft,
+                    }}
+                    onMouseEnter={(e) => { if (selectedFormat !== 'excel') { e.currentTarget.style.borderColor = 'rgba(52,211,153,0.28)'; } }}
+                    onMouseLeave={(e) => { if (selectedFormat !== 'excel') { e.currentTarget.style.borderColor = inputBorder; } }}
+                  >
+                    <FileSpreadsheet className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                    <div className="text-xs sm:text-sm font-semibold">Excel</div>
+                    <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Feuille de calcul</div>
+                  </button>
                 </div>
               </div>
-            </div>
 
-            {/* Sélection de la table */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-3">
-                Table à exporter
-              </label>
-              <select
-                value={selectedTable}
-                onChange={(e) => setSelectedTable(e.target.value)}
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200"
-              >
-                <option value="all">Toutes les tables</option>
-                {tablesWithGuests.map((table) => (
-                  <option key={table.name} value={table.name}>
-                    {table.name} ({table.guests.length} invité{table.guests.length > 1 ? 's' : ''})
-                  </option>
-                ))}
-              </select>
-            </div>
+              {selectedFormat === 'pdf' && (
+                <div>
+                  <button
+                    onClick={() => setShowAdvancedOptions(v => !v)}
+                    className="w-full px-4 py-2.5 sm:py-3 rounded-xl border transition-all duration-200 font-semibold text-left"
+                    style={{
+                      background: inputBg,
+                      borderColor: inputBorder,
+                      color: textSoft,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = inputBorder; }}
+                  >
+                    {showAdvancedOptions ? 'Masquer les options PDF avancées' : 'Afficher les options PDF avancées'}
+                  </button>
+                  {showAdvancedOptions && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3">Orientation</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          <button
+                            onClick={() => setPdfOrientation('portrait')}
+                            className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                            style={pdfOrientation === 'portrait' ? {
+                              background: 'linear-gradient(180deg, rgba(251,191,36,0.16) 0%, rgba(251,191,36,0.05) 100%)',
+                              borderColor: 'rgba(251,191,36,0.5)',
+                              color: '#fcd34d',
+                              boxShadow: '0 0 0 1px rgba(251,191,36,0.18) inset',
+                            } : {
+                              background: inputBg,
+                              borderColor: inputBorder,
+                              color: textSoft,
+                            }}
+                            onMouseEnter={(e) => { if (pdfOrientation !== 'portrait') e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; }}
+                            onMouseLeave={(e) => { if (pdfOrientation !== 'portrait') e.currentTarget.style.borderColor = inputBorder; }}
+                          >
+                            <FileText className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                            <div className="text-xs sm:text-sm font-semibold">Portrait</div>
+                            <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Page verticale</div>
+                          </button>
+                          <button
+                            onClick={() => setPdfOrientation('landscape')}
+                            className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                            style={pdfOrientation === 'landscape' ? {
+                              background: 'linear-gradient(180deg, rgba(251,191,36,0.16) 0%, rgba(251,191,36,0.05) 100%)',
+                              borderColor: 'rgba(251,191,36,0.5)',
+                              color: '#fcd34d',
+                              boxShadow: '0 0 0 1px rgba(251,191,36,0.18) inset',
+                            } : {
+                              background: inputBg,
+                              borderColor: inputBorder,
+                              color: textSoft,
+                            }}
+                            onMouseEnter={(e) => { if (pdfOrientation !== 'landscape') e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; }}
+                            onMouseLeave={(e) => { if (pdfOrientation !== 'landscape') e.currentTarget.style.borderColor = inputBorder; }}
+                          >
+                            <FileText className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                            <div className="text-xs sm:text-sm font-semibold">Paysage</div>
+                            <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Page horizontale</div>
+                          </button>
+                        </div>
+                      </div>
 
-            {/* Aperçu des données */}
-            <div className="bg-gradient-to-r from-neutral-50 to-amber-50/30 rounded-xl p-4 border border-neutral-200/50">
-              <div className="flex items-center mb-3">
-                <Users className="h-4 w-4 text-amber-600 mr-2" />
-                <h3 className="text-sm font-semibold text-slate-900">Aperçu de l'export</h3>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3">Densité du tableau</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          <button
+                            onClick={() => setPdfDensity('normal')}
+                            className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                            style={pdfDensity === 'normal' ? {
+                              background: 'linear-gradient(180deg, rgba(251,191,36,0.16) 0%, rgba(251,191,36,0.05) 100%)',
+                              borderColor: 'rgba(251,191,36,0.5)',
+                              color: '#fcd34d',
+                              boxShadow: '0 0 0 1px rgba(251,191,36,0.18) inset',
+                            } : {
+                              background: inputBg,
+                              borderColor: inputBorder,
+                              color: textSoft,
+                            }}
+                            onMouseEnter={(e) => { if (pdfDensity !== 'normal') e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; }}
+                            onMouseLeave={(e) => { if (pdfDensity !== 'normal') e.currentTarget.style.borderColor = inputBorder; }}
+                          >
+                            <Table className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                            <div className="text-xs sm:text-sm font-semibold">Normal</div>
+                            <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Lisible, espacement standard</div>
+                          </button>
+                          <button
+                            onClick={() => setPdfDensity('compact')}
+                            className="p-3 sm:p-4 rounded-xl border-2 transition-all duration-300"
+                            style={pdfDensity === 'compact' ? {
+                              background: 'linear-gradient(180deg, rgba(251,191,36,0.16) 0%, rgba(251,191,36,0.05) 100%)',
+                              borderColor: 'rgba(251,191,36,0.5)',
+                              color: '#fcd34d',
+                              boxShadow: '0 0 0 1px rgba(251,191,36,0.18) inset',
+                            } : {
+                              background: inputBg,
+                              borderColor: inputBorder,
+                              color: textSoft,
+                            }}
+                            onMouseEnter={(e) => { if (pdfDensity !== 'compact') e.currentTarget.style.borderColor = 'rgba(251,191,36,0.28)'; }}
+                            onMouseLeave={(e) => { if (pdfDensity !== 'compact') e.currentTarget.style.borderColor = inputBorder; }}
+                          >
+                            <Table className="h-7 w-7 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" />
+                            <div className="text-xs sm:text-sm font-semibold">Compact</div>
+                            <div className="text-[10px] sm:text-xs mt-0.5" style={{ color: textMuted }}>Plus d'invités par page</div>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3">Taille de police</label>
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="range"
+                            min={7}
+                            max={12}
+                            step={1}
+                            value={pdfFontSize}
+                            onChange={(e) => setPdfFontSize(Number(e.target.value))}
+                            className="flex-1"
+                            style={{ accentColor: '#f59e0b' }}
+                          />
+                          <span className="text-xs sm:text-sm w-10 sm:w-12 text-right" style={{ color: textSoft }}>{pdfFontSize}pt</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Sélection de la catégorie */}
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3 flex items-center">
+                  <Tag className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" style={{ color: '#fcd34d' }} />
+                  Filtrer par catégorie
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full pl-3 sm:pl-4 pr-10 py-2.5 sm:py-3 rounded-xl transition-all duration-200 outline-none appearance-none text-xs sm:text-sm"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                      color: '#ffffff',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = goldSoft; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = inputBorder; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <option value="all">Toutes les catégories</option>
+                    {availableCategories.map(catName => (
+                      <option key={catName} value={catName}>{catName}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none" style={{ color: textMuted }}>
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              
-              {selectedTable === 'all' ? (
-                <div className="space-y-2 text-sm text-slate-600">
+
+              {/* Sélection de la table */}
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold text-white/80 mb-2 sm:mb-3">
+                  Table à exporter
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedTable}
+                    onChange={(e) => setSelectedTable(e.target.value)}
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-200 outline-none appearance-none text-xs sm:text-sm"
+                    style={{
+                      background: inputBg,
+                      border: `1px solid ${inputBorder}`,
+                      color: '#ffffff',
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = goldSoft; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = inputBorder; e.currentTarget.style.boxShadow = 'none'; }}
+                  >
+                    <option value="all">Toutes les tables</option>
+                    {tablesWithGuests.map((table) => (
+                      <option key={table.name} value={table.name}>
+                        {table.name} ({table.guests.length} invité{table.guests.length > 1 ? 's' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none" style={{ color: textMuted }}>
+                    <svg className="h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Aperçu des données */}
+              <div 
+                className="rounded-xl p-3 sm:p-4 border"
+                style={{
+                  background: 'linear-gradient(180deg, rgba(251,191,36,0.08) 0%, rgba(255,255,255,0.015) 100%)',
+                  borderColor: 'rgba(251,191,36,0.12)',
+                }}
+              >
+                <div className="flex items-center mb-2 sm:mb-3">
+                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2" style={{ color: '#fcd34d' }} />
+                  <h3 className="text-xs sm:text-sm font-bold text-white">Aperçu de l'export</h3>
+                </div>
+                
+                {selectedTable === 'all' ? (
+                  <div className="space-y-1.5 text-xs sm:text-sm" style={{ color: textSoft }}>
                   <div>• {tablesWithGuests.length} table{tablesWithGuests.length > 1 ? 's' : ''}</div>
                   <div>• {guests.length} invité{guests.length > 1 ? 's' : ''} au total</div>
                   <div>• {guests.filter(g => g.confirmed).length} confirmé{guests.filter(g => g.confirmed).length > 1 ? 's' : ''}</div>
@@ -620,7 +725,7 @@ const GuestExportModal = ({ isOpen, onClose, guests, tables, categories = [] }: 
                 (() => {
                   const selectedTableData = tablesWithGuests.find(t => t.name === selectedTable);
                   return selectedTableData ? (
-                    <div className="space-y-2 text-sm text-slate-600">
+                    <div className="space-y-1.5 text-xs sm:text-sm" style={{ color: textSoft }}>
                       <div>• Table: {selectedTableData.name}</div>
                       <div>• {selectedTableData.guests.length} invité{selectedTableData.guests.length > 1 ? 's' : ''}</div>
                       <div>• {selectedTableData.guests.filter(g => g.confirmed).length} confirmé{selectedTableData.guests.filter(g => g.confirmed).length > 1 ? 's' : ''}</div>
@@ -628,34 +733,59 @@ const GuestExportModal = ({ isOpen, onClose, guests, tables, categories = [] }: 
                   ) : null;
                 })()
               )}
+              </div>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex space-x-3 mt-6">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 border border-neutral-300 text-neutral-700 rounded-xl hover:bg-neutral-50 transition-all duration-200 font-medium"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleExport}
-              disabled={isExporting || tablesWithGuests.length === 0}
-              className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-3 rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all duration-300 font-semibold shadow-glow-amber transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center"
-            >
-              {isExporting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                  Export en cours...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger
-                </>
-              )}
-            </button>
+          {/* Actions footer */}
+          <div 
+            className="px-4 sm:px-6 py-4 border-t flex-shrink-0"
+            style={{
+              borderColor: 'rgba(255,255,255,0.06)',
+              background: 'linear-gradient(0deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 100%)',
+            }}
+          >
+            <div className="flex flex-col-reverse sm:flex-row sm:space-x-3 gap-2 sm:gap-0 mt-0">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-300 font-medium border text-xs sm:text-sm"
+                style={{
+                  background: inputBg,
+                  borderColor: inputBorder,
+                  color: 'rgba(255,255,255,0.75)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = inputBg; e.currentTarget.style.borderColor = inputBorder; e.currentTarget.style.color = 'rgba(255,255,255,0.75)'; }}
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleExport}
+                disabled={isExporting || tablesWithGuests.length === 0}
+                className="flex-1 px-4 py-2.5 sm:py-3 rounded-xl transition-all duration-300 font-bold disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                  color: '#0b0f17',
+                  boxShadow: (isExporting || tablesWithGuests.length === 0) 
+                    ? 'none' 
+                    : `0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px ${goldRing}, 0 10px 24px -10px rgba(251,191,36,0.65)`,
+                }}
+                onMouseEnter={(e) => { if (!isExporting && tablesWithGuests.length > 0) { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; } }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+              >
+                {isExporting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-[#0b0f17]/30 border-t-[#0b0f17] rounded-full animate-spin mr-2"></div>
+                    <span className="text-xs sm:text-sm">Export en cours...</span>
+                  </div>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>

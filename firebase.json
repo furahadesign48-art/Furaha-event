@@ -24,15 +24,18 @@
     "rewrites": [
       {
         "source": "/v/**",
-        "function": "shareInvitation"
+        "function": "shareInvitation",
+        "region": "us-central1"
       },
       {
         "source": "/invite/**",
-        "function": "shareInvitation"
+        "function": "shareInvitation",
+        "region": "us-central1"
       },
       {
         "source": "/invitation/**",
-        "function": "shareInvitation"
+        "function": "shareInvitation",
+        "region": "us-central1"
       },
       {
         "source": "**",

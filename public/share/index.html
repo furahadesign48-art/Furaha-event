@@ -4,51 +4,178 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Invitation Spéciale</title>
+  <meta name="description" content="&nbsp;">
   <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Furaha Event">
+  <meta property="og:locale" content="fr_FR">
   <meta property="og:title" content="Invitation Spéciale">
-  <meta property="og:description" content="Célébrez avec nous ce moment spécial">
+  <meta property="og:description" content="&nbsp;">
   <meta property="og:image" content="https://furaha-event-831ca.web.app/assets/photo_couple-CGscjKL8.jpg">
   <meta property="og:image:secure_url" content="https://furaha-event-831ca.web.app/assets/photo_couple-CGscjKL8.jpg">
   <meta property="og:image:type" content="image/jpeg">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:width" content="1600">
+  <meta property="og:image:height" content="1200">
   <meta property="og:url" content="https://furaha-event-831ca.web.app/share/">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Invitation Spéciale">
-  <meta name="twitter:description" content="Célébrez avec nous ce moment spécial">
+  <meta name="twitter:description" content="&nbsp;">
   <meta name="twitter:image" content="https://furaha-event-831ca.web.app/assets/photo_couple-CGscjKL8.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; background: #f8fafc; color: #0f172a; }
-    .wrap { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-    .card { max-width: 680px; width: 100%; background: #fff; border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden; }
-    .media { position: relative; aspect-ratio: 16/9; background: #f1f5f9; }
-    .media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .content { padding: 20px; }
-    .title { font-weight: 700; font-size: 18px; margin: 0 0 8px; }
-    .desc { font-size: 14px; color: #334155; margin: 0 0 16px; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(to right, #f59e0b, #d97706); color: #fff; padding: 10px 16px; border-radius: 12px; text-decoration: none; font-weight: 600; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #ffffff;
+      color: #0f172a;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .bg-blobs {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 9999px;
+      filter: blur(64px);
+      opacity: 0.4;
+      animation: float 8s ease-in-out infinite;
+    }
+    .blob-1 {
+      width: 384px;
+      height: 384px;
+      background: #f59e0b1a;
+      top: 25%;
+      left: 25%;
+    }
+    .blob-2 {
+      width: 320px;
+      height: 320px;
+      background: #d946ef1a;
+      bottom: 33%;
+      right: 25%;
+      animation-delay: 2s;
+    }
+    .content {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo {
+      width: 192px;
+      height: auto;
+      margin-bottom: 32px;
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 0.2s forwards;
+    }
+    .dots {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #f59e0b, #d946ef);
+      opacity: 0;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+    .dot:nth-child(1) { animation-delay: 0s; }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    .loading-text {
+      font-size: 14px;
+      color: #64748b;
+      margin-top: 16px;
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 0.8s forwards;
+      font-weight: 400;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); opacity: 0.4; }
+      50% { transform: translateY(-40px) scale(1.1); opacity: 0.7; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0; transform: scale(0.6); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    .fallback-link {
+      position: absolute;
+      bottom: 24px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 0.6s ease-out 2s forwards;
+    }
+    .fallback-link a {
+      color: #f59e0b;
+      font-size: 12px;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .fallback-link a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <div class="media">
-        <img src="/assets/photo_couple-CGscjKL8.jpg" alt="Photo du couple">
+    <div class="bg-blobs">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+    </div>
+    <div class="content">
+      <img class="logo" src="/FURAHA-GOLD.png" alt="Furaha Logo" onerror="this.onerror=null;this.src='https://furaha-event-831ca.web.app/assets/FURAHA-GOLD-CAdZ807y.png';">
+      <div class="dots">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
       </div>
-      <div class="content">
-        <h1 class="title">Invitation Spéciale</h1>
-        <p class="desc">Cliquez ci-dessous pour voir votre invitation personnalisée.</p>
-        <a id="cta" class="btn" href="#" target="_blank" rel="noopener">Voir l'invitation</a>
-      </div>
+      <p class="loading-text">Chargement de votre invitation...</p>
+    </div>
+    <div class="fallback-link">
+      <a id="cta" href="#">Cliquez ici si la page ne s'ouvre pas</a>
     </div>
   </div>
   <script>
-    var params = new URLSearchParams(window.location.search);
-    var url = params.get('url');
-    if (url) {
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var url = params.get('url');
+      if (!url) {
+        url = '/';
+      }
       var cta = document.getElementById('cta');
       if (cta) cta.href = url;
-    }
+      setTimeout(function() {
+        try {
+          window.location.replace(url);
+        } catch (e) {
+          window.location.href = url;
+        }
+      }, 50);
+    })();
   </script>
 </body>
 </html>

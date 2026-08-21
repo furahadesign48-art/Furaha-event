@@ -21,6 +21,7 @@ export interface UserData {
   createdAt: string;
   photoURL?: string;
   invitationMessage?: string;
+  role?: 'admin' | 'user';
 }
 
 const ALLOW_PUBLIC_SIGNUP = (import.meta.env.VITE_ALLOW_PUBLIC_SIGNUP ?? 'false') === 'true';
