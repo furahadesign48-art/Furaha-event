@@ -13,11 +13,13 @@ import AuthModal from './components/AuthModal';
 import InvitationPreview from './components/InvitationPreview';
 import GuestCheckin from './components/GuestCheckin';
 import ProtectedRoute from './components/ProtectedRoute';
+import TestimonialsSection from './components/TestimonialsSection';
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
+import { cn } from './lib/utils';
 
 interface TemplateData {
   id: string;
@@ -129,7 +131,12 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0f17] font-elegant transition-colors duration-300">
+    <div className={cn(
+      "min-h-screen font-elegant transition-colors duration-500",
+      isDarkMode
+        ? "bg-[#0b0f17]"
+        : "bg-gradient-to-b from-amber-50 via-white to-amber-50"
+    )}>
       <Header 
         onLogin={handleLogin}
       />
@@ -140,13 +147,14 @@ function AppContent() {
         />
         <WhyChooseSection />
         <DemoVideoSection />
+        <TestimonialsSection />
       </main>
       <Footer />
-      
+
       {/* Modal d'authentification */}
       <AuthModal
         isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        onClose={() => { setShowAuthModal(false); setPendingTemplate(null); }}
         onSuccess={handleAuthSuccess}
       />
     </div>

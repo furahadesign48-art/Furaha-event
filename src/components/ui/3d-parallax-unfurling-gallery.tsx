@@ -17,6 +17,12 @@ export interface ParallaxGalleryItem {
   alt?: string;
 }
 
+const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v|ogg|ogv|avi|mkv|flv|wmv|3gp)(\?.*)?$/i;
+export function isVideoUrl(url: string | null | undefined): boolean {
+  if (!url) return false;
+  return VIDEO_EXT_RE.test(url.split('#')[0]);
+}
+
 interface ParallaxUnfurlingGalleryProps extends HTMLAttributes<HTMLDivElement> {
   items: ParallaxGalleryItem[];
   onImageClick?: (item: ParallaxGalleryItem, index: number) => void;
@@ -33,7 +39,8 @@ interface ImageCardProps {
 }
 
 const ImageCard = forwardRef<HTMLDivElement, ImageCardProps>(
-  ({ src, alt, onClick, index, isHovered }, ref) => {
+  ({ src, alt, onClick, index }, ref) => {
+    const isVideo = isVideoUrl(src);
     return (
       <div
         ref={ref}
@@ -43,22 +50,37 @@ const ImageCard = forwardRef<HTMLDivElement, ImageCardProps>(
           transformStyle: "preserve-3d",
         }}
       >
-        <img
-          src={src}
-          alt={alt || "Gallery Asset"}
-          loading="lazy"
-          className="w-full h-full object-cover transition-all duration-500 group-hover:scale-[1.06] group-hover:brightness-110 opacity-95 group-hover:opacity-100"
-          draggable={false}
-        />
-        {/* Premium darkening overlay (matches the reference look) */}
+        {isVideo ? (
+          <video
+            src={src}
+            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-[1.06] group-hover:brightness-110 opacity-95 group-hover:opacity-100"
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            draggable={false}
+          />
+        ) : (
+          <img
+            src={src}
+            alt={alt || "Gallery Asset"}
+            loading="lazy"
+            className="w-full h-full object-cover transition-all duration-500 group-hover:scale-[1.06] group-hover:brightness-110 opacity-95 group-hover:opacity-100"
+            draggable={false}
+          />
+        )}
+        {isVideo && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/55 backdrop-blur-md border border-white/25 text-white shadow-lg transition-transform duration-300 group-hover:scale-110 group-hover:bg-black/70">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="translate-x-[1px]"><path d="M8 5v14l11-7z" /></svg>
+            </div>
+          </div>
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-black/30 pointer-events-none transition-opacity duration-300 group-hover:from-black/20 group-hover:via-black/0 group-hover:to-black/10" />
-        {/* Subtle frame */}
         <div className="absolute inset-0 ring-1 ring-black/60 pointer-events-none" />
-        {/* Top-left index tag (optional subtle) */}
         <div className="absolute top-2 left-2 text-[9px] tracking-[0.2em] font-bold text-white/60 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
           0{index + 1}
         </div>
-        {/* Hover shine accent */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
       </div>
     );
@@ -366,13 +388,32 @@ const ParallaxUnfurlingGallery = forwardRef<
                           transform: `rotate(${rot}deg) translateY(${yShift}px)`,
                         }}
                       >
-                        <img
-                          src={it.src}
-                          alt={it.alt || `Photo ${i + 1}`}
-                          loading="lazy"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                          draggable={false}
-                        />
+                        {isVideoUrl(it.src) ? (
+                          <video
+                            src={it.src}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            muted
+                            loop
+                            playsInline
+                            preload="metadata"
+                            draggable={false}
+                          />
+                        ) : (
+                          <img
+                            src={it.src}
+                            alt={it.alt || `Photo ${i + 1}`}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            draggable={false}
+                          />
+                        )}
+                        {isVideoUrl(it.src) && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center bg-black/60 backdrop-blur-md border border-white/25 text-white shadow-lg">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" className="translate-x-[2px]"><path d="M8 5v14l11-7z" /></svg>
+                            </div>
+                          </div>
+                        )}
                         {/* Dark overlay same tone as desktop */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-black/30 pointer-events-none" />
                         <div className="absolute inset-0 rounded-xl sm:rounded-2xl ring-1 ring-black/60 pointer-events-none" />

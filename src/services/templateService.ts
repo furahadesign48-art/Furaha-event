@@ -25,13 +25,19 @@ export interface TemplateData {
   guestInfoLeftImage?: string;
   guestInfoRightImage?: string;
   invitationPhoto?: string;
+  invitationVideo?: string;
   eventPhotos?: string[];
+  eventVideos?: string[];
   eventPhoto1?: string;
   eventPhoto2?: string;
   eventPhoto3?: string;
+  eventVenuePhoto?: string;
   invitationTextPhoto?: string;
   invitationTextPhotoTitle?: string;
   invitationTextPhotoSubtitle?: string;
+  invitationTextPhoto2?: string;
+  invitationTextPhoto2Title?: string;
+  invitationTextPhoto2Subtitle?: string;
   invitationTitleSubtitle?: string;
   title: string;
   invitationText: string;
@@ -60,6 +66,17 @@ export interface TemplateData {
   rsvpDrinksSectionBackground?: string;
   gamesSectionBackground?: string;
   qrFooterSectionBackground?: string;
+  // Section visibility toggles (header & QR are always visible)
+  couplePhotoEnabled?: boolean;
+  invitationTextEnabled?: boolean;
+  countdownEnabled?: boolean;
+  galleryEnabled?: boolean;
+  rsvpEnabled?: boolean;
+  drinksEnabled?: boolean;
+  gamesEnabled?: boolean;
+  guestBookEnabled?: boolean;
+  notificationEnabled?: boolean;
+  fallingDotsEnabled?: boolean;
 }
 
 export interface UserModel extends TemplateData {
@@ -373,33 +390,52 @@ export class UserModelService {
 
   // Créer un modèle utilisateur
   static async createUserModel(
-    userId: string, 
+    userId: string,
     originalTemplate: TemplateData,
     customizations?: Partial<UserModel>
   ): Promise<string> {
     try {
       const modelId = `model_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
+      const baseCustomizations = {
+        colors: originalTemplate.colors || {
+          primary: '#f59e0b',
+          secondary: '#d97706',
+          accent: '#f43f5e'
+        },
+        fonts: {
+          title: 'Playfair Display',
+          body: 'Inter'
+        },
+        layout: 'default' as 'default' | 'book' | string
+      };
+
+      const mergedCustomizations = customizations?.customizations
+        ? {
+            ...baseCustomizations,
+            ...customizations.customizations,
+            colors: {
+              ...baseCustomizations.colors,
+              ...(customizations.customizations.colors || {})
+            },
+            fonts: {
+              ...baseCustomizations.fonts,
+              ...(customizations.customizations.fonts || {})
+            }
+          }
+        : baseCustomizations;
+
+      const { customizations: _ignored, ...restCustomizations } = customizations || {};
+
       const userModel: UserModel = {
         ...originalTemplate,
         id: modelId,
         userId,
         originalTemplateId: originalTemplate.id,
-        customizations: {
-          colors: originalTemplate.colors || {
-            primary: '#f59e0b',
-            secondary: '#d97706',
-            accent: '#f43f5e'
-          },
-          fonts: {
-            title: 'Playfair Display',
-            body: 'Inter'
-          },
-          layout: 'default'
-        },
+        customizations: mergedCustomizations,
         createdAt: serverTimestamp() as Timestamp,
         updatedAt: serverTimestamp() as Timestamp,
-        ...customizations
+        ...restCustomizations
       };
 
       // Sauvegarder dans users/{userId}/UserModel/{modelId}
@@ -748,7 +784,9 @@ export class InviteService {
   static async createGuestMessage(
     userId: string,
     inviteId: string,
-    content: string
+    content: string,
+    audioUrl?: string,
+    audioDuration?: number
   ): Promise<string> {
     try {
       const messageId = `message_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -756,7 +794,7 @@ export class InviteService {
       const inviteSnap = await getDoc(inviteRef);
       const authorName = inviteSnap.exists() ? (inviteSnap.data().nom as string) : 'Invité';
       const messageRef = doc(db, this.USERS_COLLECTION, userId, 'invites', inviteId, 'guestMessages', messageId);
-      await setDoc(messageRef, {
+      const data: any = {
         id: messageId,
         inviteId,
         authorName,
@@ -765,7 +803,10 @@ export class InviteService {
         likes: [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+      if (audioUrl) data.audioUrl = audioUrl;
+      if (audioDuration) data.audioDuration = audioDuration;
+      await setDoc(messageRef, data);
       console.log('Message du livre d\'or créé:', messageId);
       return messageId;
     } catch (error) {
@@ -776,11 +817,11 @@ export class InviteService {
 
   static async getAllGuestMessages(
     userId: string
-  ): Promise<Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_field' | 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }>> {
+  ): Promise<Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_field' | 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }>> {
     try {
       const invitesRef = collection(db, this.USERS_COLLECTION, userId, 'invites');
       const invitesSnap = await getDocs(invitesRef);
-      const results: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_field' | 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }> = [];
+      const results: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_field' | 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }> = [];
       for (const inv of invitesSnap.docs) {
         const invId = inv.id;
         const invData = inv.data();
@@ -807,7 +848,7 @@ export class InviteService {
         const msgsRef = collection(db, this.USERS_COLLECTION, userId, 'invites', invId, 'guestMessages');
         const msgsSnap = await getDocs(msgsRef);
         for (const m of msgsSnap.docs) {
-          const d = m.data() as { createdAt?: Timestamp; authorName?: string; content?: string; likes?: string[] };
+          const d = m.data() as { createdAt?: Timestamp; authorName?: string; content?: string; likes?: string[]; audioUrl?: string; audioDuration?: number };
           const created = d.createdAt instanceof Timestamp ? d.createdAt.toDate().toISOString() : new Date().toISOString();
           const repliesRef = collection(db, this.USERS_COLLECTION, userId, 'invites', invId, 'guestMessages', m.id, 'replies');
           const repliesSnap = await getDocs(repliesRef);
@@ -820,7 +861,9 @@ export class InviteService {
             likes: Array.isArray(d.likes) ? d.likes : [],
             source: 'new_collection',
             replyCount: repliesSnap.size,
-            guestType: invType
+            guestType: invType,
+            audioUrl: d.audioUrl,
+            audioDuration: d.audioDuration
           });
         }
         for (const m of legacyMsgsSnap.docs) {
@@ -842,7 +885,7 @@ export class InviteService {
         }
       }
       results.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-      return results.filter((r) => r.message && r.message.trim());
+      return results.filter((r) => (r.message && r.message.trim()) || r.audioUrl);
     } catch (error) {
       console.error('Erreur lors du chargement des messages du livre d\'or:', error);
       throw new Error('Impossible de charger les messages');
@@ -1159,15 +1202,15 @@ export class InviteService {
 
   static subscribeAllGuestMessages(
     userId: string,
-    onUpdate: (messages: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }>) => void
+    onUpdate: (messages: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }>) => void
   ): () => void {
     const invitesRef = collection(db, this.USERS_COLLECTION, userId, 'invites');
     const subUnsubs: Record<string, Array<() => void>> = {};
-    const messagesByInvite: Record<string, Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }>> = {};
+    const messagesByInvite: Record<string, Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }>> = {};
     const replyCounts: Record<string, number> = {};
 
     const recompute = () => {
-      const all: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }> = [];
+      const all: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }> = [];
       Object.values(messagesByInvite).forEach((arr) => all.push(...arr));
       all.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       onUpdate(all);
@@ -1198,7 +1241,7 @@ export class InviteService {
 
         const legacyRef = collection(db, this.USERS_COLLECTION, userId, 'invites', invId, 'message');
         const unsubLegacy = onSnapshot(legacyRef, (legacySnap) => {
-          const arr: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }> = [];
+          const arr: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }> = [];
           for (const docSnap of legacySnap.docs) {
             const d = docSnap.data() as { createdAt?: Timestamp; authorName?: string; content?: string; likes?: string[] };
             const created = d.createdAt instanceof Timestamp ? d.createdAt.toDate().toISOString() : new Date().toISOString();
@@ -1231,12 +1274,12 @@ export class InviteService {
 
         const newRef = collection(db, this.USERS_COLLECTION, userId, 'invites', invId, 'guestMessages');
         const unsubNew = onSnapshot(newRef, (newSnap) => {
-          const arr: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple' }> = [];
+          const arr: Array<{ id: string; inviteId: string; nom: string; message: string; timestamp: string; likes: string[]; source: 'legacy_collection' | 'new_collection'; replyCount: number; guestType?: 'simple' | 'couple'; audioUrl?: string; audioDuration?: number }> = [];
           for (const docSnap of newSnap.docs) {
-            const d = docSnap.data() as { createdAt?: Timestamp; authorName?: string; content?: string; likes?: string[] };
+            const d = docSnap.data() as { createdAt?: Timestamp; authorName?: string; content?: string; likes?: string[]; audioUrl?: string; audioDuration?: number };
             const created = d.createdAt instanceof Timestamp ? d.createdAt.toDate().toISOString() : new Date().toISOString();
             const key = `${invId}:${docSnap.id}`;
-            arr.push({
+            const obj: any = {
               id: docSnap.id,
               inviteId: invId,
               nom: d.authorName ?? invName,
@@ -1246,12 +1289,15 @@ export class InviteService {
               source: 'new_collection',
               replyCount: replyCounts[key] || 0,
               guestType: invType
-            });
+            };
+            if (d.audioUrl) obj.audioUrl = d.audioUrl;
+            if (d.audioDuration) obj.audioDuration = d.audioDuration;
+            arr.push(obj);
             const repliesRef = collection(db, this.USERS_COLLECTION, userId, 'invites', invId, 'guestMessages', docSnap.id, 'replies');
             const unsubReplies = onSnapshot(repliesRef, (rs) => {
               replyCounts[key] = rs.size;
               const current = messagesByInvite[invId] || [];
-              messagesByInvite[invId] = current.map((m) => m.id === docSnap.id && m.source === 'new_collection' ? { ...m, replyCount: replyCounts[key] } : m);
+              messagesByInvite[invId] = current.map((m) => m.id === docSnap.id && m.source === 'new_collection' ? { ...m, replyCount: replyCounts[key], audioUrl: (m as any).audioUrl, audioDuration: (m as any).audioDuration } : m);
               recompute();
             });
             subUnsubs[invId].push(unsubReplies);

@@ -1,0 +1,219 @@
+// --- PHOTO VIEWER COMPONENT ---
+const PhotoViewer: React.FC<{
+  photos: string[];
+  initialPhoto: string;
+  onClose: () => void;
+  optimizeImage: (url: string, w: number, q?: number) => string;
+  themeColors: {
+    primary: string;
+    secondary: string;
+    accent?: string;
+  };
+}> = ({ photos, initialPhoto, onClose, optimizeImage, themeColors }) => {
+  const [loaded, setLoaded] = useState(false);
+  const [entered, setEntered] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const mountedRef = useRef(false);
+  const [currentIndex, setCurrentIndex] = useState<number>(() => Math.max(0, photos.indexOf(initialPhoto)));
+  const [isPlaying, setIsPlaying] = useState(true);
+  const playIntervalRef = useRef<number | null>(null);
+
+  const { primary, secondary } = themeColors;
+  const accent = themeColors.accent || secondary;
+
+  const lighter = (hex: string, amt = 0.22) => {
+    try {
+      const c = hex.replace("#", "");
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      const nr = Math.min(255, Math.round(r + (255 - r) * amt));
+      const ng = Math.min(255, Math.round(g + (255 - g) * amt));
+      const nb = Math.min(255, Math.round(b + (255 - b) * amt));
+      return `rgb(${nr}, ${ng}, ${nb})`;
+    } catch {
+      return hex;
+    }
+  };
+  const darker = (hex: string, amt = 0.2) => {
+    try {
+      const c = hex.replace("#", "");
+      const r = parseInt(c.substring(0, 2), 16);
+      const g = parseInt(c.substring(2, 4), 16);
+      const b = parseInt(c.substring(4, 6), 16);
+      const nr = Math.max(0, Math.round(r * (1 - amt)));
+      const ng = Math.max(0, Math.round(g * (1 - amt)));
+      const nb = Math.max(0, Math.round(b * (1 - amt)));
+      return `rgb(${nr}, ${ng}, ${nb})`;
+    } catch {
+      return hex;
+    }
+  };
+
+  const glow1 = lighter(primary, 0.35);
+  const glow2 = lighter(secondary, 0.35);
+  const glow3 = accent ? lighter(accent, 0.45) : lighter(primary, 0.5);
+  const shadowColor1 = darker(primary, 0.05);
+  const shadowColor2 = darker(secondary, 0.08);
+
+  const safeIndex = (photos.length > 0 && currentIndex >= 0 && currentIndex < photos.length) ? currentIndex : 0;
+  const currentPhoto = photos[safeIndex] || initialPhoto;
+  const isVideo = isVideoUrl(currentPhoto);
+
+  const nextSlide = useCallback(() => {
+    setCurrentIndex((prev) => (photos.length <= 1 ? prev : (prev + 1) % photos.length));
+  }, [photos.length]);
+
+  const prevSlide = useCallback(() => {
+    setCurrentIndex((prev) => (photos.length <= 1 ? prev : (prev - 1 + photos.length) % photos.length));
+  }, [photos.length]);
+
+  const stopAutoPlay = useCallback(() => {
+    if (playIntervalRef.current !== null) {
+      window.clearInterval(playIntervalRef.current);
+      playIntervalRef.current = null;
+    }
+  }, []);
+
+  const startAutoPlay = useCallback(() => {
+    stopAutoPlay();
+    playIntervalRef.current = window.setInterval(() => {
+      nextSlide();
+    }, 4000);
+  }, [stopAutoPlay, nextSlide]);
+
+  useEffect(() => {
+    if (isPlaying && !isVideo && photos.length > 1) {
+      startAutoPlay();
+    } else {
+      stopAutoPlay();
+    }
+    return stopAutoPlay;
+  }, [isPlaying, isVideo, photos.length, startAutoPlay, stopAutoPlay]);
+
+  const finalSrc = isVideo ? currentPhoto : useMemo(
+    () => optimizeImage(currentPhoto, 1600, 85),
+    [currentPhoto, optimizeImage]
+  );
+
+  const handleClose = useCallback(() => {
+    if (closing) return;
+    stopAutoPlay();
+    setClosing(true);
+    window.setTimeout(() => {
+      if (mountedRef.current) onClose();
+    }, 520);
+  }, [closing, onClose, stopAutoPlay]);
+
+  useEffect(() => {
+    setLoaded(false);
+    mountedRef.current = true;
+    if (isVideo) {
+      setLoaded(true);
+    } else {
+      try {
+        const img = new Image();
+        img.src = finalSrc;
+        img.onload = () => { if (mountedRef.current) setLoaded(true); };
+        img.onerror = () => { if (mountedRef.current) setLoaded(true); };
+      } catch {}
+    }
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setEntered(true));
+      });
+    });
+    return () => {
+      mountedRef.current = false;
+      cancelAnimationFrame(raf);
+    };
+  }, [finalSrc, isVideo]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+      else if (e.key === "ArrowRight") nextSlide();
+      else if (e.key === "ArrowLeft") prevSlide();
+      else if (e.key === " " || e.code === "Space") { e.preventDefault(); setIsPlaying((p) => !p); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleClose, nextSlide, prevSlide]);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    const prevTouch = document.body.style.touchAction as string | undefined;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    return () => {
+      document.body.style.overflow = prev;
+      if (prevTouch !== undefined) document.body.style.touchAction = prevTouch;
+      else (document.body.style as any).touchAction = "";
+    };
+  }, []);
+
+  const show = entered && !closing;
+  const enterFactor = show ? 1 : 0;
+
+  return (
+    <div
+      className={"fixed inset-0 z-[110] flex items-center justify-center will-change-[backdrop-filter,opacity,background-color] "}
+      onClick={handleClose}
+      style={{
+        opacity: enterFactor,
+        transition: "opacity 520ms cubic-bezier(0.22, 1, 0.36, 1), backdrop-filter 620ms cubic-bezier(0.22, 1, 0.36, 1), background-color 620ms cubic-bezier(0.22, 1, 0.36, 1), -webkit-backdrop-filter 620ms cubic-bezier(0.22, 1, 0.36, 1)",
+        backdropFilter: show ? `blur(30px) saturate(145%)` : `blur(0px) saturate(100%)`,
+        WebkitBackdropFilter: show ? `blur(30px) saturate(145%)` : `blur(0px) saturate(100%)`,
+        backgroundColor: show ? "rgba(0,0,0,0.74)" : "rgba(0,0,0,0)",
+        backgroundImage: show ? `radial-gradient(ellipse at center, ${darker(primary, 0.82)} 0%, rgba(0,0,0,0.88) 100%)` : "none",
+      }}
+    >
+      <div aria-hidden className="absolute inset-0 pointer-events-none overflow-hidden" style={{ opacity: 0.55 * enterFactor, transition: "opacity 600ms ease-out" }}>
+        <div className="absolute -top-24 -left-20 w-[30rem] h-[30rem] rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${glow1} 0%, transparent 68%)` }} />
+        <div className="absolute -bottom-28 -right-14 w-[34rem] h-[34rem] rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${glow2} 0%, transparent 68%)` }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[28rem] h-[28rem] rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${glow3} 0%, transparent 72%)` }} />
+      </div>
+
+      <button onClick={(e) => { e.stopPropagation(); handleClose(); }} className="absolute top-4 sm:top-6 right-4 sm:right-6 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white z-[120] will-change-transform active:scale-95" style={{ opacity: 0.2 + 0.8 * enterFactor, transform: `scale(${0.7 + 0.3 * enterFactor})`, transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: `1px solid ${lighter(primary, 0.5)}33`, boxShadow: `0 10px 30px -10px ${darker(primary, 0.3)}66, 0 8px 24px -12px rgba(0,0,0,0.55)` }} onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.18)"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)"; }} aria-label="Fermer">
+        <X className="h-6 w-6 sm:h-7 sm:w-7" />
+      </button>
+
+      {photos.length > 1 && (
+        <>
+          <button onClick={(e) => { e.stopPropagation(); prevSlide(); }} className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white z-[120] will-change-transform active:scale-95 hover:bg-white/20 transition-colors" style={{ opacity: 0.2 + 0.8 * enterFactor, transform: `translateY(-50%) scale(${0.7 + 0.3 * enterFactor})`, transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: `1px solid ${lighter(primary, 0.5)}33`, boxShadow: `0 10px 30px -10px ${darker(primary, 0.3)}66` }} aria-label="Précédent">
+            <ChevronLeft className="h-6 w-6 sm:h-8 sm:w-8" />
+          </button>
+
+          <button onClick={(e) => { e.stopPropagation(); nextSlide(); }} className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white z-[120] will-change-transform active:scale-95 hover:bg-white/20 transition-colors" style={{ opacity: 0.2 + 0.8 * enterFactor, transform: `translateY(-50%) scale(${0.7 + 0.3 * enterFactor})`, transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: `1px solid ${lighter(primary, 0.5)}33`, boxShadow: `0 10px 30px -10px ${darker(primary, 0.3)}66` }} aria-label="Suivant">
+            <ChevronRight className="h-6 w-6 sm:h-8 sm:w-8" />
+          </button>
+
+          <button onClick={(e) => { e.stopPropagation(); setIsPlaying((p) => !p); }} disabled={isVideo} className="absolute top-4 sm:top-6 left-4 sm:left-6 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white z-[120] will-change-transform active:scale-95" style={{ opacity: isVideo ? 0.4 : (0.2 + 0.8 * enterFactor), transform: `scale(${0.7 + 0.3 * enterFactor})`, transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out, box-shadow 200ms ease-out", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)", border: `1px solid ${lighter(primary, 0.5)}33`, boxShadow: `0 10px 30px -10px ${darker(primary, 0.3)}66`, cursor: isVideo ? 'not-allowed' : 'pointer' }} onMouseEnter={(e) => { if (!isVideo) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.18)"; }} onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "rgba(255,255,255,0.1)"; }} aria-label={isPlaying ? "Pause diaporama" : "Lecture diaporama"}>
+            {isPlaying ? <Pause className="h-5 w-5 sm:h-6 sm:w-6" /> : <Play className="h-5 w-5 sm:h-6 sm:w-6" />}
+          </button>
+
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full text-white text-sm font-poppins z-[120] flex items-center gap-3" style={{ opacity: 0.2 + 0.8 * enterFactor, transform: `translateX(-50%) translateY(${6 * (1 - enterFactor)}px)`, transition: "transform 520ms cubic-bezier(0.22, 1, 0.36, 1), opacity 420ms ease-out, background-color 200ms ease-out", background: "rgba(0,0,0,0.45)", backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: `1px solid rgba(255,255,255,0.1)` }}>
+            <span>{safeIndex + 1}</span>
+            <span className="opacity-60">/</span>
+            <span className="opacity-80">{photos.length}</span>
+          </div>
+        </>
+      )}
+
+      <div className="relative px-3 sm:px-6 md:px-10 py-4 sm:py-8 max-w-full max-h-full flex items-center justify-center z-[115] will-change-transform" style={{ transform: `scale(${0.7 + 0.3 * enterFactor}) translateY(${(-18) * (1 - enterFactor)}px)`, opacity: 0.15 + 0.85 * enterFactor, transformOrigin: "center center", transition: "transform 700ms cubic-bezier(0.22, 1, 0.36, 1), opacity 520ms ease-out" }} onClick={(e) => e.stopPropagation()}>
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden" style={{ boxShadow: show ? `0 45px 140px -20px ${shadowColor1}55, 0 30px 80px -18px ${shadowColor2}55, 0 25px 70px -12px rgba(0,0,0,0.85)` : "0 10px 30px -10px rgba(0,0,0,0.5)", border: `1px solid ${lighter(primary, 0.55)}22`, transition: "box-shadow 700ms cubic-bezier(0.22, 1, 0.36, 1), border-color 500ms ease-out" }}>
+          {!loaded && (<div className="absolute inset-0 rounded-2xl sm:rounded-3xl z-10" style={{ background: `linear-gradient(90deg, ${lighter(primary, 0.75)}10, ${lighter(secondary, 0.7)}22, ${lighter(primary, 0.75)}10)`, backgroundSize: "200% 100%", animation: "shimmerX 1.6s ease-in-out infinite", opacity: enterFactor, transition: "opacity 300ms ease-out" }} />)}
+          {isVideo ? (
+            <video key={currentPhoto} src={finalSrc} controls autoPlay playsInline muted loop className={"max-w-full w-auto h-auto object-contain select-none will-change-[opacity,transform] bg-black"} style={{ maxHeight: "min(84vh, 900px)", transform: `scale(${0.96 + 0.04 * (loaded ? enterFactor : 0.2)})`, opacity: loaded ? (0.4 + 0.6 * enterFactor) : 0, filter: `saturate(${0.92 + 0.08 * enterFactor}) contrast(${0.96 + 0.04 * enterFactor})`, transition: "opacity 480ms ease-out, transform 820ms cubic-bezier(0.22, 1, 0.36, 1), filter 620ms ease-out" }} />
+          ) : (
+            <img key={currentPhoto} src={finalSrc} alt={`Agrandissement photo ${safeIndex + 1}/${photos.length}`} onLoad={() => setLoaded(true)} onError={() => setLoaded(true)} className={"max-w-full w-auto h-auto object-contain select-none will-change-[opacity,transform] "} style={{ maxHeight: "min(84vh, 900px)", transform: `scale(${0.96 + 0.04 * (loaded ? enterFactor : 0.2)})`, opacity: loaded ? (0.4 + 0.6 * enterFactor) : 0, filter: `saturate(${0.92 + 0.08 * enterFactor}) contrast(${0.96 + 0.04 * enterFactor})`, transition: "opacity 480ms ease-out, transform 820ms cubic-bezier(0.22, 1, 0.36, 1), filter 620ms ease-out" }} draggable={false} loading="eager" decoding="async" />
+          )}
+          <div className="absolute inset-0 pointer-events-none rounded-2xl sm:rounded-3xl" style={{ boxShadow: `inset 0 0 140px ${darker(primary, 0.8)}33, inset 0 0 60px rgba(0,0,0,0.3)`, opacity: enterFactor, transition: "opacity 520ms ease-out" }} />
+        </div>
+      </div>
+
+      <style>{`@keyframes shimmerX { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+    </div>
+  );
+};
+

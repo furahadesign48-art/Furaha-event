@@ -1,368 +1,288 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   Sparkles,
   Heart,
   CheckCircle2,
   Users,
-  Camera,
-  Timer,
-  CheckSquare,
-  MessageSquareHeart,
-  Gamepad2,
+  Clock,
+  MessageCircle,
 } from 'lucide-react';
-import { CinematicHero } from './ui/cinematic-landing-hero';
+import { cn } from '../lib/utils';
 
-const InvitationMockup = () => {
+const PhoneMockup = ({ 
+  src, 
+  className,
+  alt = "Modèle d'invitation",
+  variant = 'black',
+  size = 'md',
+}: { 
+  src: string; 
+  className?: string;
+  alt?: string;
+  variant?: 'black' | 'white';
+  size?: 'sm' | 'md' | 'lg';
+}) => {
+  const sizes = {
+    sm: { w: 200, h: 400, screenR: '30px', frameR: '38px', notchW: 90, notchH: 22 },
+    md: { w: 220, h: 440, screenR: '34px', frameR: '42px', notchW: 96, notchH: 24 },
+    lg: { w: 260, h: 520, screenR: '40px', frameR: '50px', notchW: 120, notchH: 28 },
+  };
+  const s = sizes[size];
+
+  const frameBg = variant === 'white' 
+    ? 'linear-gradient(180deg, #f5f5f5 0%, #e5e5e5 25%, #d4d4d4 55%, #c0c0c0 85%, #a8a8a8 100%)'
+    : 'linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 50%, #0f0f0f 100%)';
+  const notchBg = variant === 'white' ? '#1f1f1f' : '#0a0a0a';
+  const outerBorder = variant === 'white'
+    ? '0 0 0 1px rgba(255,255,255,0.85), 0 0 0 2px rgba(0,0,0,0.15), 0 2px 0 rgba(255,255,255,0.5) inset, 0 -2px 0 rgba(0,0,0,0.1) inset'
+    : '0 0 0 1px rgba(251,191,36,0.18)';
+
   return (
-    <div className="relative">
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-[92%] h-[72%] pointer-events-none blur-3xl opacity-75"
+    <div className={cn("relative", className)}>
+      <div 
+        className="relative p-[10px] shadow-2xl" 
         style={{
-          background:
-            'radial-gradient(ellipse at center, rgba(251,191,36,0.45) 0%, rgba(251,191,36,0.18) 35%, rgba(251,191,36,0) 70%)',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-full h-32 pointer-events-none blur-3xl opacity-55"
-        style={{
-          background:
-            'radial-gradient(ellipse at center, rgba(236,72,153,0.22) 0%, rgba(236,72,153,0) 70%)',
-        }}
-      />
-
-      <div
-        className="relative rounded-xl overflow-hidden widget-depth"
-        style={{
-          background:
-            'linear-gradient(180deg, #0f1420 0%, #0b0f17 100%)',
-        }}
-      >
-        <div className="flex items-center justify-between px-4 h-11 border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#ff5f56] shadow-inner" />
-            <div className="w-3 h-3 rounded-full bg-[#ffbd2e] shadow-inner" />
-            <div className="w-3 h-3 rounded-full bg-[#27c93f] shadow-inner" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Heart className="w-3.5 h-3.5 text-amber-300/80 fill-amber-300/70" />
-            <span className="font-mono text-[11px] text-white/55">
-              preview · mariage ·{' '}
-              <span style={{ color: '#fcd34d' }}>invitation</span>
-            </span>
-          </div>
-          <div className="w-[52px]" />
+          width: `${s.w}px`,
+          height: `${s.h}px`,
+          borderRadius: s.frameR,
+          background: frameBg,
+          boxShadow: `0 30px 80px -20px rgba(0,0,0,0.75), ${outerBorder}`,
+        }}>
+        <div 
+          className="absolute left-1/2 z-20 rounded-full"
+          style={{
+            top: '10px',
+            transform: 'translateX(-50%)',
+            width: `${s.notchW}px`,
+            height: `${s.notchH}px`,
+            background: notchBg,
+          }} 
+        />
+        <div 
+          className="w-full h-full overflow-hidden"
+          style={{
+            borderRadius: s.screenR,
+            background: '#000',
+          }}>
+          <img 
+            src={src} 
+            alt={alt}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
         </div>
-
-        <div className="grid grid-cols-12">
-          <div className="col-span-6 md:col-span-5 p-4 sm:p-5 border-r border-white/5">
-            <div className="text-[11px] font-mono text-white/40 uppercase tracking-wider mb-3">
-              Contenu de l'invitation
-            </div>
-            <div className="space-y-2.5">
-              {[
-                { icon: Heart, label: "Page d'accueil & noms", ok: true },
-                { icon: Timer, label: 'Compte à rebours', ok: true },
-                { icon: Users, label: 'Date, lieu & plan', ok: true },
-                { icon: Camera, label: 'Galerie 3D photos', ok: true },
-                { icon: CheckSquare, label: 'RSVP + boissons', ok: true },
-                {
-                  icon: MessageSquareHeart,
-                  label: "Livre d'or interactif",
-                  ok: true,
-                },
-                { icon: Gamepad2, label: 'Quiz, Memory, jeux', ok: true },
-                {
-                  icon: Sparkles,
-                  label: 'Check-in QR Code',
-                  ok: false,
-                  wip: true,
-                },
-              ].map((row) => (
-                <div
-                  key={row.label}
-                  className="flex items-center gap-2.5 px-3 py-2.5 rounded-md"
-                  style={{
-                    background: row.wip
-                      ? 'rgba(251,191,36,0.05)'
-                      : 'rgba(255,255,255,0.02)',
-                    border: row.wip
-                      ? '1px dashed rgba(251,191,36,0.25)'
-                      : '1px solid rgba(255,255,255,0.05)',
-                  }}
-                >
-                  <div
-                    className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-                    style={{
-                      background: row.ok
-                        ? 'linear-gradient(145deg, rgba(251,191,36,0.22), rgba(251,191,36,0.06))'
-                        : 'rgba(255,255,255,0.04)',
-                      border: row.ok
-                        ? '1px solid rgba(251,191,36,0.30)'
-                        : '1px solid rgba(255,255,255,0.06)',
-                    }}
-                  >
-                    {row.ok ? (
-                      <CheckCircle2
-                        className="w-3.5 h-3.5"
-                        style={{ color: '#fbbf24' }}
-                      />
-                    ) : (
-                      <row.icon
-                        className="w-3.5 h-3.5"
-                        style={{ color: '#fcd34d', opacity: 0.7 }}
-                      />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-[12.5px] font-medium truncate"
-                      style={{
-                        color: row.ok
-                          ? '#ffffff'
-                          : 'rgba(255,255,255,0.65)',
-                      }}
-                    >
-                      {row.label}
-                    </div>
-                  </div>
-                  {row.wip && (
-                    <span
-                      className="px-2 py-0.5 rounded-full text-[9.5px] font-bold uppercase tracking-wider"
-                      style={{
-                        background: 'rgba(251,191,36,0.12)',
-                        color: '#fcd34d',
-                        border: '1px solid rgba(251,191,36,0.28)',
-                      }}
-                    >
-                      Live
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="col-span-6 md:col-span-7 p-3 sm:p-4 bg-[#0a0d14]">
-            <div
-              className="relative h-full rounded-lg overflow-hidden flex flex-col"
-              style={{
-                border: '1px solid rgba(251,191,36,0.30)',
-                background:
-                  'radial-gradient(ellipse at top, rgba(251,191,36,0.22), transparent 55%), linear-gradient(180deg, #121827 0%, #0a0d14 100%)',
-              }}
-            >
-              <div className="flex justify-center pt-2">
-                <div className="h-1.5 w-14 rounded-full bg-black/50" />
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center px-3 py-3 text-center">
-                <div
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center mb-2.5"
-                  style={{
-                    background: 'linear-gradient(145deg, #fbbf24, #b45309)',
-                    boxShadow: '0 10px 28px -10px rgba(251,191,36,0.85)',
-                  }}
-                >
-                  <Heart className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-                </div>
-                <div
-                  className="font-serif tracking-[0.22em] uppercase mb-1"
-                  style={{ color: 'rgba(253,230,138,0.95)', fontSize: '11px' }}
-                >
-                  Save the date
-                </div>
-                <div
-                  className="text-white font-extrabold leading-tight mb-1"
-                  style={{ fontSize: '17px' }}
-                >
-                  Sarah
-                  <span style={{ color: '#fbbf24' }} className="mx-0.5">
-                    &
-                  </span>
-                  Malik
-                </div>
-                <div
-                  className="text-white/45 mb-2.5"
-                  style={{ fontSize: '10px' }}
-                >
-                  14 · 06 · 2026 · Château des Lumières
-                </div>
-                <div className="flex flex-wrap justify-center gap-1 mb-2.5">
-                  {[
-                    { i: Camera, l: 'Galerie' },
-                    { i: Users, l: 'RSVP' },
-                    { i: Heart, l: "Livre d'or" },
-                    { i: Gamepad2, l: 'Jeux' },
-                  ].map((p) => (
-                    <div
-                      key={p.l}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full"
-                      style={{
-                        background: 'rgba(251,191,36,0.11)',
-                        border: '1px solid rgba(251,191,36,0.26)',
-                      }}
-                    >
-                      <p.i
-                        className="w-2.5 h-2.5"
-                        style={{ color: '#fbbf24' }}
-                      />
-                      <span
-                        className="font-medium"
-                        style={{
-                          fontSize: '9px',
-                          color: 'rgba(253,230,138,0.92)',
-                        }}
-                      >
-                        {p.l}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div
-                  className="w-full h-8 rounded-md flex items-center justify-center"
-                  style={{
-                    background:
-                      'linear-gradient(180deg, rgba(251,191,36,0.24), rgba(251,191,36,0.08))',
-                    border: '1px solid rgba(251,191,36,0.32)',
-                  }}
-                >
-                  <Sparkles
-                    className="w-3 h-3 mr-1.5"
-                    style={{ color: '#fcd34d' }}
-                  />
-                  <span
-                    className="font-bold"
-                    style={{ fontSize: '10.5px', color: '#fde68a' }}
-                  >
-                    Ouvrir l'invitation
-                  </span>
-                </div>
-              </div>
-              <div
-                className="mx-3 mb-3 h-5 rounded-md"
-                style={{
-                  background:
-                    'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01))',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              />
-            </div>
-          </div>
-        </div>
+        <div 
+          className="absolute rounded-l"
+          style={{ 
+            left: '-3px', 
+            top: '18%', 
+            width: '3px', 
+            height: '8%', 
+            background: variant === 'white' ? '#9a9a9a' : '#333' 
+          }} 
+        />
+        <div 
+          className="absolute rounded-l"
+          style={{ 
+            left: '-3px', 
+            top: '30%', 
+            width: '3px', 
+            height: '14%', 
+            background: variant === 'white' ? '#9a9a9a' : '#333' 
+          }} 
+        />
+        <div 
+          className="absolute rounded-r"
+          style={{ 
+            right: '-3px', 
+            top: '24%', 
+            width: '3px', 
+            height: '12%', 
+            background: variant === 'white' ? '#9a9a9a' : '#333' 
+          }} 
+        />
       </div>
     </div>
   );
 };
 
-const TrustBadges = () => {
-  return (
-    <>
-      <div
-        className="cinematic-badge gsap-reveal absolute -bottom-4 -left-4 sm:-left-6 px-3 py-2.5 rounded-2xl floating-ui-badge flex items-center gap-2.5 text-xs pointer-events-auto"
-        style={{ zIndex: 5 }}
-      >
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center"
-          style={{ background: 'linear-gradient(145deg,#fbbf24,#b45309)' }}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-white" />
-        </div>
-        <div className="leading-tight">
-          <div className="text-white font-semibold text-[11.5px]">
-            Template Premium
-          </div>
-          <div className="text-white/45 text-[10px]">Prêt en 5 minutes</div>
-        </div>
-      </div>
-
-      <div
-        className="cinematic-badge gsap-reveal absolute -top-4 -right-2 sm:-right-5 px-3 py-2 rounded-2xl floating-ui-badge flex items-center gap-2 text-xs pointer-events-auto"
-        style={{ zIndex: 5 }}
-      >
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center"
-          style={{
-            background:
-              'linear-gradient(145deg, #ec4899, #be185d)',
-            boxShadow: '0 8px 20px -10px rgba(236,72,153,0.85)',
-          }}
-        >
-          <Heart className="w-3.5 h-3.5 text-white fill-white" />
-        </div>
-        <div className="leading-tight">
-          <div className="text-white font-semibold text-[11px]">
-            Mariages & Événements
-          </div>
-          <div className="text-white/45 text-[10px]">
-            Thèmes élégants inclus
-          </div>
-        </div>
-      </div>
-    </>
-  );
-};
-
 const NewHeroSection = () => {
   const { t } = useLanguage();
-
-  const eyebrow =
-    t('hero_eyebrow') || 'Cérémonies d\'Exception';
-
-  const tagline1 = t('hero_tagline1') || 'Donnez vie à';
-  const taglineAccent = t('hero_tagline_accent') || "le plus beau jour de votre histoire";
-  const tagline2 =
-    t('hero_tagline2') || 'avec une touche de magie.';
-
-  const description =
-    t('hero_description') ||
-    "Concevez des invitations sur mesure, élégantes et immersives pour célébrer vos moments les plus précieux";
+  const { isDarkMode } = useTheme();
 
   const primaryLabel =
     t('discover_templates') || "Découvrir nos modèles";
-  const secondaryLabel =
-    t('view_features') || 'Voir les fonctionnalités';
 
   return (
-    <CinematicHero
-      eyebrow={eyebrow}
-      tagline1={tagline1}
-      taglineAccent={taglineAccent}
-      tagline2={tagline2}
-      description={description}
-      primaryCta={{ label: primaryLabel, href: '#services' }}
-      secondaryCta={{ label: secondaryLabel, href: '#features' }}
-      trustItems={[
-        {
-          icon: (
-            <CheckCircle2
-              className="w-3.5 h-3.5"
-              style={{ color: 'rgba(251,191,36,0.9)' }}
-            />
-          ),
-          label: 'Sans code — 100% visuel',
-        },
-        {
-          icon: (
-            <Users
-              className="w-3.5 h-3.5"
-              style={{ color: 'rgba(251,191,36,0.9)' }}
-            />
-          ),
-          label: 'Invitations illimitées*',
-        },
-        {
-          icon: (
-            <Heart
-              className="w-3.5 h-3.5"
-              style={{ color: 'rgba(251,191,36,0.9)' }}
-            />
-          ),
-          label: 'Support personnalisé',
-        },
-      ]}
-    />
+    <section className={cn(
+      "relative w-full overflow-hidden pt-28 sm:pt-32 pb-20 sm:pb-28 px-4 sm:px-6 lg:px-8 border-b transition-colors duration-500",
+      isDarkMode ? "border-white/5" : "border-amber-900/10"
+    )}>
+      <div 
+        className="absolute inset-0 z-0 transition-colors duration-500"
+        style={{
+          background: isDarkMode
+            ? 'linear-gradient(135deg, #1a0f1f 0%, #2d1b2e 25%, #1a0f1f 50%, #0f0a14 75%, #0b0f17 100%)'
+            : 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 25%, #fffbeb 50%, #fef7ed 75%, #ffffff 100%)'
+        }}
+      />
+      <div 
+        className="absolute inset-0 z-0 opacity-30"
+        style={{
+          backgroundImage: isDarkMode
+            ? `
+              linear-gradient(to right, rgba(251,191,36,0.05) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(251,191,36,0.05) 1px, transparent 1px)
+            `
+            : `
+              linear-gradient(to right, rgba(180,83,9,0.08) 1px, transparent 1px),
+              linear-gradient(to bottom, rgba(180,83,9,0.08) 1px, transparent 1px)
+            `,
+          backgroundSize: '60px 60px',
+          maskImage: 'radial-gradient(ellipse at 50% 35%, black 0%, transparent 72%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at 50% 35%, black 0%, transparent 72%)'
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -top-48 -left-40 w-[680px] h-[680px] rounded-full pointer-events-none z-0 blur-3xl"
+        style={{
+          background: isDarkMode
+            ? 'radial-gradient(closest-side, rgba(251,191,36,0.30), rgba(251,191,36,0) 70%)'
+            : 'radial-gradient(closest-side, rgba(251,191,36,0.22), rgba(251,191,36,0) 70%)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute -bottom-48 -right-40 w-[720px] h-[720px] rounded-full pointer-events-none z-0 blur-3xl"
+        style={{
+          background: isDarkMode
+            ? 'radial-gradient(closest-side, rgba(139,92,246,0.15), rgba(139,92,246,0) 70%)'
+            : 'radial-gradient(closest-side, rgba(168,85,247,0.10), rgba(168,85,247,0) 70%)',
+        }}
+      />
+
+      <div className="relative z-10 max-w-7xl mx-auto w-full">
+        {/* ============== 1. TITRE + CTA (mobile & desktop) ============== */}
+        <div className="text-center lg:text-left lg:max-w-none">
+          <div className="grid lg:grid-cols-2 lg:gap-8 lg:items-start">
+            <div>
+              <h1 className={cn(
+                "font-extrabold tracking-tight leading-[1.05] mb-0 text-center lg:text-left transition-colors duration-500",
+                isDarkMode ? "text-white" : "text-amber-950"
+              )}
+                  style={{ 
+                    fontSize: 'clamp(1.8rem, 6vw, 4.2rem)',
+                    textShadow: isDarkMode ? '0 10px 40px rgba(0,0,0,0.5)' : '0 4px 20px rgba(180,83,9,0.15)'
+                  }}>
+                Donnez vie à votre
+              </h1>
+              <h1 className={cn(
+                "font-extrabold tracking-tight leading-[1.05] mb-8 sm:mb-10 text-center lg:text-left transition-colors duration-500",
+                isDarkMode ? "text-white" : "text-amber-950"
+              )}
+                  style={{ 
+                    fontSize: 'clamp(1.8rem, 6vw, 4.2rem)',
+                    textShadow: isDarkMode ? '0 10px 40px rgba(0,0,0,0.5)' : '0 4px 20px rgba(180,83,9,0.15)'
+                  }}>
+                événement avec{' '}
+                <span
+                  className="transition-all duration-500 bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: isDarkMode
+                      ? 'linear-gradient(135deg, #a78bfa 0%, #fcd34d 35%, #fbbf24 65%, #7c3aed 100%)'
+                      : 'linear-gradient(135deg, #9333ea 0%, #d97706 50%, #7c3aed 100%)',
+                  }}
+                >
+                  Une invitation haut de gamme
+                </span>
+              </h1>
+
+              <div className="flex justify-center lg:justify-start mb-12 lg:mb-0">
+                <a
+                  href="https://wa.me/243844333917"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center justify-center gap-3 px-8 sm:px-10 py-4 sm:py-5 rounded-full text-base font-bold tracking-wide transition-all duration-300 hover:scale-[1.03] focus:outline-none focus:ring-2 focus:ring-amber-400/70 w-full sm:w-auto"
+                  style={{
+                    background: 'linear-gradient(135deg, #fde68a 0%, #fbbf24 40%, #d97706 70%, #7c3aed 100%)',
+                    color: '#0b0f17',
+                    boxShadow: '0 0 0 1px rgba(251,191,36,0.5), 0 15px 40px -10px rgba(251,191,36,0.6), 0 0 60px -20px rgba(139,92,246,0.5)'
+                  }}
+                >
+                  <MessageCircle className="w-5 h-5 shrink-0" />
+                  Nous contacter
+                </a>
+              </div>
+            </div>
+
+            {/* ============== 2. MOCKUP 3 TELEPHONES - DESKTOP SEULEMENT ============== */}
+            <div className="relative h-[600px] hidden lg:block">
+              <div className="absolute inset-x-0 bottom-0 h-[540px] pointer-events-none">
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-0 z-0 origin-bottom scale-[1.12]">
+                  <PhoneMockup
+                    src="/model2.jpg"
+                    alt="Modèle 2"
+                    variant="white"
+                    size="lg"
+                  />
+                </div>
+                <div className="absolute left-[2%] bottom-0 z-20 origin-bottom-left scale-[0.90] -ml-2">
+                  <PhoneMockup
+                    src="/model1.jpg"
+                    alt="Modèle 1"
+                    variant="black"
+                    size="md"
+                  />
+                </div>
+                <div className="absolute right-[2%] bottom-0 z-20 origin-bottom-right scale-[0.90] -mr-2">
+                  <PhoneMockup
+                    src="/model3.jpg"
+                    alt="Modèle 3"
+                    variant="black"
+                    size="md"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ============== 2. MOCKUP - MOBILE + TABLETTE (ordres 2) ============== */}
+        <div className="lg:hidden relative my-10 sm:my-14 flex justify-center">
+          <div className="relative w-full max-w-[340px] sm:max-w-[400px] h-[360px] sm:h-[420px] flex items-end justify-center pointer-events-none">
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-0 z-0 origin-bottom scale-[0.88] sm:scale-[0.92]">
+              <PhoneMockup
+                src="/model2.jpg"
+                alt="Modèle 2"
+                variant="white"
+                size="md"
+              />
+            </div>
+            <div className="absolute left-0 bottom-0 z-20 origin-bottom-left scale-[0.62] sm:scale-[0.66] -ml-4 sm:-ml-2">
+              <PhoneMockup
+                src="/model1.jpg"
+                alt="Modèle 1"
+                variant="black"
+                size="sm"
+              />
+            </div>
+            <div className="absolute right-0 bottom-0 z-20 origin-bottom-right scale-[0.62] sm:scale-[0.66] -mr-4 sm:-mr-2">
+              <PhoneMockup
+                src="/model3.jpg"
+                alt="Modèle 3"
+                variant="black"
+                size="sm"
+              />
+            </div>
+          </div>
+        </div>
+
+
+      </div>
+    </section>
   );
 };
 

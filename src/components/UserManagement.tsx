@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { auth } from '../config/firebase';
 import ConfirmationModal from './ConfirmationModal';
+import { UserModelService } from '../services/templateService';
 
 const REGION = 'europe-west1';
 const PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID;
@@ -79,6 +80,8 @@ const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
+  const [userEventDates, setUserEventDates] = useState<Record<string, string | null>>({});
+  const [isLoadingDates, setIsLoadingDates] = useState(false);
 
   // Create user modal
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -119,18 +122,103 @@ const UserManagement: React.FC = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
+  const formatLongDate = (s: string) => {
+    if (!s) return '—';
+    try {
+      const monthMap: Record<string, string> = {
+        '01': 'janvier', '02': 'février', '03': 'mars', '04': 'avril',
+        '05': 'mai', '06': 'juin', '07': 'juillet', '08': 'août',
+        '09': 'septembre', '10': 'octobre', '11': 'novembre', '12': 'décembre',
+        'jan': 'janvier', 'fév': 'février', 'fev': 'février', 'mar': 'mars',
+        'avr': 'avril', 'mai': 'mai', 'jui': 'juin', 'juil': 'juillet',
+        'aoû': 'août', 'aou': 'août', 'sep': 'septembre', 'oct': 'octobre',
+        'nov': 'novembre', 'déc': 'décembre', 'dec': 'décembre',
+      };
+
+      const clean = s.trim().replace(/\s+/g, ' ');
+      const parsed = Date.parse(clean);
+      if (!isNaN(parsed)) {
+        const d = new Date(parsed);
+        return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      }
+
+      const match = clean.match(/^(\d{1,2})[\s.\-/]+([a-zA-Z\u00e9\u00ea\u00eb\u00e8]+)[\s.\-/]+(\d{4})$/);
+      if (match) {
+        const day = match[1];
+        const monthRaw = match[2].toLowerCase();
+        const year = match[3];
+        const monthFull =
+          (Object.keys(monthMap).find(k =>
+            k === monthRaw.slice(0, 3) || monthRaw.startsWith(k)
+          ) && monthMap[Object.keys(monthMap).find(k =>
+            k === monthRaw.slice(0, 3) || monthRaw.startsWith(k)
+          )!]) || monthRaw;
+        return `${parseInt(day, 10)} ${monthFull} ${year}`;
+      }
+
+      return clean;
+    } catch {
+      return s;
+    }
+  };
+
+  const loadUserEventDates = useCallback(async (userList: ManagedUser[]) => {
+    if (userList.length === 0) return;
+    setIsLoadingDates(true);
+    try {
+      const results: Record<string, string | null> = {};
+      const promises = userList.map(async (u) => {
+        try {
+          const models = await UserModelService.getUserModels(u.uid);
+          const dates = models
+            .map(m => m.eventDate)
+            .filter((d): d is string => !!d && d.trim() !== '');
+          if (dates.length === 0) {
+            results[u.uid] = null;
+            return;
+          }
+          const sortedDates = dates
+            .map(d => {
+              const p = Date.parse(d.replace(/(\d+)\s+([a-zA-ZÀ-ÿ]+)\s+(\d{4})/, (_, day, month, year) => {
+                const map: Record<string, string> = {
+                  janvier: '01', février: '02', fevrier: '02', mars: '03', avril: '04',
+                  mai: '05', juin: '06', juillet: '07', août: '08', aout: '08',
+                  septembre: '09', octobre: '10', novembre: '11', décembre: '12', decembre: '12',
+                };
+                const mm = map[month.toLowerCase()] || '01';
+                return `${year}-${mm}-${day.padStart(2, '0')}`;
+              }));
+              return { raw: d, parsed: isNaN(p) ? Infinity : p };
+            })
+            .sort((a, b) => a.parsed - b.parsed);
+          results[u.uid] = formatLongDate(sortedDates[0].raw);
+        } catch {
+          results[u.uid] = null;
+        }
+      });
+      await Promise.all(promises);
+      setUserEventDates(results);
+    } catch (err) {
+      console.error('Erreur chargement dates événements:', err);
+    } finally {
+      setIsLoadingDates(false);
+    }
+  }, []);
+
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const data = await callAdminFunction('adminListUsers', { limit: 100 }, 'GET');
-      setUsers(data.users || []);
+      const userList: ManagedUser[] = data.users || [];
+      setUsers(userList);
+      loadUserEventDates(userList);
     } catch (err: any) {
       console.error('Erreur chargement users:', err);
       showToast('error', err.message || 'Impossible de charger les utilisateurs');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadUserEventDates]);
 
   useEffect(() => {
     loadUsers();
@@ -441,6 +529,23 @@ const UserManagement: React.FC = () => {
                             <p className="text-xs text-slate-500 dark:text-slate-400 truncate md:hidden">
                               {u.email}
                             </p>
+                            <div className="flex items-center space-x-1 mt-1">
+                              <Calendar className="h-3 w-3 text-amber-500/80 flex-shrink-0" />
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                {isLoadingDates && !(u.uid in userEventDates) ? (
+                                  <span className="opacity-60">expiration : chargement...</span>
+                                ) : userEventDates[u.uid] ? (
+                                  <>
+                                    expiration :{' '}
+                                    <span className="font-medium text-slate-700 dark:text-slate-300">
+                                      {userEventDates[u.uid]}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="italic opacity-60">expiration : —</span>
+                                )}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </td>

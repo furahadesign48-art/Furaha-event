@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Play, Sparkles, Maximize2, Clock, Layers, Zap, Pause, AlertCircle, Volume2, VolumeX } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { cn } from '../lib/utils';
 
 // =========================================================================
 // 🔗 LIEN VIDÉO FIRESTORAGE À REMPLIR ICI (lorsque ta vidéo sera prête)
@@ -18,6 +20,7 @@ const DEMO_VIDEO_POSTER: string = '';
 
 const DemoVideoSection = () => {
   const { t } = useLanguage();
+  const { isDarkMode } = useTheme();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -117,13 +120,17 @@ const DemoVideoSection = () => {
   ];
 
   return (
-    <section id="demo" className="relative py-16 md:py-24 bg-[#0b0f17] border-t border-white/5 overflow-hidden">
+    <section id="demo" className={cn(
+      "relative py-16 md:py-24 border-t overflow-hidden transition-colors duration-500",
+      isDarkMode ? "bg-[#0b0f17] border-white/5" : "bg-white border-amber-900/10"
+    )}>
       {/* Dot grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)'
+            : 'radial-gradient(circle at 1px 1px, #78350f 1px, transparent 0)',
           backgroundSize: '28px 28px',
         }}
       />
@@ -154,45 +161,26 @@ const DemoVideoSection = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-10 md:mb-14 animate-fade-in">
-          <div
-            className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full"
-            style={{
-              border: '1px solid rgba(59,130,246,0.28)',
-              background:
-                'linear-gradient(180deg, rgba(59,130,246,0.1), rgba(59,130,246,0.02))',
-            }}
-          >
-            <Play className="w-3.5 h-3.5" style={{ color: '#93c5fd' }} />
-            <span
-              className="font-mono text-[11px] tracking-wide uppercase"
-              style={{ color: '#93c5fd' }}
-            >
-              Démo interactive
-            </span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-3 md:mb-4">
+          <h2 className={cn(
+            "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-0 transition-colors duration-500",
+            isDarkMode ? "text-white" : "text-amber-950"
+          )}>
             Voir{' '}
             <span
               className="bg-clip-text text-transparent"
               style={{
-                backgroundImage:
-                  'linear-gradient(135deg, #fcd34d 0%, #f59e0b 45%, #ec4899 100%)',
+                backgroundImage: isDarkMode
+                  ? 'linear-gradient(135deg, #fcd34d 0%, #f59e0b 45%, #ec4899 100%)'
+                  : 'linear-gradient(135deg, #d97706 0%, #b45309 45%, #db2777 100%)',
               }}
             >
               comment ça marche
             </span>
           </h2>
-          <p className="text-sm sm:text-base md:text-lg max-w-2xl mx-auto" style={{ color: 'rgba(255,255,255,0.6)' }}>
-            {t('demo_subtitle') ||
-              'Une démo rapide de 60 secondes pour découvrir le dashboard de personnalisation et toutes les fonctionnalités.'}
-          </p>
         </div>
 
-        {/* Video frame + steps */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 md:gap-8 items-start">
-          {/* Instagram / Phone mock container (takes 3 cols) */}
-          <div className="lg:col-span-3 flex justify-center">
+        {/* Video frame */}
+        <div className="flex justify-center">
             <div className="relative group">
               {/* Multi-layer backlight (plus haut pour format portrait) */}
               <div
@@ -216,11 +204,15 @@ const DemoVideoSection = () => {
               <div
                 className="relative rounded-[2.5rem] p-[10px] sm:p-[12px] shadow-[0_40px_100px_-30px_rgba(0,0,0,0.95)]"
                 style={{
-                  background:
-                    'linear-gradient(145deg, #1a2236 0%, #0b0f17 60%, #161d32 100%)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  boxShadow:
-                    '0 30px 100px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.1) inset, 0 2px 0 rgba(255,255,255,0.1) inset, 0 -2px 0 rgba(0,0,0,0.4) inset',
+                  background: isDarkMode
+                    ? 'linear-gradient(145deg, #1a2236 0%, #0b0f17 60%, #161d32 100%)'
+                    : 'linear-gradient(145deg, #404040 0%, #262626 60%, #171717 100%)',
+                  border: isDarkMode
+                    ? '1px solid rgba(255,255,255,0.1)'
+                    : '1px solid rgba(0,0,0,0.3)',
+                  boxShadow: isDarkMode
+                    ? '0 30px 100px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(251,191,36,0.1) inset, 0 2px 0 rgba(255,255,255,0.1) inset, 0 -2px 0 rgba(0,0,0,0.4) inset'
+                    : '0 30px 100px -20px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.2) inset, 0 2px 0 rgba(255,255,255,0.15) inset, 0 -2px 0 rgba(0,0,0,0.3) inset',
                 }}
               >
                 {/* Screen area (even taller aspect 1:2 for max vertical visibility) */}
@@ -306,16 +298,18 @@ const DemoVideoSection = () => {
                       <div
                         className="absolute inset-0"
                         style={{
-                          background:
-                            'radial-gradient(ellipse at top, rgba(252,211,77,0.18) 0%, transparent 55%), radial-gradient(ellipse at bottom, rgba(236,72,153,0.18) 0%, transparent 55%), linear-gradient(180deg, #0f162a 0%, #0b0f17 60%, #0a1126 100%)',
+                          background: isDarkMode
+                            ? 'radial-gradient(ellipse at top, rgba(252,211,77,0.18) 0%, transparent 55%), radial-gradient(ellipse at bottom, rgba(236,72,153,0.18) 0%, transparent 55%), linear-gradient(180deg, #0f162a 0%, #0b0f17 60%, #0a1126 100%)'
+                            : 'radial-gradient(ellipse at top, rgba(252,211,77,0.25) 0%, transparent 55%), radial-gradient(ellipse at bottom, rgba(236,72,153,0.15) 0%, transparent 55%), linear-gradient(180deg, #fffbeb 0%, #fef3c7 60%, #fff7ed 100%)',
                         }}
                       >
                         {/* Hero image background */}
                         <div
                           className="absolute inset-0"
                           style={{
-                            backgroundImage:
-                              `linear-gradient(180deg, rgba(11,15,23,0.25) 0%, rgba(11,15,23,0.65) 55%, rgba(11,15,23,0.92) 100%), url("${DEMO_VIDEO_POSTER}")`,
+                            backgroundImage: isDarkMode
+                              ? `linear-gradient(180deg, rgba(11,15,23,0.25) 0%, rgba(11,15,23,0.65) 55%, rgba(11,15,23,0.92) 100%), url("${DEMO_VIDEO_POSTER}")`
+                              : `linear-gradient(180deg, rgba(255,251,235,0.2) 0%, rgba(255,251,235,0.6) 55%, rgba(255,251,235,0.92) 100%), url("${DEMO_VIDEO_POSTER}")`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                           }}
@@ -327,13 +321,13 @@ const DemoVideoSection = () => {
                           <div className="text-center mt-2">
                             <div
                               className="text-[9px] font-mono tracking-[0.2em] uppercase mb-2"
-                              style={{ color: 'rgba(252,211,77,0.85)' }}
+                              style={{ color: isDarkMode ? 'rgba(252,211,77,0.85)' : 'rgba(180,83,9,0.9)' }}
                             >
                               ✦ Mariage ✦
                             </div>
                             <div
                               className="text-[8px] font-medium tracking-wider mb-1"
-                              style={{ color: 'rgba(255,255,255,0.7)' }}
+                              style={{ color: isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(120,53,15,0.75)' }}
                             >
                               Vous êtes invité au mariage de
                             </div>
@@ -341,9 +335,9 @@ const DemoVideoSection = () => {
                               className="font-extrabold leading-none"
                               style={{
                                 fontSize: '28px',
-                                color: '#fff',
+                                color: isDarkMode ? '#fff' : '#78350f',
                                 fontFamily: 'serif',
-                                textShadow: '0 2px 20px rgba(0,0,0,0.4)',
+                                textShadow: isDarkMode ? '0 2px 20px rgba(0,0,0,0.4)' : '0 2px 12px rgba(180,83,9,0.15)',
                               }}
                             >
                               Sophie
@@ -353,23 +347,23 @@ const DemoVideoSection = () => {
                             >
                               <span
                                 className="w-8 h-px"
-                                style={{ background: 'rgba(252,211,77,0.7)' }}
+                                style={{ background: isDarkMode ? 'rgba(252,211,77,0.7)' : 'rgba(217,119,6,0.6)' }}
                               />
-                              <span style={{ color: 'rgba(252,211,77,1)', fontSize: '14px' }}>
+                              <span style={{ color: isDarkMode ? 'rgba(252,211,77,1)' : 'rgba(217,119,6,1)', fontSize: '14px' }}>
                                 ❦
                               </span>
                               <span
                                 className="w-8 h-px"
-                                style={{ background: 'rgba(252,211,77,0.7)' }}
+                                style={{ background: isDarkMode ? 'rgba(252,211,77,0.7)' : 'rgba(217,119,6,0.6)' }}
                               />
                             </div>
                             <h2
                               className="font-extrabold leading-none mb-2"
                               style={{
                                 fontSize: '28px',
-                                color: '#fff',
+                                color: isDarkMode ? '#fff' : '#78350f',
                                 fontFamily: 'serif',
-                                textShadow: '0 2px 20px rgba(0,0,0,0.4)',
+                                textShadow: isDarkMode ? '0 2px 20px rgba(0,0,0,0.4)' : '0 2px 12px rgba(180,83,9,0.15)',
                               }}
                             >
                               &amp; Lucas
@@ -390,23 +384,25 @@ const DemoVideoSection = () => {
                                 key={i}
                                 className="rounded-lg py-1.5 text-center"
                                 style={{
-                                  background:
-                                    'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
-                                  border:
-                                    '1px solid rgba(255,255,255,0.1)',
+                                  background: isDarkMode
+                                    ? 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))'
+                                    : 'linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,251,235,0.7))',
+                                  border: isDarkMode
+                                    ? '1px solid rgba(255,255,255,0.1)'
+                                    : '1px solid rgba(251,191,36,0.25)',
                                   backdropFilter: 'blur(4px)',
                                 }}
                               >
                                 <div
                                   className="font-extrabold leading-none"
-                                  style={{ color: '#fcd34d', fontSize: '14px' }}
+                                  style={{ color: isDarkMode ? '#fcd34d' : '#d97706', fontSize: '14px' }}
                                 >
                                   {c.n}
                                 </div>
                                 <div
                                   className="mt-0.5 uppercase"
                                   style={{
-                                    color: 'rgba(255,255,255,0.6)',
+                                    color: isDarkMode ? 'rgba(255,255,255,0.6)' : 'rgba(120,53,15,0.65)',
                                     fontSize: '7px',
                                     letterSpacing: '0.08em',
                                   }}
@@ -421,27 +417,30 @@ const DemoVideoSection = () => {
                           <div
                             className="mt-4 rounded-xl p-3 mx-auto w-[94%]"
                             style={{
-                              background:
-                                'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-                              border:
-                                '1px solid rgba(251,191,36,0.22)',
+                              background: isDarkMode
+                                ? 'linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)'
+                                : 'linear-gradient(180deg, #ffffff 0%, #fffbeb 100%)',
+                              border: isDarkMode
+                                ? '1px solid rgba(251,191,36,0.22)'
+                                : '1px solid rgba(251,191,36,0.35)',
                               backdropFilter: 'blur(10px)',
-                              boxShadow:
-                                '0 8px 30px -10px rgba(251,191,36,0.2)',
+                              boxShadow: isDarkMode
+                                ? '0 8px 30px -10px rgba(251,191,36,0.2)'
+                                : '0 8px 30px -10px rgba(180,83,9,0.2)',
                             }}
                           >
                             <div className="grid grid-cols-2 gap-2 text-center">
                               <div>
                                 <div
                                   className="text-[8px] uppercase tracking-wider mb-0.5"
-                                  style={{ color: 'rgba(252,211,77,0.9)' }}
+                                  style={{ color: isDarkMode ? 'rgba(252,211,77,0.9)' : 'rgba(180,83,9,0.85)' }}
                                 >
                                   Date
                                 </div>
                                 <div
                                   className="font-bold"
                                   style={{
-                                    color: '#fff',
+                                    color: isDarkMode ? '#fff' : '#78350f',
                                     fontSize: '11px',
                                   }}
                                 >
@@ -451,14 +450,14 @@ const DemoVideoSection = () => {
                               <div>
                                 <div
                                   className="text-[8px] uppercase tracking-wider mb-0.5"
-                                  style={{ color: 'rgba(252,211,77,0.9)' }}
+                                  style={{ color: isDarkMode ? 'rgba(252,211,77,0.9)' : 'rgba(180,83,9,0.85)' }}
                                 >
                                   Lieu
                                 </div>
                                 <div
                                   className="font-bold"
                                   style={{
-                                    color: '#fff',
+                                    color: isDarkMode ? '#fff' : '#78350f',
                                     fontSize: '11px',
                                   }}
                                 >
@@ -469,18 +468,18 @@ const DemoVideoSection = () => {
                             <div
                               className="mt-2 pt-2 border-t text-center"
                               style={{
-                                borderColor: 'rgba(255,255,255,0.08)',
+                                borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(180,83,9,0.10)',
                               }}
                             >
                               <div
                                 className="text-[8px] uppercase tracking-wider mb-0.5"
-                                style={{ color: 'rgba(236,72,153,0.85)' }}
+                                style={{ color: isDarkMode ? 'rgba(236,72,153,0.85)' : 'rgba(190,24,93,0.85)' }}
                               >
                                 Cérémonie &amp; Réception
                               </div>
                               <div
                                 style={{
-                                  color: 'rgba(255,255,255,0.65)',
+                                  color: isDarkMode ? 'rgba(255,255,255,0.65)' : 'rgba(120,53,15,0.7)',
                                   fontSize: '9.5px',
                                 }}
                               >
@@ -493,7 +492,7 @@ const DemoVideoSection = () => {
                           <div className="mt-3 px-2">
                             <div
                               className="text-[8px] uppercase tracking-wider mb-1.5"
-                              style={{ color: 'rgba(255,255,255,0.5)' }}
+                              style={{ color: isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(120,53,15,0.6)' }}
                             >
                               Le couple ✦
                             </div>
@@ -523,8 +522,9 @@ const DemoVideoSection = () => {
                                 background:
                                   'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
                                 color: '#0b0f17',
-                                boxShadow:
-                                  '0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px -6px rgba(251,191,36,0.6)',
+                                boxShadow: isDarkMode
+                                  ? '0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 20px -6px rgba(251,191,36,0.6)'
+                                  : '0 1px 0 rgba(255,255,255,0.4) inset, 0 6px 20px -6px rgba(180,83,9,0.35)',
                               }}
                             >
                               Confirmer ma présence
@@ -533,10 +533,11 @@ const DemoVideoSection = () => {
                               <button
                                 className="py-1.5 rounded-lg font-semibold text-[9.5px]"
                                 style={{
-                                  background: 'rgba(255,255,255,0.05)',
-                                  color: '#fff',
-                                  border:
-                                    '1px solid rgba(255,255,255,0.1)',
+                                  background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',
+                                  color: isDarkMode ? '#fff' : '#78350f',
+                                  border: isDarkMode
+                                    ? '1px solid rgba(255,255,255,0.1)'
+                                    : '1px solid rgba(180,83,9,0.15)',
                                 }}
                               >
                                 💌 Envoyer un message
@@ -544,10 +545,11 @@ const DemoVideoSection = () => {
                               <button
                                 className="py-1.5 rounded-lg font-semibold text-[9.5px]"
                                 style={{
-                                  background: 'rgba(255,255,255,0.05)',
-                                  color: '#fff',
-                                  border:
-                                    '1px solid rgba(255,255,255,0.1)',
+                                  background: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.8)',
+                                  color: isDarkMode ? '#fff' : '#78350f',
+                                  border: isDarkMode
+                                    ? '1px solid rgba(255,255,255,0.1)'
+                                    : '1px solid rgba(180,83,9,0.15)',
                                 }}
                               >
                                 📍 Itinéraire
@@ -823,137 +825,6 @@ const DemoVideoSection = () => {
                 }}
               />
             </div>
-          </div>
-
-          {/* Steps (takes 2 cols) */}
-          <div className="lg:col-span-2 space-y-4 md:space-y-5">
-            <div
-              className="rounded-2xl p-4 md:p-5"
-              style={{
-                background:
-                  'linear-gradient(180deg, rgba(251,191,36,0.08) 0%, rgba(251,191,36,0.02) 100%)',
-                border: '1px solid rgba(251,191,36,0.18)',
-              }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles
-                  className="w-4 h-4 md:w-5 md:h-5"
-                  style={{ color: '#fcd34d' }}
-                />
-                <h3
-                  className="text-sm md:text-base font-extrabold"
-                  style={{ color: '#fcd34d' }}
-                >
-                  3 étapes, 2 minutes
-                </h3>
-              </div>
-              <div className="space-y-3 md:space-y-3.5">
-                {demoSteps.map((step, i) => {
-                  const Icon = step.icon;
-                  return (
-                    <div
-                      key={i}
-                      className="flex gap-3 p-3 rounded-xl group transition-all duration-300"
-                      style={{
-                        background:
-                          'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor =
-                          step.color.replace(/[\d.]+\)$/, '0.25)');
-                        e.currentTarget.style.transform = 'translateX(2px)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor =
-                          'rgba(255,255,255,0.06)';
-                        e.currentTarget.style.transform = 'translateX(0)';
-                      }}
-                    >
-                      <div className="flex flex-col items-center">
-                        <div
-                          className="w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{
-                            background: `radial-gradient(circle, ${step.color.replace(/[\d.]+\)$/, '0.18)')} 0%, ${step.color.replace(/[\d.]+\)$/, '0.04)')} 100%)`,
-                            border: `1px solid ${step.color.replace(/[\d.]+\)$/, '0.28)')}`,
-                            boxShadow: `0 8px 20px -10px ${step.color}`,
-                          }}
-                        >
-                          <Icon className="w-4 h-4 md:w-[18px] md:h-[18px]" style={{ color: step.color }} />
-                        </div>
-                        {i < demoSteps.length - 1 && (
-                          <div
-                            className="flex-1 w-px my-1.5"
-                            style={{
-                              background:
-                                'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%)',
-                            }}
-                          />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-[10px] md:text-[11px] font-mono font-bold px-1.5 py-0.5 rounded"
-                            style={{
-                              background: step.color.replace(/[\d.]+\)$/, '0.12)'),
-                              color: step.color,
-                            }}
-                          >
-                            0{i + 1}
-                          </span>
-                          <h4
-                            className="text-xs md:text-sm font-bold"
-                            style={{ color: '#ffffff' }}
-                          >
-                            {step.title}
-                          </h4>
-                        </div>
-                        <p
-                          className="text-[11px] md:text-xs mt-1 leading-snug"
-                          style={{ color: 'rgba(255,255,255,0.55)' }}
-                        >
-                          {step.desc}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Mini stat card */}
-            <div
-              className="rounded-2xl p-4 md:p-5 grid grid-cols-3 gap-3"
-              style={{
-                background:
-                  'linear-gradient(180deg, #141a2c 0%, #0d1220 100%)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
-            >
-              {[
-                { n: '120+', l: 'Templates', c: '#fcd34d' },
-                { n: '< 2min', l: 'Setup', c: '#8af0cc' },
-                { n: '24/7', l: 'Support', c: '#e9a4f2' },
-              ].map((s, i) => (
-                <div key={i} className="text-center">
-                  <div
-                    className="text-lg md:text-2xl font-extrabold"
-                    style={{ color: s.c }}
-                  >
-                    {s.n}
-                  </div>
-                  <div
-                    className="text-[10px] md:text-[11px] mt-0.5 font-medium"
-                    style={{ color: 'rgba(255,255,255,0.5)' }}
-                  >
-                    {s.l}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </section>

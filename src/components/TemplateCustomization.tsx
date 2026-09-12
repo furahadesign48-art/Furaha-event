@@ -29,9 +29,14 @@ import {
   ChevronDown,
   Hotel,
   Mail,
-  Globe
+  Globe,
+  Shield,
+  Video,
+  RefreshCw,
+  Building
 } from 'lucide-react';
 import InvitationPreview from './InvitationPreview';
+import AdminPasswordModal from './AdminPasswordModal';
 import { UserModel } from '../services/templateService';
 
 declare global {
@@ -50,6 +55,7 @@ interface Accommodation {
   badge?: string;
   note?: string;
   orderIndex: number;
+  image?: string;
 }
 
 interface UsefulAddress {
@@ -70,13 +76,19 @@ interface TemplateData {
   guestInfoLeftImage?: string;
   guestInfoRightImage?: string;
   invitationPhoto?: string;
+  invitationVideo?: string;
   eventPhotos?: string[];
+  eventVideos?: string[];
   eventPhoto1?: string;
   eventPhoto2?: string;
   eventPhoto3?: string;
+  eventVenuePhoto?: string;
   invitationTextPhoto?: string;
   invitationTextPhotoTitle?: string;
   invitationTextPhotoSubtitle?: string;
+  invitationTextPhoto2?: string;
+  invitationTextPhoto2Title?: string;
+  invitationTextPhoto2Subtitle?: string;
   invitationTitleSubtitle?: string;
   title: string;
   invitationText: string;
@@ -103,6 +115,17 @@ interface TemplateData {
   gamesSectionBackground?: string;
   qrFooterSectionBackground?: string;
   accommodationSectionBackground?: string;
+  // Section visibility toggles (header & QR are always visible)
+  couplePhotoEnabled?: boolean;
+  invitationTextEnabled?: boolean;
+  countdownEnabled?: boolean;
+  galleryEnabled?: boolean;
+  rsvpEnabled?: boolean;
+  drinksEnabled?: boolean;
+  gamesEnabled?: boolean;
+  guestBookEnabled?: boolean;
+  notificationEnabled?: boolean;
+  fallingDotsEnabled?: boolean;
 }
 
 interface TemplateCustomizationProps {
@@ -122,12 +145,19 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   const [primaryColor, setPrimaryColor] = useState('#f59e0b'); // amber-500
   const [secondaryColor, setSecondaryColor] = useState('#d97706'); // amber-600
   const [accentColor, setAccentColor] = useState('#f43f5e'); // rose-500
+  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book'>('default');
+  const SHOW_LAYOUT_SELECTOR = true;
+  const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
+  const [pendingLayout, setPendingLayout] = useState<'default' | 'book'>('default');
+  const isCurrentUserAdmin = user?.role === 'admin';
   const [selectedTextColor, setSelectedTextColor] = useState('#f59e0b');
   const [showQRInfo, setShowQRInfo] = useState(false);
   const [eventPhotoUrlInputs, setEventPhotoUrlInputs] = useState(['', '', '']);
   const [galleryUrlInput, setGalleryUrlInput] = useState('');
   const [bulkGalleryLinksInput, setBulkGalleryLinksInput] = useState('');
+  const [galleryVideoUrlInput, setGalleryVideoUrlInput] = useState('');
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [isUploadingGalleryVideo, setIsUploadingGalleryVideo] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
@@ -174,7 +204,24 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
       setSecondaryColor(template.customizations.colors.secondary);
       setAccentColor(template.customizations.colors.accent);
     }
+    const raw = (template as any).customizations?.layout || 'default';
+    setSelectedLayout(raw === 'book' ? 'book' : 'default');
   }, [template]);
+
+  const handleLayoutSelectorClick = (targetLayout: 'default' | 'book') => {
+    if (targetLayout === selectedLayout) return;
+    if (isCurrentUserAdmin) {
+      setSelectedLayout(targetLayout);
+      return;
+    }
+    setPendingLayout(targetLayout);
+    setShowAdminPasswordModal(true);
+  };
+
+  const handleAdminPasswordSuccess = () => {
+    setSelectedLayout(pendingLayout);
+    setShowAdminPasswordModal(false);
+  };
 
   const tabs = [
     { id: 'general', label: 'Général', icon: Type },
@@ -192,21 +239,23 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     }));
   };
 
-  const handleCloudinaryUpload = (field: keyof TemplateData | 'gallery' | 'eventPhoto1' | 'eventPhoto2' | 'eventPhoto3') => {
+  const handleCloudinaryUpload = (field: keyof TemplateData | 'gallery' | 'galleryVideo' | 'eventPhoto1' | 'eventPhoto2' | 'eventPhoto3' | 'eventVenuePhoto' | 'invitationVideo', accId?: string) => {
     if (!window.cloudinary) {
       showToast('error', 'Le service Cloudinary n\'est pas disponible');
       return;
     }
 
+    const isVideoField = field === 'galleryVideo' || field === 'invitationVideo';
     const widget = window.cloudinary.createUploadWidget(
       {
         cloudName: 'dogokmf6m',
         uploadPreset: 'Wedding',
-        sources: ['local', 'url', 'camera'],
+        sources: ['local', 'url', ...(isVideoField ? [] : ['camera'])],
         showAdvancedOptions: false,
         cropping: false,
-        multiple: field === 'gallery',
+        multiple: field === 'gallery' || field === 'galleryVideo',
         defaultSource: 'local',
+        resourceType: isVideoField ? 'video' : 'auto',
         styles: {
           palette: {
             window: '#FFFFFF',
@@ -246,14 +295,38 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               onSave(updated);
             }
             showToast('success', 'Image ajoutée à la galerie');
+          } else if (field === 'galleryVideo') {
+            const next = [...(customTemplate.eventVideos || []), url];
+            const updated = { ...customTemplate, eventVideos: next } as TemplateData;
+            setCustomTemplate(updated);
+            if (user && customTemplate.id) {
+              const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+              await setDoc(modelRef, { eventVideos: next, updatedAt: serverTimestamp() }, { merge: true });
+              onSave(updated);
+            }
+            showToast('success', 'Vidéo ajoutée à la galerie');
+          } else if (accId) {
+            const list = (customTemplate.accommodations || []).map(a =>
+              a.id === accId ? { ...a, image: url } : a
+            );
+            const updated = { ...customTemplate, accommodations: list } as TemplateData;
+            setCustomTemplate(updated);
+            if (user && customTemplate.id) {
+              try {
+                const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+                await setDoc(modelRef, { accommodations: list, updatedAt: serverTimestamp() }, { merge: true });
+                onSave(updated);
+              } catch {}
+            }
+            showToast('success', 'Image hébergement téléchargée');
           } else {
             handleInputChange(field as keyof TemplateData, url);
-            if (user && customTemplate.id && (field === 'eventPhoto1' || field === 'eventPhoto2' || field === 'eventPhoto3' || field === 'invitationTextPhoto')) {
+            if (user && customTemplate.id && (field === 'eventPhoto1' || field === 'eventPhoto2' || field === 'eventPhoto3' || field === 'eventVenuePhoto' || field === 'invitationTextPhoto' || field === 'invitationTextPhoto2' || field === 'invitationVideo')) {
               const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
               await setDoc(modelRef, { [field]: url, updatedAt: serverTimestamp() }, { merge: true });
               onSave({ ...customTemplate, [field]: url });
             }
-            showToast('success', 'Image téléchargée avec succès');
+            showToast('success', isVideoField ? 'Vidéo téléchargée avec succès' : 'Image téléchargée avec succès');
           }
         } else if (error) {
           showToast('error', "Erreur lors du téléchargement. Veuillez réessayer.");
@@ -433,6 +506,69 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     }
   };
 
+  const addGalleryVideoViaLink = async () => {
+    const url = galleryVideoUrlInput.trim();
+    if (!user || !customTemplate.id) { showToast('error', 'Vous devez être connecté'); return; }
+    if (!url || !/^https?:\/\//i.test(url)) { showToast('error', 'Veuillez saisir un lien http(s) valide'); return; }
+    const next = [...(customTemplate.eventVideos || []), url];
+    const updated = { ...customTemplate, eventVideos: next } as TemplateData;
+    setCustomTemplate(updated);
+    try {
+      const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+      await setDoc(modelRef, { eventVideos: next, updatedAt: serverTimestamp() }, { merge: true });
+      onSave(updated);
+      setGalleryVideoUrlInput('');
+      showToast('success', 'Vidéo ajoutée à la galerie');
+    } catch {
+      showToast('error', 'Erreur lors de la sauvegarde du lien');
+    }
+  };
+
+  const addGalleryVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) {
+      if (!user) showToast('error', 'Vous devez être connecté pour télécharger une vidéo');
+      return;
+    }
+    if (!file.type.startsWith('video/')) { showToast('error', 'Veuillez sélectionner un fichier vidéo valide'); return; }
+    if (file.size > 50 * 1024 * 1024) { showToast('error', 'La vidéo ne doit pas dépasser 50MB'); return; }
+    try {
+      setIsUploadingGalleryVideo(true);
+      const timestamp = Date.now();
+      const fileName = `template-gallery-videos/${user.id}/${timestamp}_${file.name}`;
+      const storageRef = ref(storage, fileName);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      const next = [...(customTemplate.eventVideos || []), downloadURL];
+      const updated = { ...customTemplate, eventVideos: next } as TemplateData;
+      setCustomTemplate(updated);
+      const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+      await setDoc(modelRef, { eventVideos: next, updatedAt: serverTimestamp() }, { merge: true });
+      onSave(updated);
+      showToast('success', 'Vidéo ajoutée à la galerie');
+    } catch {
+      showToast('error', "Erreur lors du téléchargement de la vidéo. Veuillez réessayer.");
+    } finally {
+      setIsUploadingGalleryVideo(false);
+      if (event.target) event.target.value = '';
+    }
+  };
+
+  const removeGalleryVideo = async (idx: number) => {
+    if (!user || !customTemplate.id) { showToast('error', 'Vous devez être connecté'); return; }
+    const next = (customTemplate.eventVideos || []).filter((_, i) => i !== idx);
+    const updated = { ...customTemplate, eventVideos: next } as TemplateData;
+    setCustomTemplate(updated);
+    try {
+      const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+      await setDoc(modelRef, { eventVideos: next, updatedAt: serverTimestamp() }, { merge: true });
+      onSave(updated);
+      showToast('success', 'Vidéo retirée de la galerie');
+    } catch {
+      showToast('error', 'Erreur lors de la mise à jour de la galerie');
+    }
+  };
+
   /* ========= Handlers Hébergements ========= */
   const persistAccommodations = async (nextList: Accommodation[]) => {
     const updated = { ...customTemplate, accommodations: nextList } as TemplateData;
@@ -535,7 +671,10 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   };
 
   const handleSave = async () => {
-    if (!customTemplate.id || !user) return;
+    if (!customTemplate.id || !user) {
+      showToast('error', !user ? 'Utilisateur non connecté, reconnectez-vous.' : 'Modèle invalide, retournez à l\'étape précédente.');
+      return;
+    }
 
   const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
 
@@ -562,12 +701,27 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             title: 'Playfair Display',
             body: 'Inter'
           },
-          layout: 'default'
+          layout: selectedLayout
         },
         updatedAt: serverTimestamp()
       }, { merge: true });
 
-      onSave(customTemplate);
+      const saved: TemplateData & { customizations?: { layout?: string; colors?: any; fonts?: any } } = {
+        ...customTemplate,
+        customizations: {
+          colors: {
+            primary: primaryColor,
+            secondary: secondaryColor,
+            accent: accentColor
+          },
+          fonts: {
+            title: 'Playfair Display',
+            body: 'Inter'
+          },
+          layout: selectedLayout
+        }
+      };
+      onSave(saved as TemplateData);
       setToast({ type: 'success', message: 'Template sauvegardé avec succès !' });
       window.setTimeout(() => setToast(null), 2500);
     } catch (error) {
@@ -705,6 +859,96 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
 
             <div>
               <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                Photo 2 dans la zone de texte
+              </label>
+              <div className="space-y-2.5 sm:space-y-3">
+                {/* Titre de la photo 2 */}
+                <div>
+                  <label className="block text-xs font-medium mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    Titre de la photo 2
+                  </label>
+                  <input
+                    type="text"
+                    value={(customTemplate as any).invitationTextPhoto2Title || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhoto2Title' as any, e.target.value)}
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    placeholder="Ex: Deuxième motif"
+                  />
+                </div>
+
+                {/* Sous-titre de la photo 2 */}
+                <div>
+                  <label className="block text-xs font-medium mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    Sous-titre de la photo 2
+                  </label>
+                  <input
+                    type="text"
+                    value={(customTemplate as any).invitationTextPhoto2Subtitle || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhoto2Subtitle' as any, e.target.value)}
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-lg text-xs sm:text-sm transition-all duration-200 outline-none"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    placeholder="Ex: Sous-titre 2"
+                  />
+                </div>
+
+                {/* Aperçu et upload photo 2 */}
+                <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
+                  {(customTemplate as any).invitationTextPhoto2 ? (
+                    <>
+                      <img
+                        src={(customTemplate as any).invitationTextPhoto2}
+                        alt="Aperçu photo texte 2"
+                        className="w-full h-full object-contain rounded-xl"
+                      />
+                      <button
+                        onClick={() => handleInputChange('invitationTextPhoto2' as any, '')}
+                        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
+                        title="Retirer la photo"
+                      >
+                        <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <Camera className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                        <p className="text-xs sm:text-sm" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune photo sélectionnée</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleCloudinaryUpload('invitationTextPhoto2')}
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    Charger une photo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Texte d'invitation
               </label>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
@@ -771,6 +1015,78 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
       case 'design':
         return (
           <div className="space-y-4 sm:space-y-6">
+            {SHOW_LAYOUT_SELECTOR && (
+              <div>
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  <span className="inline-flex items-center gap-1.5">
+                    Type d'invitation (layout)
+                    <Shield className="w-3.5 h-3.5" style={{ color: '#fcd34d' }} />
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <button
+                    onClick={() => handleLayoutSelectorClick('default')}
+                    className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left ${selectedLayout === 'default' ? 'scale-[1.02]' : 'opacity-80 hover:opacity-100 hover:border-amber-400/40'}`}
+                    style={{
+                      background: selectedLayout === 'default' ? 'rgba(251,191,36,0.10)' : 'rgba(255,255,255,0.03)',
+                      borderColor: selectedLayout === 'default' ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.08)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                      <span className="text-xs sm:text-sm font-bold text-white">Scroll Classique</span>
+                      {selectedLayout === 'default' && <Check className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#fcd34d' }} />}
+                    </div>
+                    <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      Défilement vertical premium
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => handleLayoutSelectorClick('book')}
+                    className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left ${selectedLayout === 'book' ? 'scale-[1.02]' : 'opacity-80 hover:opacity-100 hover:border-amber-400/40'}`}
+                    style={{
+                      background: selectedLayout === 'book' ? 'rgba(251,191,36,0.10)' : 'rgba(255,255,255,0.03)',
+                      borderColor: selectedLayout === 'book' ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.08)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                      <span className="text-xs sm:text-sm font-bold text-white">Livre</span>
+                      <div className="flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-wider uppercase" style={{ background: 'rgba(252,211,77,0.18)', color: '#fcd34d' }}>
+                          Nouveau
+                        </span>
+                        {selectedLayout === 'book' && <Check className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#fcd34d' }} />}
+                      </div>
+                    </div>
+                    <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      Format livre avec animations
+                    </p>
+                  </button>
+                </div>
+                <div
+                  className="mt-2.5 p-2.5 sm:p-3 rounded-lg flex items-start gap-2"
+                  style={{
+                    background: isCurrentUserAdmin
+                      ? 'rgba(34,197,94,0.08)'
+                      : 'rgba(251,191,36,0.05)',
+                    border: isCurrentUserAdmin
+                      ? '1px solid rgba(34,197,94,0.3)'
+                      : '1px solid rgba(251,191,36,0.18)',
+                  }}
+                >
+                  <Shield className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: isCurrentUserAdmin ? '#4ade80' : '#fcd34d' }} />
+                  {isCurrentUserAdmin ? (
+                    <p className="text-[10.5px] sm:text-xs leading-snug" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                      ✅ <span style={{ color: '#4ade80', fontWeight: 700 }}>Compte administrateur</span> : changement de format autorisé sans code.
+                    </p>
+                  ) : (
+                    <p className="text-[10.5px] sm:text-xs leading-snug" style={{ color: 'rgba(255,255,255,0.65)' }}>
+                      Le <span style={{ color: '#fcd34d', fontWeight: 700 }}>changement de format</span> est soumis à un code d&apos;autorisation administrateur.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
                 Image de fond
@@ -1250,6 +1566,63 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </div>
             </div>
 
+            <div className="mt-5">
+              <label className="block text-xs sm:text-sm font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                Vidéo en-tête (optionnel)
+              </label>
+              <p className="text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                MP4 ou WebM en boucle, sans son. Remplace la photo de fond en haut.
+              </p>
+              <div className="space-y-3">
+                <div className="relative h-24 rounded-xl border-2 border-dashed transition-all duration-300 flex items-center justify-center group"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
+                  {(customTemplate as any).invitationVideo ? (
+                    <>
+                      <video
+                        src={(customTemplate as any).invitationVideo}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="h-20 w-28 rounded-lg object-cover shadow-md"
+                      />
+                      <button
+                        onClick={() => handleInputChange('invitationVideo' as any, '')}
+                        className="absolute top-2 right-2 p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center">
+                      <Video className="h-6 w-6 mx-auto mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                      <p className="text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune vidéo sélectionnée</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleCloudinaryUpload('invitationVideo')}
+                    className="px-3 py-2 text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Charger une vidéo
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Section backgrounds */}
             <div className="pt-6 mt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2" style={{ color: 'rgba(255,255,255,0.9)' }}>
@@ -1500,21 +1873,19 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 </label>
                 <input
                   type="date"
-                  value={customTemplate.eventDate && customTemplate.eventDate.includes(' ') ? 
-                        customTemplate.eventDate.split(' ')[2] + '-' + 
-                        (customTemplate.eventDate.split(' ')[1] === 'Janvier' ? '01' : 
-                         customTemplate.eventDate.split(' ')[1] === 'Février' ? '02' :
-                         customTemplate.eventDate.split(' ')[1] === 'Mars' ? '03' :
-                         customTemplate.eventDate.split(' ')[1] === 'Avril' ? '04' :
-                         customTemplate.eventDate.split(' ')[1] === 'Mai' ? '05' :
-                         customTemplate.eventDate.split(' ')[1] === 'Juin' ? '06' :
-                         customTemplate.eventDate.split(' ')[1] === 'Juillet' ? '07' :
-                         customTemplate.eventDate.split(' ')[1] === 'Août' ? '08' :
-                         customTemplate.eventDate.split(' ')[1] === 'Septembre' ? '09' :
-                         customTemplate.eventDate.split(' ')[1] === 'Octobre' ? '10' :
-                         customTemplate.eventDate.split(' ')[1] === 'Novembre' ? '11' :
-                         customTemplate.eventDate.split(' ')[1] === 'Décembre' ? '12' : '01') + '-' + 
-                        customTemplate.eventDate.split(' ')[0].padStart(2, '0') : ''}
+                  value={(() => {
+                    if (!customTemplate.eventDate || !customTemplate.eventDate.includes(' ')) return '';
+                    const parts = customTemplate.eventDate.split(' ');
+                    if (parts.length < 3) return '';
+                    const monthMap: { [key: string]: string } = {
+                      'janvier': '01', 'fevrier': '02', 'février': '02', 'mars': '03', 'avril': '04', 'mai': '05', 'juin': '06',
+                      'juillet': '07', 'aout': '08', 'août': '08', 'septembre': '09', 'octobre': '10', 'novembre': '11', 'decembre': '12', 'décembre': '12',
+                      'Janvier': '01', 'Fevrier': '02', 'Février': '02', 'Mars': '03', 'Avril': '04', 'Mai': '05', 'Juin': '06',
+                      'Juillet': '07', 'Aout': '08', 'Août': '08', 'Septembre': '09', 'Octobre': '10', 'Novembre': '11', 'Decembre': '12', 'Décembre': '12'
+                    };
+                    const monthNum = monthMap[parts[1]] || '01';
+                    return parts[2] + '-' + monthNum + '-' + parts[0].padStart(2, '0');
+                  })()}
                   onChange={(e) => {
                     const date = new Date(e.target.value);
                     const formattedDate = date.toLocaleDateString('fr-FR', {
@@ -1602,6 +1973,62 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: 15.3136"
                   />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                Photo de la salle
+              </label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <div className="relative h-24 sm:h-28 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all duration-300"
+                     style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                     onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                >
+                  {customTemplate.eventVenuePhoto ? (
+                    <img src={customTemplate.eventVenuePhoto} alt="Aperçu salle" className="h-full w-full object-cover rounded-lg" />
+                  ) : (
+                    <div className="text-center">
+                      <Building className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-0.5 sm:mb-1" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                      <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune image</p>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ boxShadow: 'inset 0 0 0 2px rgba(251, 191, 36, 0.15)' }} />
+                </div>
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCloudinaryUpload('eventVenuePhoto')}
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
+                    {customTemplate.eventVenuePhoto ? 'Changer la photo' : 'Charger une photo'}
+                  </button>
+                  {customTemplate.eventVenuePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('eventVenuePhoto', '')}
+                      className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center border"
+                      style={{
+                        borderColor: 'rgba(236, 72, 153, 0.3)',
+                        color: '#fda4af',
+                        background: 'rgba(236, 72, 153, 0.05)',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236, 72, 153, 0.15)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(236, 72, 153, 0.05)'; }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1776,6 +2203,58 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                               onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                               placeholder="Ex: Partenaire | 5 min"
                             />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                              <Camera className="h-3 w-3 inline mr-1" /> Photo de l'établissement
+                            </label>
+                            <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group overflow-hidden"
+                                 style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
+                                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
+                                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                            >
+                              {acc.image ? (
+                                <>
+                                  <img
+                                    src={acc.image}
+                                    alt="Photo hébergement"
+                                    className="w-full h-full object-cover rounded-xl"
+                                  />
+                                  <button
+                                    onClick={() => updateAccommodation(acc.id, { image: '' })}
+                                    className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1 sm:p-1.5 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                    style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
+                                    title="Retirer la photo"
+                                  >
+                                    <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <div className="text-center">
+                                    <Camera className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.35)' }} />
+                                    <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune photo</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleCloudinaryUpload('invitationTextPhoto' as any, acc.id)}
+                                className="px-2.5 py-1.5 text-[10px] sm:text-xs rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                                style={{
+                                  background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                                  color: '#0b0f17',
+                                  boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 6px 16px -6px rgba(251,191,36,0.55)',
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                              >
+                                <Upload className="h-3 w-3 mr-1" />
+                                Charger photo
+                              </button>
+                            </div>
                           </div>
                           <div className="md:col-span-2">
                             <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>Note privée (non affichée)</label>
@@ -2016,6 +2495,95 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 </div>
               </div>
               </div>
+
+              <div className="mt-4 sm:mt-6">
+                <label className="block text-xs sm:text-sm font-semibold mb-1.5 sm:mb-2" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  <span className="flex items-center gap-1.5"><Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" style={{ color: '#fcd34d' }} />Vidéos de la galerie</span>
+                </label>
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+                  {(customTemplate.eventVideos || []).map((src, idx) => (
+                    <div key={`${src}-${idx}`} className="relative rounded-xl overflow-hidden group" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <video src={src} className="w-full h-20 sm:h-24 object-cover" muted loop playsInline preload="metadata" />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-black/60 backdrop-blur-sm border border-white/25 text-white shadow-lg">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="translate-x-[1px]"><path d="M8 5v14l11-7z" /></svg>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeGalleryVideo(idx)}
+                        className="absolute top-1.5 right-1.5 p-1.5 rounded-full shadow transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        style={{ background: 'rgba(15,23,42,0.9)', color: '#fda4af' }}
+                        title="Retirer"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {!(customTemplate.eventVideos || []).length && (
+                    <div className="text-xs sm:text-sm col-span-2 md:col-span-3" style={{ color: 'rgba(255,255,255,0.45)' }}>Aucune vidéo dans la galerie pour le moment</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => handleCloudinaryUpload('galleryVideo')}
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 sm:gap-2"
+                    style={{
+                      background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+                      color: '#0b0f17',
+                      boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                  >
+                    <Video className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    Ajouter des vidéos
+                  </button>
+                  <label className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center gap-1.5 sm:gap-2 cursor-pointer border disabled:opacity-50 disabled:cursor-not-allowed" style={{ background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.85)', borderColor: 'rgba(255,255,255,0.12)' }} onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}>
+                    {isUploadingGalleryVideo ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" style={{ color: '#fcd34d' }} />
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        Upload vidéo local
+                      </>
+                    )}
+                    <input type="file" accept="video/*" className="hidden" onChange={addGalleryVideoUpload} disabled={isUploadingGalleryVideo} />
+                  </label>
+                </div>
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <input
+                    type="text"
+                    value={galleryVideoUrlInput}
+                    onChange={(e) => setGalleryVideoUrlInput(e.target.value)}
+                    placeholder="Lien direct vidéo (https://...mp4)"
+                    className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') addGalleryVideoViaLink(); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addGalleryVideoViaLink}
+                    className="px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border"
+                    style={{ background: 'rgba(251,191,36,0.1)', color: '#fcd34d', borderColor: 'rgba(251,191,36,0.35)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.2)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(251,191,36,0.1)'; }}
+                  >
+                    Ajouter
+                  </button>
+                </div>
+                <p className="text-[10px] sm:text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                  Formats supportés : MP4, WebM, MOV. Taille max recommandée : 50MB. Les vidéos sont affichées en mute dans la prévisualisation.
+                </p>
+              </div>
+              </div>
           </div>
         );
 
@@ -2091,6 +2659,57 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 Personnalisez les options de boissons selon vos préférences. Vos invités pourront 
                 sélectionner leur choix directement depuis l'invitation.
               </p>
+            </div>
+
+            <div className="rounded-2xl p-3 sm:p-5 sm:p-6 border" style={{ background: 'rgba(251,191,36,0.06)', borderColor: 'rgba(251,191,36,0.18)' }}>
+              <div className="flex items-center mb-3 sm:mb-5">
+                <svg className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" style={{ color: '#fcd34d' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18M15 3v18M3 9h18M3 15h18" /></svg>
+                <h3 className="text-base sm:text-lg font-semibold" style={{ color: '#fcd34d' }}>Sections de l'invitation</h3>
+              </div>
+              <p className="text-xs sm:text-sm mb-4 sm:mb-5" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                Activez ou désactivez les sections selon vos besoins (Entête et QR Code toujours visibles).
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3.5">
+                {[
+                  { field: 'couplePhotoEnabled' as const, label: 'Photo du Couple', icon: '📸' },
+                  { field: 'invitationTextEnabled' as const, label: 'Texte d\'invitation', icon: '💌' },
+                  { field: 'countdownEnabled' as const, label: 'Compte à rebours + Lieu', icon: '⏰' },
+                  { field: 'galleryEnabled' as const, label: 'Galerie Photos', icon: '🖼️' },
+                  { field: 'rsvpEnabled' as const, label: 'Confirmation de présence', icon: '✅' },
+                  { field: 'drinksEnabled' as const, label: 'Choix des boissons', icon: '🍷' },
+                  { field: 'gamesEnabled' as const, label: 'Jeux & Fun', icon: '🎮' },
+                  { field: 'guestBookEnabled' as const, label: 'Livre d\'Or', icon: '📖' },
+                  { field: 'notificationEnabled' as const, label: 'Bouton Notifications', icon: '🔔' },
+                  { field: 'fallingDotsEnabled' as const, label: 'Effet Points Tombants', icon: '✨' },
+                ].map(({ field, label, icon }) => {
+                  const val = (customTemplate as any)[field] !== false;
+                  return (
+                    <div
+                      key={field}
+                      className="flex items-center justify-between rounded-xl p-2.5 sm:p-3 sm:px-4 border transition-all duration-300 group"
+                      style={{ background: 'linear-gradient(180deg, #111727 0%, #0d1220 100%)', borderColor: 'rgba(255,255,255,0.08)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.25)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                    >
+                      <div className="flex items-center min-w-0">
+                        <span className="mr-1.5 sm:mr-2 text-sm sm:text-base flex-shrink-0">{icon}</span>
+                        <span className="font-medium text-[11px] sm:text-sm truncate" style={{ color: 'rgba(255,255,255,0.9)' }}>{label}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange(field, !val)}
+                        className="w-10 sm:w-11 h-6 sm:h-6 rounded-full relative transition-all duration-300 flex-shrink-0 ml-2 active:scale-95"
+                        style={{ background: val ? 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)' : 'rgba(255,255,255,0.12)', boxShadow: val ? '0 0 0 1px rgba(251,191,36,0.5), 0 6px 14px -8px rgba(251,191,36,0.6)' : 'inset 0 1px 0 rgba(255,255,255,0.06)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 w-5 h-5 rounded-full transition-all duration-300"
+                          style={{ background: '#ffffff', left: val ? 'calc(100% - 22px)' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+                        />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         );
@@ -2206,7 +2825,8 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
           primary: primaryColor,
           secondary: secondaryColor,
           accent: accentColor
-        }
+        },
+        layout: selectedLayout
       }
     };
     return (
@@ -2248,41 +2868,50 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                        radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)`,
       backgroundSize: 'auto, auto, auto, 22px 22px'
     }}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
-        <div className="flex items-center">
-          <button
-            onClick={onBack}
-            className="flex items-center transition-all duration-300 group mr-3"
-            style={{ color: '#fcd34d' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fbbf24'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
-          >
-            <ArrowLeft className="h-4 w-4 mr-1 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="text-sm font-medium">Retour</span>
-          </button>
-          <div>
-            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
-              Personnalisation du Template
-            </h2>
-            <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{customTemplate.name}</p>
+      {/* Header Sticky (Desktop: bouton Sauvegarder toujours accessible) */}
+      <div
+        className="sticky top-0 z-50 mb-4 sm:mb-6 -mx-0 sm:-mx-4 px-0 sm:px-4 py-3 sm:py-4 backdrop-blur-xl border-b"
+        style={{
+          background: 'rgba(11, 15, 23, 0.85)',
+          borderColor: 'rgba(255,255,255,0.06)',
+          boxShadow: '0 10px 40px -20px rgba(0,0,0,0.7)',
+        }}
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 max-w-full">
+          <div className="flex items-center">
+            <button
+              onClick={onBack}
+              className="flex items-center transition-all duration-300 group mr-3"
+              style={{ color: '#fcd34d' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fbbf24'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#fcd34d'; }}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1 group-hover:-translate-x-1 transition-transform duration-300" />
+              <span className="text-sm font-medium">Retour</span>
+            </button>
+            <div>
+              <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                Personnalisation du Template
+              </h2>
+              <p className="text-xs sm:text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>{customTemplate.name}</p>
+            </div>
           </div>
-        </div>
 
-        <button
-          onClick={handleSave}
-          className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-all duration-300 font-semibold flex items-center text-sm"
-          style={{
-            background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
-            color: '#0b0f17',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.65)',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <Save className="h-3.5 w-3.5 mr-1.5" />
-          Sauvegarder
-        </button>
+          <button
+            onClick={handleSave}
+            className="px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg transition-all duration-300 font-semibold flex items-center text-sm"
+            style={{
+              background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
+              color: '#0b0f17',
+              boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 10px 24px -10px rgba(251,191,36,0.65)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            <Save className="h-3.5 w-3.5 mr-1.5" />
+            Sauvegarder
+          </button>
+        </div>
       </div>
 
       {/* Mobile Tab Navigation */}
@@ -2416,6 +3045,12 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
           {renderPreview()}
         </div>
       </div>
+      <AdminPasswordModal
+        isOpen={showAdminPasswordModal}
+        onClose={() => setShowAdminPasswordModal(false)}
+        onSuccess={handleAdminPasswordSuccess}
+        targetLayoutLabel={pendingLayout === 'book' ? 'Format Livre' : 'Scroll Classique'}
+      />
       {toast && (
         <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] px-3 py-2 sm:px-4 sm:py-3 rounded-xl border text-xs sm:text-sm"
              style={{

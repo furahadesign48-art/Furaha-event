@@ -16,13 +16,15 @@ import {
   Mail
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { cn } from '../lib/utils';
 import type { GlassCardProps } from './ui/glass-cards';
 
 const rgbFromColor = (c: string) =>
   c.replace(/rgba?\(([^,]+),([^,]+),([^,]+),?[^)]*\)/, "rgb($1,$2,$3)");
 
-const StaticFeatureCard: React.FC<GlassCardProps & { index: number }> = ({
-  id, title, description, icon: IconComponent, color, gradient, bullets, index
+const StaticFeatureCard: React.FC<GlassCardProps & { index: number; isDarkMode: boolean }> = ({
+  id, title, description, color, bullets, index, isDarkMode
 }) => {
   const solidColor = rgbFromColor(color);
   return (
@@ -33,124 +35,52 @@ const StaticFeatureCard: React.FC<GlassCardProps & { index: number }> = ({
       <div
         className="relative overflow-hidden"
         style={{
-          borderRadius: '18px',
-          background: gradient,
-          border: `1px solid ${color.replace(/[\d.]+\)$/, "0.45)")}`,
-          boxShadow: `
-            0 12px 48px rgba(0, 0, 0, 0.45),
-            0 3px 12px rgba(0, 0, 0, 0.32),
-            inset 0 1px 0 rgba(255, 255, 255, 0.22),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.2)
-          `,
+          borderRadius: '22px',
+          background: isDarkMode
+            ? 'linear-gradient(180deg, #141a2c 0%, #0d1220 100%)'
+            : '#ffffff',
+          border: isDarkMode
+            ? '1px solid rgba(255,255,255,0.08)'
+            : '1px solid rgba(180, 83, 9, 0.14)',
+          boxShadow: isDarkMode
+            ? '0 20px 50px -20px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.25)'
+            : '0 20px 50px -20px rgba(180, 83, 9, 0.18), 0 4px 12px rgba(180, 83, 9, 0.06)',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: '-1.5px',
-            borderRadius: '19.5px',
-            padding: '1.5px',
-            background: `conic-gradient(
-              from 0deg,
-              transparent 0deg,
-              ${color} 60deg,
-              ${color.replace(/[\d.]+\)$/, "0.55)")} 120deg,
-              transparent 180deg,
-              ${color.replace(/[\d.]+\)$/, "0.3)")} 240deg,
-              transparent 360deg
-            )`,
-            zIndex: -1,
-            WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-            WebkitMaskComposite: "xor",
-            maskComposite: "exclude",
-            opacity: 0.9,
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '40%',
-            background: "linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 100%)",
-            pointerEvents: 'none',
-            borderRadius: '18px 18px 0 0',
-          }}
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-6 sm:-bottom-10 left-1/2 -translate-x-1/2 w-[85%] h-[50%] sm:h-[60%] pointer-events-none blur-3xl opacity-60 sm:opacity-70"
-          style={{
-            background: `radial-gradient(ellipse at center, ${color.replace(/[\d.]+\)$/, "0.35)")} 0%, ${color.replace(/[\d.]+\)$/, "0.1)")} 45%, transparent 72%)`,
-          }}
-        />
-
-        <div className="relative z-10 flex flex-col h-full p-3.5 sm:p-5 md:p-6">
-          <div className="flex items-start gap-2 sm:gap-3 mb-2.5 sm:mb-3">
+        <div className="relative z-10 flex flex-col h-full p-4 sm:p-5 md:p-6">
+          <div
+            className="rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6"
+            style={{
+              background: isDarkMode
+                ? color.replace(/[\d.]+\)$/, "0.08)")
+                : color.replace(/[\d.]+\)$/, "0.10)"),
+              border: isDarkMode
+                ? `1px solid ${color.replace(/[\d.]+\)$/, "0.18)")}`
+                : `1px solid ${color.replace(/[\d.]+\)$/, "0.22)")}`,
+            }}
+          >
             <div
-              className="relative p-2 sm:p-2.5 sm:p-3 rounded-lg sm:rounded-xl shrink-0"
+              className="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-2 sm:mb-3"
               style={{
-                background: `linear-gradient(145deg, ${color.replace(/[\d.]+\)$/, "0.28)")}, ${color.replace(/[\d.]+\)$/, "0.08)")})`,
-                border: `1px solid ${color.replace(/[\d.]+\)$/, "0.5)")}`,
-                boxShadow: `0 6px 20px -8px ${solidColor}`,
+                color: solidColor,
+                lineHeight: 1,
               }}
             >
-              <IconComponent
-                className="w-4 h-4 sm:w-5 sm:h-5 sm:w-6 sm:h-6"
-                style={{ color: solidColor }}
-              />
+              {String(index + 1).padStart(2, '0')}
             </div>
-            <div className="flex-1 min-w-0">
-              <div
-                className="inline-flex items-center mb-1 sm:mb-1.5 px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] sm:text-[10px] font-mono tracking-wider uppercase"
-                style={{
-                  background: `${color.replace(/[\d.]+\)$/, "0.18)")}`,
-                  color: solidColor,
-                  border: `1px solid ${color.replace(/[\d.]+\)$/, "0.35)")}`,
-                }}
-              >
-                F{String(index + 1).padStart(2, '0')}
-              </div>
-              <h3 className="text-sm sm:text-base md:text-xl font-extrabold text-white leading-tight">
-                {title}
-              </h3>
-            </div>
+            <h3 className={cn(
+              "text-lg sm:text-xl md:text-2xl font-bold leading-tight mb-2 sm:mb-3 transition-colors duration-500",
+              isDarkMode ? "text-white" : "text-amber-950"
+            )}>
+              {title}
+            </h3>
+            <p
+              className="leading-relaxed text-sm md:text-base transition-colors duration-500"
+              style={{ color: isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(120, 53, 15, 0.70)" }}
+            >
+              {description}
+            </p>
           </div>
-
-          <p
-            className="hidden sm:block leading-relaxed text-xs md:text-sm mb-3 md:mb-4"
-            style={{ color: "rgba(255,255,255,0.82)" }}
-          >
-            {description}
-          </p>
-
-          <ul className="grid grid-cols-1 gap-1 sm:gap-1.5 md:gap-2 mt-auto">
-            {bullets.slice(0, 2).map((bullet, idx) => (
-              <li
-                key={idx}
-                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl"
-                style={{
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.12)",
-                }}
-              >
-                <span
-                  className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0"
-                  style={{
-                    background: `linear-gradient(145deg, ${solidColor}, ${color.replace(/[\d.]+\)$/, "0.7)")})`,
-                    boxShadow: `0 0 0 2px ${color.replace(/[\d.]+\)$/, "0.18)")}`,
-                  }}
-                />
-                <span
-                  className="text-[9px] sm:text-[10px] sm:text-xs font-medium leading-snug line-clamp-1"
-                  style={{ color: "rgba(255,255,255,0.88)" }}
-                >
-                  {bullet}
-                </span>
-              </li>
-            ))}
-          </ul>
         </div>
       </div>
     </div>
@@ -159,6 +89,7 @@ const StaticFeatureCard: React.FC<GlassCardProps & { index: number }> = ({
 
 const WhyChooseSection = () => {
   const { t } = useLanguage();
+  const { isDarkMode } = useTheme();
 
   const features: Omit<GlassCardProps, 'index' | 'total'>[] = [
     {
@@ -227,13 +158,17 @@ const WhyChooseSection = () => {
   ];
 
   return (
-    <section id="features" className="relative py-16 md:py-20 bg-[#0b0f17] border-t border-white/5 overflow-hidden">
+    <section id="features" className={cn(
+      "relative py-16 md:py-20 border-t overflow-hidden transition-colors duration-500",
+      isDarkMode ? "bg-[#0b0f17] border-white/5" : "bg-amber-50/50 border-amber-900/10"
+    )}>
       {/* Subtle dot grid */}
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)'
+            : 'radial-gradient(circle at 1px 1px, #78350f 1px, transparent 0)',
           backgroundSize: '28px 28px',
         }}
       />
@@ -254,20 +189,10 @@ const WhyChooseSection = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-6 md:mb-8 animate-fade-in">
-          <div
-            className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full"
-            style={{
-              border: '1px solid rgba(251,191,36,0.25)',
-              background: 'linear-gradient(180deg, rgba(251,191,36,0.1), rgba(251,191,36,0.02))',
-            }}
-          >
-            <Sparkles className="w-3.5 h-3.5" style={{ color: '#fbbf24' }} />
-            <span className="font-mono text-[11px] tracking-wide uppercase" style={{ color: '#fcd34d' }}>
-              {t('all_in_one_platform') || 'Plateforme tout-en-un'}
-            </span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-0">
+          <h2 className={cn(
+            "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-0 transition-colors duration-500",
+            isDarkMode ? "text-white" : "text-amber-950"
+          )}>
             {t('why_choose_us') || 'Tout ce qu\'il faut pour un événement inoubliable'}
           </h2>
         </div>
@@ -275,12 +200,13 @@ const WhyChooseSection = () => {
 
       {/* Static Feature Cards Grid */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6 md:mt-10">
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           {features.map((card, index) => (
             <StaticFeatureCard
               key={card.id}
               {...card}
               index={index}
+              isDarkMode={isDarkMode}
             />
           ))}
         </div>
@@ -309,17 +235,27 @@ const WhyChooseSection = () => {
           <div
             className="inline-block rounded-2xl px-5 py-3.5 md:px-8 md:py-5 text-left sm:text-center relative"
             style={{
-              background:
-                'linear-gradient(180deg, #141a2c 0%, #0d1220 100%)',
-              border: '1px solid rgba(251,191,36,0.28)',
-              boxShadow:
-                '0 30px 80px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(251,191,36,0.08) inset, 0 1px 0 rgba(255,255,255,0.05) inset',
+              background: isDarkMode
+                ? 'linear-gradient(180deg, #141a2c 0%, #0d1220 100%)'
+                : 'linear-gradient(180deg, #fffaf0 0%, #fffbeb 100%)',
+              border: isDarkMode
+                ? '1px solid rgba(251,191,36,0.28)'
+                : '1px solid rgba(180,83,9,0.28)',
+              boxShadow: isDarkMode
+                ? '0 30px 80px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(251,191,36,0.08) inset, 0 1px 0 rgba(255,255,255,0.05) inset'
+                : '0 30px 80px -20px rgba(180,83,9,0.25), 0 0 0 1px rgba(251,191,36,0.15) inset, 0 1px 0 rgba(255,255,255,0.7) inset',
             }}
           >
-            <h3 className="text-base md:text-xl font-bold text-white mb-0.5 md:mb-1">
+            <h3 className={cn(
+              "text-base md:text-xl font-bold mb-0.5 md:mb-1 transition-colors duration-500",
+              isDarkMode ? "text-white" : "text-amber-950"
+            )}>
               {t('ready_to_start') || 'Prêt à créer votre invitation ?'}
             </h3>
-            <p className="text-xs md:text-sm text-white/55 mb-3 md:mb-4">
+            <p className={cn(
+              "text-xs md:text-sm mb-3 md:mb-4 transition-colors duration-500",
+              isDarkMode ? "text-white/55" : "text-amber-900/65"
+            )}>
               {t('contact_direct') || 'Contactez-nous directement — Paiement et accompagnement personnalisés'}
             </p>
             <div className="flex flex-row gap-3 justify-center">
@@ -343,14 +279,16 @@ const WhyChooseSection = () => {
                 aria-label="Contacter par email"
                 className="inline-flex items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-xl text-sm font-semibold transition-all duration-300 hover:scale-[1.08] hover:-translate-y-0.5"
                 style={{
-                  background:
-                    'linear-gradient(180deg, #1e2338 0%, #0b0f17 100%)',
+                  background: isDarkMode
+                    ? 'linear-gradient(180deg, #1e2338 0%, #0b0f17 100%)'
+                    : 'linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%)',
                   color: '#fff',
-                  boxShadow:
-                    '0 0 0 1px rgba(251,191,36,0.22), 0 12px 30px -12px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.09) inset, 0 -3px 6px rgba(0,0,0,0.9) inset',
+                  boxShadow: isDarkMode
+                    ? '0 0 0 1px rgba(251,191,36,0.22), 0 12px 30px -12px rgba(0,0,0,0.9), 0 1px 1px rgba(255,255,255,0.09) inset, 0 -3px 6px rgba(0,0,0,0.9) inset'
+                    : '0 0 0 1px rgba(180,83,9,0.22), 0 12px 30px -12px rgba(180,83,9,0.25), 0 1px 1px rgba(255,255,255,0.9) inset, 0 -3px 6px rgba(180,83,9,0.08) inset',
                 }}
               >
-                <Mail className="w-5 h-5 md:w-[22px] md:h-[22px]" style={{ color: '#fcd34d' }} />
+                <Mail className="w-5 h-5 md:w-[22px] md:h-[22px]" style={{ color: isDarkMode ? '#fcd34d' : '#d97706' }} />
               </a>
             </div>
           </div>

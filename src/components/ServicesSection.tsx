@@ -1,6 +1,8 @@
 import React from 'react';
 import { Heart, Sparkles, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { cn } from '../lib/utils';
 
 interface ServicesSectionProps {
   onViewWeddingTemplate?: () => void;
@@ -8,12 +10,13 @@ interface ServicesSectionProps {
 
 const ServicesSection = ({ onViewWeddingTemplate }: ServicesSectionProps) => {
   const { t } = useLanguage();
+  const { isDarkMode } = useTheme();
 
   const weddingService = {
     id: 1,
     title: t('wedding_invitations') || 'Invitations de Mariage',
     description: t('wedding_description') || 'Une expérience interactive complète pour le plus beau jour de votre vie. Invitations élégantes et entièrement personnalisées, RSVP intelligent, livre d\'or animé avec réponses, jeux d\'ambiance, galerie 3D immersive et check-in invités le jour J.',
-    image: 'https://static.vecteezy.com/system/resources/thumbnails/056/699/345/small_2x/a-young-couple-of-african-american-bride-and-groom-at-their-wedding-ceremony-photo.jpg',
+    image: '/model4.jpg',
     icon: Heart,
     features: [
       'Compte à rebours personnalisé',
@@ -29,13 +32,17 @@ const ServicesSection = ({ onViewWeddingTemplate }: ServicesSectionProps) => {
   };
 
   return (
-    <section id="services" className="relative py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-[#0a0d14] border-t border-white/5 overflow-hidden">
+    <section id="services" className={cn(
+      "relative py-20 sm:py-24 px-4 sm:px-6 lg:px-8 border-t overflow-hidden transition-colors duration-500",
+      isDarkMode ? "bg-[#0a0d14] border-white/5" : "bg-white border-amber-900/10"
+    )}>
       {/* Subtle dot grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.05]"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)'
+            : 'radial-gradient(circle at 1px 1px, #78350f 1px, transparent 0)',
           backgroundSize: '26px 26px',
         }}
       />
@@ -50,24 +57,16 @@ const ServicesSection = ({ onViewWeddingTemplate }: ServicesSectionProps) => {
       <div className="relative max-w-6xl mx-auto">
         {/* Section header */}
         <div className="text-center mb-12 md:mb-16 animate-fade-in">
-          <div className="inline-flex items-center gap-2 mb-5 px-3 py-1 rounded-full"
-               style={{
-                 border: '1px solid rgba(251,191,36,0.25)',
-                 background: 'linear-gradient(180deg, rgba(251,191,36,0.1), rgba(251,191,36,0.02))',
-               }}
-          >
-            <Sparkles className="w-3.5 h-3.5" style={{ color: '#fbbf24' }} />
-            <span className="font-mono text-[11px] tracking-wide uppercase"
-                  style={{ color: '#fcd34d' }}
-            >
-              {t('wedding_only') || 'Modèle phare — Mariage'}
-            </span>
-          </div>
-
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-white mb-4">
+          <h2 className={cn(
+            "text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight mb-4 transition-colors duration-500",
+            isDarkMode ? "text-white" : "text-amber-950"
+          )}>
             {t('our_services') || 'Notre Offre Mariage'}
           </h2>
-          <p className="text-base md:text-lg text-white/55 max-w-2xl mx-auto leading-relaxed">
+          <p className={cn(
+            "text-base md:text-lg max-w-2xl mx-auto leading-relaxed transition-colors duration-500",
+            isDarkMode ? "text-white/55" : "text-amber-900/65"
+          )}>
             {t('services_description') || 'Une invitation premium et interactive qui transforme l\'annonce de votre union en une expérience mémorable pour tous vos invités'}
           </p>
         </div>
@@ -95,33 +94,44 @@ const ServicesSection = ({ onViewWeddingTemplate }: ServicesSectionProps) => {
           <div
             className="relative rounded-2xl overflow-hidden group"
             style={{
-              border: '1px solid rgba(255,255,255,0.08)',
-              background:
-                'linear-gradient(180deg, #111727 0%, #0d1220 100%)',
-              boxShadow:
-                '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.05) inset',
+              border: isDarkMode
+                ? '1px solid rgba(255,255,255,0.08)'
+                : '1px solid rgba(180,83,9,0.18)',
+              background: isDarkMode
+                ? 'linear-gradient(180deg, #111727 0%, #0d1220 100%)'
+                : 'linear-gradient(180deg, #fffaf0 0%, #fffbeb 100%)',
+              boxShadow: isDarkMode
+                ? '0 30px 80px -30px rgba(0,0,0,0.7), 0 0 0 1px rgba(251,191,36,0.05) inset'
+                : '0 30px 80px -30px rgba(180,83,9,0.25), 0 0 0 1px rgba(251,191,36,0.15) inset',
               transition: 'all 400ms cubic-bezier(0.22,1,0.36,1)',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(251,191,36,0.25)';
+              (e.currentTarget as HTMLElement).style.borderColor = isDarkMode ? 'rgba(251,191,36,0.25)' : 'rgba(180,83,9,0.45)';
               (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+              (e.currentTarget as HTMLElement).style.borderColor = isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(180,83,9,0.18)';
               (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
             }}
           >
             {/* Top badge bar - GitHub repo style */}
-            <div className="flex items-center justify-between px-5 sm:px-7 py-3 border-b border-white/5">
+            <div className="flex items-center justify-between px-5 sm:px-7 py-3 border-b"
+                 style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(180,83,9,0.10)' }}>
               <div className="flex items-center gap-2">
                 <Heart className="w-4 h-4 text-rose-400 fill-rose-400" />
-                <span className="font-mono text-[11.5px] text-white/60">
-                  templates/<span style={{ color: '#fcd34d' }}>wedding-premium</span>
+                <span className={cn(
+                  "font-mono text-[11.5px]",
+                  isDarkMode ? "text-white/60" : "text-amber-900/60"
+                )}>
+                  templates/<span style={{ color: isDarkMode ? '#fcd34d' : '#92400e' }}>wedding-premium</span>
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-[11px] text-white/50">
+              <div className={cn(
+                "flex items-center gap-3 text-[11px]",
+                isDarkMode ? "text-white/50" : "text-amber-900/50"
+              )}>
                 <div className="inline-flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3" style={{ color: '#fbbf24' }} />
+                  <Sparkles className="w-3 h-3" style={{ color: '#d97706' }} />
                   <span>v3.1</span>
                 </div>
                 <div className="inline-flex items-center gap-1.5">
@@ -132,23 +142,28 @@ const ServicesSection = ({ onViewWeddingTemplate }: ServicesSectionProps) => {
             </div>
 
             {/* Image area */}
-            <div className="relative h-52 md:h-72 overflow-hidden border-b border-white/5">
+            <div className="relative h-52 md:h-72 overflow-hidden border-b"
+                 style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(180,83,9,0.10)' }}>
               <img
                 src={weddingService.image}
                 alt={weddingService.title}
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
               />
-              <div className="absolute inset-0"
-                   style={{
-                     background:
-                       'linear-gradient(180deg, rgba(10,13,20,0.1) 0%, rgba(10,13,20,0.65) 60%, rgba(10,13,20,0.9) 100%)',
-                   }}
-              />
+              {isDarkMode && (
+                <div className="absolute inset-0"
+                     style={{
+                       background: 'linear-gradient(180deg, rgba(10,13,20,0.1) 0%, rgba(10,13,20,0.65) 60%, rgba(10,13,20,0.9) 100%)',
+                     }}
+                />
+              )}
             </div>
 
             {/* Content */}
             <div className="p-6 md:p-10 text-center">
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-6 md:mb-8">
+              <h3 className={cn(
+                "text-2xl md:text-3xl font-bold mb-6 md:mb-8 transition-colors duration-500",
+                isDarkMode ? "text-white" : "text-amber-950"
+              )}>
                 {weddingService.title}
               </h3>
 

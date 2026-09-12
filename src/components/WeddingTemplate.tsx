@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { Heart, Calendar, MapPin, Users, Wine, Camera, MessageCircle, QrCode, ArrowLeft, Check, Sparkles, User, Bell, LayoutDashboard, Volume2, VolumeX, Gamepad2, Trophy, Clock, Gift, Music2, Download, BookOpen, Star, ChevronRight, Eye, Palette } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Calendar, MapPin, Users, Wine, Camera, MessageCircle, QrCode, ArrowLeft, Check, Sparkles, User, Bell, LayoutDashboard, Volume2, VolumeX, Gamepad2, Trophy, Clock, Gift, Music2, Download, BookOpen, Star, ChevronRight, Eye, Palette, Shield } from 'lucide-react';
 import AuthModal from './AuthModal';
 import ToastModal from './ToastModal';
+import AdminPasswordModal from './AdminPasswordModal';
 import { useTemplates } from '../hooks/useTemplates';
 import { useNotifications } from '../hooks/useNotifications';
+import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../contexts/ThemeContext';
+import { cn } from '../lib/utils';
+import InvitationPreview from './InvitationPreview';
+import type { UserModel } from '../services/templateService';
 
 interface WeddingTemplateProps {
   onBack: () => void;
@@ -12,8 +18,10 @@ interface WeddingTemplateProps {
 }
 
 const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingTemplateProps) => {
+  const { isDarkMode } = useTheme();
   const { createUserTemplate, isLoading, userModels } = useTemplates();
   const { permission, requestPermission, isLoading: isNotificationLoading } = useNotifications();
+  const { user } = useAuth();
   const [selectedDrink, setSelectedDrink] = useState('');
   const [showToastModal, setShowToastModal] = useState(false);
   const [guestMessage, setGuestMessage] = useState('');
@@ -21,16 +29,51 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
   const [showPreview, setShowPreview] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showQRInfo, setShowQRInfo] = useState(false);
+  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book'>('default');
+  const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
+  const [pendingLayout, setPendingLayout] = useState<'default' | 'book'>('default');
 
   // SÉCURITÉ : Empêcher toute nouvelle création de template si l'utilisateur en a déjà un
   // Évite la réinitialisation accidentelle de designs déjà personnalisés.
   const hasExistingTemplate = isAuthenticated && Array.isArray(userModels) && userModels.length > 0;
+  const isCurrentUserAdmin = user?.role === 'admin';
+
+  // Pré-charger le layout depuis le modèle existant
+  useEffect(() => {
+    if (hasExistingTemplate && userModels && userModels.length > 0) {
+      const existingLayout = (userModels[0] as any)?.customizations?.layout;
+      if (existingLayout === 'book' || existingLayout === 'default') {
+        setSelectedLayout(existingLayout);
+      }
+    }
+  }, [hasExistingTemplate, userModels]);
+
+  const handleLayoutCardClick = (targetLayout: 'default' | 'book') => {
+    if (!hasExistingTemplate) {
+      setSelectedLayout(targetLayout);
+      return;
+    }
+    if (targetLayout === selectedLayout) {
+      return;
+    }
+    if (isCurrentUserAdmin) {
+      setSelectedLayout(targetLayout);
+      return;
+    }
+    setPendingLayout(targetLayout);
+    setShowAdminPasswordModal(true);
+  };
+
+  const handleAdminPasswordSuccess = () => {
+    setSelectedLayout(pendingLayout);
+    setShowAdminPasswordModal(false);
+  };
 
   const templateData = {
     id: 'wedding-gold-premium',
     name: 'Mariage Gold Premium',
     category: 'wedding',
-    backgroundImage: 'https://static.vecteezy.com/ti/photos-gratuite/t1/51675899-une-joyeux-scene-de-un-africain-americain-la-mariee-et-jeune-marie-a-leur-mariage-la-ceremonie-photo.jpeg',
+    backgroundImage: '/model4.jpg',
     title: 'Mariage de Sophie & Lucas',
     invitationText: 'Nous avons l\'honneur de vous inviter à célébrer notre union dans la joie et l\'amour. Votre présence sera le plus beau des cadeaux pour ce jour si spécial.',
     eventDate: '15 Juin 2024',
@@ -62,10 +105,14 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
     // SÉCURITÉ : Bloquer la re-création si un template existe déjà.
     // Appeler onSelectTemplate directement permet de repartir vers le Dashboard existant.
     if (hasExistingTemplate) {
+      const existingCust = (userModels[0] as any)?.customizations || { layout: selectedLayout };
+      const existingColors = (userModels[0] as any)?.colors || existingCust.colors || templateData.colors;
       onSelectTemplate({
         ...templateData,
         id: userModels[0].id,
         isPersonalized: true,
+        colors: existingColors,
+        customizations: existingCust,
         ...(userModels[0] as any)
       });
       return;
@@ -81,11 +128,23 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
           confirmation: 'pending',
           selectedDrink: '',
           message: ''
+        },
+        customizations: {
+          layout: selectedLayout,
+          colors: templateData.colors || {
+            primary: '#f59e0b',
+            secondary: '#d97706',
+            accent: '#f43f5e'
+          },
+          fonts: {
+            title: 'Playfair Display',
+            body: 'Inter'
+          }
         }
       });
 
       if (userTemplateId) {
-        // Créer l'objet pour le callback avec l'ID du nouveau template
+        // Créer l'objet pour le callback avec l'ID du nouveau template ET customizations
         const personalizedTemplate = {
           ...templateData,
           id: userTemplateId,
@@ -94,7 +153,20 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
           guestData: {
             name: '[Nom de l\'invité]',
             tableNumber: '[Numéro de table]'
-          }
+          },
+          customizations: {
+            layout: selectedLayout,
+            colors: templateData.colors || {
+              primary: '#f59e0b',
+              secondary: '#d97706',
+              accent: '#f43f5e'
+            },
+            fonts: {
+              title: 'Playfair Display',
+              body: 'Inter'
+            }
+          },
+          colors: templateData.colors
         };
         
         onSelectTemplate(personalizedTemplate);
@@ -111,14 +183,18 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
     setShowAuthModal(false);
   };
   return (
-    <div className="min-h-screen bg-[#0b0f17] relative overflow-hidden">
+    <div className={cn(
+      "min-h-screen relative overflow-hidden transition-colors duration-500",
+      isDarkMode ? 'bg-[#0b0f17]' : 'bg-gradient-to-b from-[#fffaf0] via-white to-[#fff7ed]'
+    )}>
       {/* Subtle dot grid pattern — identique à la page d'accueil */}
       <div
         aria-hidden
         className="absolute inset-0 opacity-[0.05] pointer-events-none"
         style={{
-          backgroundImage:
-            'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)',
+          backgroundImage: isDarkMode
+            ? 'radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)'
+            : 'radial-gradient(circle at 1px 1px, #78350f 1px, transparent 0)',
           backgroundSize: '26px 26px',
         }}
       />
@@ -126,20 +202,23 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
       <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-40 right-0 w-[620px] h-[620px] translate-x-1/3 rounded-full blur-3xl"
              style={{
-               background:
-                 'radial-gradient(closest-side, rgba(251,191,36,0.26), rgba(251,191,36,0) 70%)',
+               background: isDarkMode
+                 ? 'radial-gradient(closest-side, rgba(251,191,36,0.26), rgba(251,191,36,0) 70%)'
+                 : 'radial-gradient(closest-side, rgba(251,191,36,0.22), rgba(251,191,36,0) 70%)',
              }}
         />
         <div className="absolute bottom-24 left-0 w-[580px] h-[580px] -translate-x-1/3 rounded-full blur-3xl"
              style={{
-               background:
-                 'radial-gradient(closest-side, rgba(217,70,239,0.18), rgba(217,70,239,0) 70%)',
+               background: isDarkMode
+                 ? 'radial-gradient(closest-side, rgba(217,70,239,0.18), rgba(217,70,239,0) 70%)'
+                 : 'radial-gradient(closest-side, rgba(244,114,182,0.14), rgba(244,114,182,0) 70%)',
              }}
         />
         <div className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full blur-3xl opacity-60 animate-float"
              style={{
-               background:
-                 'radial-gradient(closest-side, rgba(244,114,182,0.10), rgba(244,114,182,0) 70%)',
+               background: isDarkMode
+                 ? 'radial-gradient(closest-side, rgba(244,114,182,0.10), rgba(244,114,182,0) 70%)'
+                 : 'radial-gradient(closest-side, rgba(244,114,182,0.08), rgba(244,114,182,0) 70%)',
              }}
         />
       </div>
@@ -150,27 +229,266 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
           <div className="flex items-center justify-between">
             <button
               onClick={onBack}
-              className="flex items-center text-amber-400 hover:text-amber-300 transition-all duration-300 group"
+              className={cn(
+                "flex items-center transition-all duration-300 group",
+                isDarkMode
+                  ? 'text-amber-400 hover:text-amber-300'
+                  : 'text-amber-700 hover:text-amber-600'
+              )}
             >
               <ArrowLeft className="h-4 w-4 mr-1.5 group-hover:-translate-x-1 transition-transform duration-300" />
               <span className="text-sm">Retour</span>
             </button>
             
             <div className="text-center">
-              <h1 className="text-2xl md:text-3xl font-bold" style={{ color: '#fcd34d', textShadow: '0 2px 12px rgba(252,211,77,0.25)' }}>
+              <h1 className="text-2xl md:text-3xl font-bold" style={{
+                color: isDarkMode ? '#fcd34d' : '#b45309',
+                textShadow: isDarkMode ? '0 2px 12px rgba(252,211,77,0.25)' : 'none'
+              }}>
                 Mariage Gold Premium
+                <span className="ml-2 px-2 py-0.5 rounded align-middle text-[10px] font-black uppercase tracking-wider"
+                      style={{
+                        background: selectedLayout === 'book'
+                          ? 'linear-gradient(145deg, #fbbf24, #b45309)'
+                          : isDarkMode
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'rgba(180,83,9,0.08)',
+                        color: selectedLayout === 'book'
+                          ? '#0b0f17'
+                          : isDarkMode
+                          ? 'rgba(255,255,255,0.6)'
+                          : 'rgba(180,83,9,0.7)',
+                        border: selectedLayout === 'book'
+                          ? 'none'
+                          : isDarkMode
+                          ? '1px solid rgba(255,255,255,0.1)'
+                          : '1px solid rgba(180,83,9,0.15)'
+                      }}>
+                  {selectedLayout === 'book' ? 'Livre' : 'Scroll'}
+                </span>
               </h1>
-              <p className="text-neutral-400 mt-1 text-sm">Élégance &amp; romantisme pour votre jour J</p>
+              <p className={cn("mt-1 text-sm transition-colors duration-500",
+                isDarkMode ? 'text-neutral-400' : 'text-amber-900/65'
+              )}>
+                {selectedLayout === 'book' ? 'Expérience Format Livre · Design immersif' : 'Élégance &amp; romantisme pour votre jour J'}
+              </p>
             </div>
 
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 transition-all duration-300 group text-sm"
+              className={cn(
+                "flex items-center gap-1.5 transition-all duration-300 group text-sm",
+                isDarkMode
+                  ? 'text-amber-400 hover:text-amber-300'
+                  : 'text-amber-700 hover:text-amber-600'
+              )}
             >
               <Eye className="h-4 w-4" />
               Aperçu
             </button>
           </div>
+        </div>
+
+        {/* Sélecteur de Layout */}
+        <div className="max-w-6xl mx-auto mb-8">
+          <div className="flex items-center gap-2 mb-4 justify-center">
+            <div className="h-px w-12 sm:w-20" style={{ background: isDarkMode
+              ? 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08))'
+              : 'linear-gradient(90deg, transparent, rgba(180,83,9,0.18))'
+            }}></div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
+                 style={{
+                   border: isDarkMode ? '1px solid rgba(251,191,36,0.25)' : '1px solid rgba(180,83,9,0.25)',
+                   background: isDarkMode
+                     ? 'linear-gradient(180deg, rgba(251,191,36,0.1), rgba(251,191,36,0.02))'
+                     : 'linear-gradient(180deg, rgba(251,191,36,0.12), rgba(251,191,36,0.02))',
+                 }}>
+              <LayoutDashboard className="w-3.5 h-3.5" style={{ color: isDarkMode ? '#fbbf24' : '#b45309' }} />
+              <span className="font-mono text-[11px] tracking-wide uppercase" style={{ color: isDarkMode ? '#fcd34d' : '#92400e' }}>
+                Type d'invitation
+              </span>
+            </div>
+            <div className="h-px w-12 sm:w-20" style={{ background: isDarkMode
+              ? 'linear-gradient(90deg, rgba(255,255,255,0.08), transparent)'
+              : 'linear-gradient(90deg, rgba(180,83,9,0.18), transparent)'
+            }}></div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {/* Carte 1 : Scroll Classique */}
+            <button
+              onClick={() => handleLayoutCardClick('default')}
+              className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-300 text-left group ${selectedLayout === 'default' ? 'scale-[1.01]' : 'opacity-80 hover:opacity-100'} ${hasExistingTemplate && selectedLayout !== 'default' ? 'hover:border-amber-400/40 cursor-pointer' : !hasExistingTemplate ? 'cursor-pointer' : 'cursor-default'}`}
+              style={{
+                background: selectedLayout === 'default'
+                  ? isDarkMode ? 'rgba(251,191,36,0.10)' : 'rgba(251,191,36,0.12)'
+                  : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(180,83,9,0.04)',
+                borderColor: selectedLayout === 'default'
+                  ? 'rgba(251,191,36,0.6)'
+                  : isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(180,83,9,0.10)',
+                boxShadow: selectedLayout === 'default'
+                  ? '0 10px 40px -15px rgba(251,191,36,0.35)'
+                  : 'none'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shrink-0"
+                       style={{
+                         background: selectedLayout === 'default'
+                           ? 'linear-gradient(145deg, rgba(251,191,36,0.3), rgba(251,191,36,0.08))'
+                           : isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(180,83,9,0.06)',
+                         border: selectedLayout === 'default'
+                           ? '1px solid rgba(251,191,36,0.4)'
+                           : isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(180,83,9,0.10)'
+                       }}>
+                    <Sparkles className="w-5 h-5" style={{
+                      color: selectedLayout === 'default'
+                        ? (isDarkMode ? '#fcd34d' : '#b45309')
+                        : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)')
+                    }} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className={cn("text-sm sm:text-base font-bold leading-tight",
+                      isDarkMode ? 'text-white' : 'text-amber-950'
+                    )}>
+                      Scroll Classique
+                    </h3>
+                    <p className={cn("text-[11px] sm:text-xs mt-0.5 leading-snug",
+                      isDarkMode ? 'text-neutral-400' : 'text-amber-900/65'
+                    )}>
+                      Format scroll premium · 6 sections cinématiques
+                    </p>
+                  </div>
+                </div>
+                {selectedLayout === 'default' && (
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0"
+                       style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.5)' }}>
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: isDarkMode ? '#fcd34d' : '#92400e' }} />
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(180,83,9,0.10)' }}>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Galeries 3D', 'RSVP lumineux', 'Jeux interactifs'].map((tag, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{
+                            background: selectedLayout === 'default'
+                              ? 'rgba(251,191,36,0.12)'
+                              : isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(180,83,9,0.05)',
+                            color: selectedLayout === 'default'
+                              ? (isDarkMode ? '#fcd34d' : '#92400e')
+                              : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)'),
+                            border: selectedLayout === 'default'
+                              ? '1px solid rgba(251,191,36,0.25)'
+                              : isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(180,83,9,0.10)'
+                          }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+
+            {/* Carte 2 : Format Livre */}
+            <button
+              onClick={() => handleLayoutCardClick('book')}
+              className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-300 text-left group ${selectedLayout === 'book' ? 'scale-[1.01]' : 'opacity-80 hover:opacity-100'} ${hasExistingTemplate && selectedLayout !== 'book' ? 'hover:border-amber-400/40 cursor-pointer' : !hasExistingTemplate ? 'cursor-pointer' : 'cursor-default'}`}
+              style={{
+                background: selectedLayout === 'book'
+                  ? isDarkMode ? 'rgba(251,191,36,0.10)' : 'rgba(251,191,36,0.12)'
+                  : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(180,83,9,0.04)',
+                borderColor: selectedLayout === 'book'
+                  ? 'rgba(251,191,36,0.6)'
+                  : isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(180,83,9,0.10)',
+                boxShadow: selectedLayout === 'book'
+                  ? '0 10px 40px -15px rgba(251,191,36,0.35)'
+                  : 'none'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shrink-0"
+                       style={{
+                         background: selectedLayout === 'book'
+                           ? 'linear-gradient(145deg, rgba(251,191,36,0.3), rgba(251,191,36,0.08))'
+                           : isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(180,83,9,0.06)',
+                         border: selectedLayout === 'book'
+                           ? '1px solid rgba(251,191,36,0.4)'
+                           : isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(180,83,9,0.10)'
+                       }}>
+                    <BookOpen className="w-5 h-5" style={{
+                      color: selectedLayout === 'book'
+                        ? (isDarkMode ? '#fcd34d' : '#b45309')
+                        : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)')
+                    }} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className={cn("text-sm sm:text-base font-bold leading-tight flex items-center gap-1.5",
+                      isDarkMode ? 'text-white' : 'text-amber-950'
+                    )}>
+                      Format Livre
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
+                            style={{
+                              background: 'linear-gradient(145deg, #fbbf24, #b45309)',
+                              color: '#0b0f17',
+                              boxShadow: '0 2px 8px -2px rgba(251,191,36,0.5)'
+                            }}>
+                        Nouveau
+                      </span>
+                    </h3>
+                    <p className={cn("text-[11px] sm:text-xs mt-0.5 leading-snug",
+                      isDarkMode ? 'text-neutral-400' : 'text-amber-900/65'
+                    )}>
+                      Expérience page-turning · Design élégant &amp; immersif
+                    </p>
+                  </div>
+                </div>
+                {selectedLayout === 'book' && (
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0"
+                       style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.5)' }}>
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: isDarkMode ? '#fcd34d' : '#92400e' }} />
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(180,83,9,0.10)' }}>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Pages tournantes', 'Effets livre', 'Focus Rail'].map((tag, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{
+                            background: selectedLayout === 'book' ? 'rgba(251,191,36,0.12)' : (isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(180,83,9,0.05)'),
+                            color: selectedLayout === 'book'
+                              ? (isDarkMode ? '#fcd34d' : '#92400e')
+                              : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)'),
+                            border: selectedLayout === 'book' ? '1px solid rgba(251,191,36,0.25)' : (isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(180,83,9,0.10)')
+                          }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {hasExistingTemplate && (
+            <div className="mt-3 text-center">
+              {isCurrentUserAdmin ? (
+                <p className={cn("text-[11px] font-medium inline-flex items-center gap-1.5",
+                  isDarkMode ? 'text-neutral-500' : 'text-amber-900/60'
+                )}>
+                  <Shield className="w-3.5 h-3.5" style={{ color: isDarkMode ? '#fcd34d' : '#b45309' }} />
+                  ✅ <span style={{ color: isDarkMode ? '#fcd34d' : '#92400e', fontWeight: 700 }}>Compte administrateur</span> : changement de format autorisé sans code.
+                </p>
+              ) : (
+                <p className={cn("text-[11px] font-medium inline-flex items-center gap-1.5",
+                  isDarkMode ? 'text-neutral-500' : 'text-amber-900/60'
+                )}>
+                  <Shield className="w-3.5 h-3.5" style={{ color: isDarkMode ? '#fcd34d' : '#b45309' }} />
+                  ℹ️ Un design existe déjà. Pour <span style={{ color: isDarkMode ? '#fcd34d' : '#92400e', fontWeight: 700 }}>changer de format</span>, cliquez sur l&apos;autre carte — un <span style={{ color: isDarkMode ? '#fcd34d' : '#92400e', fontWeight: 700 }}>code d&apos;autorisation</span> vous sera demandé.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="max-w-6xl mx-auto">
@@ -200,7 +518,7 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                        style={{ background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.20) 0%, rgba(251,191,36,0.08) 38%, rgba(251,191,36,0) 70%)' }}></div>
                   <div aria-hidden className="absolute -bottom-16 left-1/2 -translate-x-1/2 w-[110%] h-28 pointer-events-none blur-3xl opacity-50"
                        style={{ background: 'radial-gradient(ellipse at center, rgba(244,114,182,0.10) 0%, rgba(244,114,182,0) 70%)' }}></div>
-                  <div className="relative w-full h-full bg-gradient-to-br from-neutral-50 to-amber-50/30 rounded-[1.6rem] overflow-hidden shadow-inner z-10">
+                  <div className="relative w-full h-full bg-gradient-to-br from-neutral-50 to-amber-50/30 rounded-[1.6rem] overflow-y-auto no-scrollbar shadow-inner z-10" style={{ scrollbarWidth: 'none' }}>
                     {/* Status Bar */}
                     <div className="bg-gradient-to-r from-slate-900 to-slate-800 h-5 flex items-center justify-between px-5 text-neutral-50 text-[10px]">
                       <span>9:41</span>
@@ -212,6 +530,7 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                     </div>
                     
                     {/* Invitation Content - Reproduction fidèle InvitationPreview */}
+                    {selectedLayout === 'default' ? (
                     <div className="h-full bg-slate-900 relative overflow-y-auto no-scrollbar" style={{ scrollbarWidth: 'none' }}>
                       <style>{`
                         @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -677,6 +996,47 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
 
                       <div className="h-12"></div>
                     </div>
+                    ) : (
+                    <div className="h-full w-full relative overflow-y-auto no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+                      <style>{`.no-scrollbar::-webkit-scrollbar { display: none; }`}</style>
+                      {(() => {
+                        const embeddedModel: UserModel = {
+                          ...templateData,
+                          userId: 'embedded-preview',
+                          originalTemplateId: templateData.id,
+                          title: templateData.title,
+                          backgroundImage: templateData.backgroundImage,
+                          invitationText: templateData.invitationText,
+                          eventDate: templateData.eventDate,
+                          eventTime: templateData.eventTime,
+                          eventLocation: templateData.eventLocation,
+                          eventAddress: templateData.eventAddress,
+                          drinkOptions: templateData.drinkOptions,
+                          category: 'wedding',
+                          colors: {
+                            primary: '#f59e0b',
+                            secondary: '#d97706',
+                            accent: '#f43f5e',
+                          },
+                          customizations: {
+                            layout: selectedLayout,
+                            colors: {
+                              primary: '#f59e0b',
+                              secondary: '#d97706',
+                              accent: '#f43f5e',
+                            },
+                            fonts: {
+                              title: 'Playfair Display',
+                              body: 'Inter',
+                            },
+                          },
+                        } as UserModel;
+                        return (
+                          <InvitationPreview embedded embeddedModel={embeddedModel} />
+                        );
+                      })()}
+                    </div>
+                    )}
                   </div>
                 </div>
                 
@@ -719,13 +1079,18 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                      <span className="font-mono text-[11px] text-white/60">templates/<span style={{ color: '#fcd34d' }}>wedding-premium</span></span>
+                      <span className="font-mono text-[11px] text-white/60">templates/<span style={{ color: '#fcd34d' }}>wedding-premium</span>/{selectedLayout === 'book' ? 'book' : 'scroll'}</span>
                     </div>
-                    <h2 className="text-xl font-extrabold leading-tight text-white">
+                    <h2 className="text-xl font-extrabold leading-tight text-white flex items-center gap-2">
                       Gold Premium
+                      {selectedLayout === 'book' && (
+                        <BookOpen className="w-4 h-4" style={{ color: '#fcd34d' }} />
+                      )}
                     </h2>
                     <p className="text-neutral-400 text-[13px] mt-0.5 leading-snug">
-                      L&apos;invitation d&apos;exception pour un mariage inoubliable
+                      {selectedLayout === 'book'
+                        ? 'Format Livre — expérience page-turning immersive'
+                        : 'L\u2019invitation d\u2019exception pour un mariage inoubliable'}
                     </p>
                   </div>
                   <div className="flex-shrink-0 px-3 py-1.5 rounded-full flex items-center gap-1.5"
@@ -806,9 +1171,19 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                     </div>
                   </div>
                   <p className="text-[11.5px] text-neutral-300 leading-relaxed">
-                    Interface scrollable en <span className="font-semibold" style={{ color: '#fcd34d' }}>6 sections cinématiques</span>,
-                    animations fluides, effets de lumière, jeux interactifs, notifications push,
-                    musique de fond, livre d&apos;or moderne et cache offline automatique.
+                    {selectedLayout === 'book' ? (
+                      <>
+                        Format <span className="font-semibold" style={{ color: '#fcd34d' }}>Livre page-turning</span> avec
+                        pages animées, Focus Rail navigation, cartes tilt interactives, galerie parallaxe unfurling,
+                        Typewriter plume, jeux intégrés, musique de fond et notifications push.
+                      </>
+                    ) : (
+                      <>
+                        Interface scrollable en <span className="font-semibold" style={{ color: '#fcd34d' }}>6 sections cinématiques</span>,
+                        animations fluides, effets de lumière, jeux interactifs, notifications push,
+                        musique de fond, livre d&apos;or moderne et cache offline automatique.
+                      </>
+                    )}
                   </p>
                   <div className="mt-3 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                     <span className="text-[10px] text-neutral-500 italic font-mono">Dashboard : couleurs · photos · texte · boissons · jeux…</span>
@@ -864,8 +1239,14 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                         </>
                       ) : (
                         <>
-                          <Heart className="h-4.5 w-4.5 fill-current" strokeWidth={2} />
-                          Découvrir le modèle Mariage
+                          {selectedLayout === 'book' ? (
+                            <BookOpen className="h-4.5 w-4.5 fill-current" strokeWidth={2} />
+                          ) : (
+                            <Heart className="h-4.5 w-4.5 fill-current" strokeWidth={2} />
+                          )}
+                          {selectedLayout === 'book'
+                            ? 'Créer mon modèle Format Livre'
+                            : 'Découvrir le modèle Mariage'}
                         </>
                       )}
                     </span>
@@ -882,6 +1263,13 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
         onSuccess={handleAuthSuccess}
+      />
+
+      <AdminPasswordModal
+        isOpen={showAdminPasswordModal}
+        onClose={() => setShowAdminPasswordModal(false)}
+        onSuccess={handleAdminPasswordSuccess}
+        targetLayoutLabel={pendingLayout === 'book' ? 'Format Livre' : 'Scroll Classique'}
       />
 
       <ToastModal 
