@@ -83,6 +83,7 @@ import LoveQuizGame from './LoveQuizGame';
 import CatchLoveGame from './CatchLoveGame';
 import ClassicScrollLayout from './layouts/ClassicScrollLayout';
 import BookLayout from './layouts/BookLayout';
+import AlbumLayout from './layouts/AlbumLayout';
 
 // Helper for image optimization
 const VIDEO_EXT_RE = /\.(mp4|webm|mov|m4v|ogg|ogv|avi|mkv|flv|wmv|3gp)(\?.*)?$/i;
@@ -93,6 +94,29 @@ const optimizeImage = (url: string, width: number = 800, quality: number = 70) =
   if (isVideoUrl(url)) return url;
   if (url.includes('cloudinary.com')) {
     return url.replace('/upload/', `/upload/w_${width},q_${quality},f_auto,c_limit/`);
+  }
+  if (url.includes('images.unsplash.com') || url.includes('unsplash.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('q', String(quality));
+      u.searchParams.set('auto', 'format');
+      u.searchParams.set('fit', 'crop');
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+  if (url.includes('images.pexels.com') || url.includes('pexels.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('auto', 'compress');
+      u.searchParams.set('cs', 'tinysrgb');
+      return u.toString();
+    } catch {
+      return url;
+    }
   }
   return url;
 };
@@ -1116,8 +1140,8 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
             // On sort du mode offline si on a rÃ©ussi
             setIsOfflineMode(false);
             setRetryCountdown(null);
-            // Preload initial images
-            const initialImagesToPreload = [
+            // Preload initial images (OPTIMISÃ‰: rÃ©solution rÃ©duite + limite eventPhotos)
+            const sectionBgs = [
               models[0].backgroundImage,
               models[0].headerSectionBackground,
               models[0].textSectionBackground,
@@ -1127,11 +1151,17 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
               models[0].gamesSectionBackground,
               models[0].qrFooterSectionBackground,
               models[0].accommodationSectionBackground,
-              ...(models[0].eventPhotos || []),
             ].filter(Boolean) as string[];
-            initialImagesToPreload.forEach((imgUrl) => {
+            const firstPhotos = (models[0].eventPhotos || []).slice(0, 3) as string[];
+            sectionBgs.forEach((imgUrl) => {
               const img = new Image();
-              img.src = imgUrl;
+              img.decoding = 'async';
+              img.src = optimizeImage(imgUrl, 1200, 75);
+            });
+            firstPhotos.forEach((imgUrl) => {
+              const img = new Image();
+              img.decoding = 'async';
+              img.src = optimizeImage(imgUrl, 600, 70);
             });
 
             unsubUserModel = UserModelService.subscribeUserModel(inviteData.userId, models[0].id, (updatedModel) => {
@@ -1140,7 +1170,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                 // Mise Ã  jour cache sur modif live du modÃ¨le
                 const currentInv = inviteRef.current;
                 if (currentInv) setCachedInviteData(inviteId, currentInv, updatedModel);
-                const imagesToPreload = [
+                const sectionBgsUpd = [
                   updatedModel.backgroundImage,
                   updatedModel.headerSectionBackground,
                   updatedModel.textSectionBackground,
@@ -1150,11 +1180,17 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
                   updatedModel.gamesSectionBackground,
                   updatedModel.qrFooterSectionBackground,
                   updatedModel.accommodationSectionBackground,
-                  ...(updatedModel.eventPhotos || []),
                 ].filter(Boolean) as string[];
-                imagesToPreload.forEach((imgUrl) => {
+                const firstPhotosUpd = (updatedModel.eventPhotos || []).slice(0, 3) as string[];
+                sectionBgsUpd.forEach((imgUrl) => {
                   const img = new Image();
-                  img.src = imgUrl;
+                  img.decoding = 'async';
+                  img.src = optimizeImage(imgUrl, 1200, 75);
+                });
+                firstPhotosUpd.forEach((imgUrl) => {
+                  const img = new Image();
+                  img.decoding = 'async';
+                  img.src = optimizeImage(imgUrl, 600, 70);
                 });
               }
             });
@@ -2428,13 +2464,18 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
     );
   }
 
-  // ===== SÃ‰LECTION DU LAYOUT (MULTI-MODÃˆLES) =====
-  // Feature Flags & Whitelist pour protÃ©ger les utilisateurs actuels
-  const FEATURE_FLAG_BOOK_ENABLED = true; // PASSER Ã€ true SEULEMENT APRÃˆS VALIDATION
-  const BOOK_WHITELIST_UIDS: string[] = []; // Ajouter l'UID Firebase ici pour test utilisateur
+  // ===== SÉLECTION DU LAYOUT (MULTI-MODÈLES) =====
+  // Feature Flags & Whitelist pour protéger les utilisateurs actuels
+  const FEATURE_FLAG_BOOK_ENABLED = true;
+  const FEATURE_FLAG_ALBUM_ENABLED = true;
+  const BOOK_WHITELIST_UIDS: string[] = [];
   const rawLayout = (safeUserModel as any).customizations?.layout || 'default';
   const canUseBookLayout = FEATURE_FLAG_BOOK_ENABLED && (BOOK_WHITELIST_UIDS.length === 0 || BOOK_WHITELIST_UIDS.includes(safeUserModel.userId));
-  const effectiveLayout = (canUseBookLayout && rawLayout === 'book') ? 'book' : 'default';
+  const canUseAlbumLayout = FEATURE_FLAG_ALBUM_ENABLED && (BOOK_WHITELIST_UIDS.length === 0 || BOOK_WHITELIST_UIDS.includes(safeUserModel.userId));
+  const effectiveLayout: 'default' | 'book' | 'album' =
+    (canUseBookLayout && rawLayout === 'book') ? 'book'
+    : (canUseAlbumLayout && rawLayout === 'album') ? 'album'
+    : 'default';
 
   // ===== Rendu selon layout =====
   if (effectiveLayout === 'book') {
@@ -2534,6 +2575,86 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         togglePreviewPlay={togglePreviewPlay}
         seekPreviewAudio={seekPreviewAudio}
         forcePreviewRerender={forcePreviewRerender}
+      />
+    );
+  }
+  if (effectiveLayout === 'album') {
+    return (
+      <AlbumLayout
+        safeUserModel={safeUserModel}
+        safeInvite={safeInvite}
+        colors={colors}
+        optimizedBg={optimizedBg}
+        optimizedPattern={optimizedPattern}
+        optimizedHeaderSectionBg={optimizedHeaderSectionBg}
+        optimizedTextSectionBg={optimizedTextSectionBg}
+        optimizedDateLocationSectionBg={optimizedDateLocationSectionBg}
+        optimizedGallerySectionBg={optimizedGallerySectionBg}
+        optimizedRsvpDrinksSectionBg={optimizedRsvpDrinksSectionBg}
+        optimizedGamesSectionBg={optimizedGamesSectionBg}
+        optimizedQrFooterSectionBg={optimizedQrFooterSectionBg}
+        optimizedAccommodationSectionBg={optimizedAccommodationSectionBg}
+        parallaxGalleryItems={parallaxGalleryItems}
+        galleryPhotos={galleryPhotos}
+        eventDay={eventDay}
+        eventMonth={eventMonth}
+        eventYear={eventYear}
+        targetEventDate={targetEventDate}
+        qrCodeDataUrl={qrCodeDataUrl}
+        isOfflineMode={isOfflineMode}
+        retryCountdown={retryCountdown}
+        isConfirmed={isConfirmed}
+        selectedDrink={selectedDrink}
+        guestBookMessages={guestBookMessages}
+        editingMessageId={editingMessageId}
+        editingText={editingText}
+        showDeleteConfirm={showDeleteConfirm}
+        showToastModal={showToastModal}
+        selectedGalleryPhoto={selectedGalleryPhoto}
+        isMusicPlaying={isMusicPlaying}
+        isMusicMuted={isMusicMuted}
+        showNotificationModal={showNotificationModal}
+        isFCMSupported={isFCMSupported}
+        permission={permission}
+        token={token}
+        isNotificationLoading={isNotificationLoading}
+        notificationError={error}
+        showGuestBook={showGuestBook}
+        currentGameId={currentGameId}
+        games={games}
+        gameResults={gameResults}
+        completedGames={completedGames}
+        invite={invite}
+        inviteId={inviteId}
+        userModel={userModel}
+        isAdminView={isAdminView}
+        isSubmittingMessage={isSubmittingMessage}
+        guestMessage={guestMessage}
+        sectionRefs={sectionRefs}
+        audioRef={audioRef}
+        messagesEndRef={messagesEndRef}
+        setShowToastModal={setShowToastModal}
+        setSelectedGalleryPhoto={setSelectedGalleryPhoto}
+        setShowGuestBook={setShowGuestBook}
+        setShowNotificationModal={setShowNotificationModal}
+        setCurrentGameId={setCurrentGameId}
+        setEditingMessageId={setEditingMessageId}
+        setEditingText={setEditingText}
+        setShowDeleteConfirm={setShowDeleteConfirm}
+        setGuestMessage={setGuestMessage}
+        toggleMute={toggleMute}
+        requestPermission={requestPermission}
+        inviteDocPath={inviteDocPath}
+        handleConfirmation={handleConfirmation}
+        handleDrinkSelection={handleDrinkSelection}
+        handleSendMessage={handleSendMessage}
+        handleEditMessage={handleEditMessage}
+        handleSaveEdit={handleSaveEdit}
+        handleDeleteMessage={handleDeleteMessage}
+        confirmDelete={confirmDelete}
+        downloadQRCode={downloadQRCode}
+        downloadInvitationJpg={downloadInvitationJpg}
+        optimizeImageFn={optimizeImage}
       />
     );
   }

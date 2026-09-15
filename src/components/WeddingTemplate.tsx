@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, Calendar, MapPin, Users, Wine, Camera, MessageCircle, QrCode, ArrowLeft, Check, Sparkles, User, Bell, LayoutDashboard, Volume2, VolumeX, Gamepad2, Trophy, Clock, Gift, Music2, Download, BookOpen, Star, ChevronRight, Eye, Palette, Shield } from 'lucide-react';
+import { Heart, Calendar, MapPin, Users, Wine, Camera, MessageCircle, QrCode, ArrowLeft, Check, Sparkles, User, Bell, LayoutDashboard, Volume2, VolumeX, Gamepad2, Trophy, Clock, Gift, Music2, Download, BookOpen, Star, ChevronRight, Eye, Palette, Shield, Images } from 'lucide-react';
 import AuthModal from './AuthModal';
 import ToastModal from './ToastModal';
 import AdminPasswordModal from './AdminPasswordModal';
@@ -29,9 +29,9 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
   const [showPreview, setShowPreview] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showQRInfo, setShowQRInfo] = useState(false);
-  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book'>('default');
+  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book' | 'album'>('default');
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
-  const [pendingLayout, setPendingLayout] = useState<'default' | 'book'>('default');
+  const [pendingLayout, setPendingLayout] = useState<'default' | 'book' | 'album'>('default');
 
   // SÉCURITÉ : Empêcher toute nouvelle création de template si l'utilisateur en a déjà un
   // Évite la réinitialisation accidentelle de designs déjà personnalisés.
@@ -42,13 +42,13 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
   useEffect(() => {
     if (hasExistingTemplate && userModels && userModels.length > 0) {
       const existingLayout = (userModels[0] as any)?.customizations?.layout;
-      if (existingLayout === 'book' || existingLayout === 'default') {
+      if (existingLayout === 'book' || existingLayout === 'album' || existingLayout === 'default') {
         setSelectedLayout(existingLayout);
       }
     }
   }, [hasExistingTemplate, userModels]);
 
-  const handleLayoutCardClick = (targetLayout: 'default' | 'book') => {
+  const handleLayoutCardClick = (targetLayout: 'default' | 'book' | 'album') => {
     if (!hasExistingTemplate) {
       setSelectedLayout(targetLayout);
       return;
@@ -248,29 +248,33 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                 Mariage Gold Premium
                 <span className="ml-2 px-2 py-0.5 rounded align-middle text-[10px] font-black uppercase tracking-wider"
                       style={{
-                        background: selectedLayout === 'book'
+                        background: selectedLayout !== 'default'
                           ? 'linear-gradient(145deg, #fbbf24, #b45309)'
                           : isDarkMode
                           ? 'rgba(255,255,255,0.06)'
                           : 'rgba(180,83,9,0.08)',
-                        color: selectedLayout === 'book'
+                        color: selectedLayout !== 'default'
                           ? '#0b0f17'
                           : isDarkMode
                           ? 'rgba(255,255,255,0.6)'
                           : 'rgba(180,83,9,0.7)',
-                        border: selectedLayout === 'book'
+                        border: selectedLayout !== 'default'
                           ? 'none'
                           : isDarkMode
                           ? '1px solid rgba(255,255,255,0.1)'
                           : '1px solid rgba(180,83,9,0.15)'
                       }}>
-                  {selectedLayout === 'book' ? 'Livre' : 'Scroll'}
+                  {selectedLayout === 'book' ? 'Livre' : selectedLayout === 'album' ? 'Album' : 'Scroll'}
                 </span>
               </h1>
               <p className={cn("mt-1 text-sm transition-colors duration-500",
                 isDarkMode ? 'text-neutral-400' : 'text-amber-900/65'
               )}>
-                {selectedLayout === 'book' ? 'Expérience Format Livre · Design immersif' : 'Élégance &amp; romantisme pour votre jour J'}
+                {selectedLayout === 'book'
+                  ? 'Expérience Format Livre · Design immersif'
+                  : selectedLayout === 'album'
+                  ? 'Format Album · Style scrapbooking & souvenirs'
+                  : 'Élégance &amp; romantisme pour votre jour J'}
               </p>
             </div>
 
@@ -314,7 +318,7 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
             }}></div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
             {/* Carte 1 : Scroll Classique */}
             <button
               onClick={() => handleLayoutCardClick('default')}
@@ -461,6 +465,85 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                               ? (isDarkMode ? '#fcd34d' : '#92400e')
                               : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)'),
                             border: selectedLayout === 'book' ? '1px solid rgba(251,191,36,0.25)' : (isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(180,83,9,0.10)')
+                          }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+
+            {/* Carte 3 : Format Album */}
+            <button
+              onClick={() => handleLayoutCardClick('album')}
+              className={`relative p-4 sm:p-5 rounded-xl border-2 transition-all duration-300 text-left group ${selectedLayout === 'album' ? 'scale-[1.01]' : 'opacity-80 hover:opacity-100'} ${hasExistingTemplate && selectedLayout !== 'album' ? 'hover:border-amber-400/40 cursor-pointer' : !hasExistingTemplate ? 'cursor-pointer' : 'cursor-default'}`}
+              style={{
+                background: selectedLayout === 'album'
+                  ? isDarkMode ? 'rgba(251,191,36,0.10)' : 'rgba(251,191,36,0.12)'
+                  : isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(180,83,9,0.04)',
+                borderColor: selectedLayout === 'album'
+                  ? 'rgba(251,191,36,0.6)'
+                  : isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(180,83,9,0.10)',
+                boxShadow: selectedLayout === 'album'
+                  ? '0 10px 40px -15px rgba(251,191,36,0.35)'
+                  : 'none'
+              }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg flex items-center justify-center shrink-0"
+                       style={{
+                         background: selectedLayout === 'album'
+                           ? 'linear-gradient(145deg, rgba(251,191,36,0.3), rgba(251,191,36,0.08))'
+                           : isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(180,83,9,0.06)',
+                         border: selectedLayout === 'album'
+                           ? '1px solid rgba(251,191,36,0.4)'
+                           : isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(180,83,9,0.10)'
+                       }}>
+                    <Images className="w-5 h-5" style={{
+                      color: selectedLayout === 'album'
+                        ? (isDarkMode ? '#fcd34d' : '#b45309')
+                        : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)')
+                    }} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className={cn("text-sm sm:text-base font-bold leading-tight flex items-center gap-1.5",
+                      isDarkMode ? 'text-white' : 'text-amber-950'
+                    )}>
+                      Format Album
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider"
+                            style={{
+                              background: 'linear-gradient(145deg, #fbbf24, #b45309)',
+                              color: '#0b0f17',
+                              boxShadow: '0 2px 8px -2px rgba(251,191,36,0.5)'
+                            }}>
+                        Nouveau
+                      </span>
+                    </h3>
+                    <p className={cn("text-[11px] sm:text-xs mt-0.5 leading-snug",
+                      isDarkMode ? 'text-neutral-400' : 'text-amber-900/65'
+                    )}>
+                      Style album photo · Scrapbooking &amp; souvenirs
+                    </p>
+                  </div>
+                </div>
+                {selectedLayout === 'album' && (
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center shrink-0"
+                       style={{ background: 'rgba(251,191,36,0.2)', border: '1px solid rgba(251,191,36,0.5)' }}>
+                    <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" style={{ color: isDarkMode ? '#fcd34d' : '#92400e' }} />
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 pt-3 border-t" style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(180,83,9,0.10)' }}>
+                <div className="flex flex-wrap gap-1.5">
+                  {['Galerie polaroïd', 'Scrapbooking', 'Souvenirs'].map((tag, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                          style={{
+                            background: selectedLayout === 'album' ? 'rgba(251,191,36,0.12)' : (isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(180,83,9,0.05)'),
+                            color: selectedLayout === 'album'
+                              ? (isDarkMode ? '#fcd34d' : '#92400e')
+                              : (isDarkMode ? 'rgba(255,255,255,0.5)' : 'rgba(180,83,9,0.55)'),
+                            border: selectedLayout === 'album' ? '1px solid rgba(251,191,36,0.25)' : (isDarkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(180,83,9,0.10)')
                           }}>
                       {tag}
                     </span>
@@ -1079,17 +1162,22 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5 mb-1">
                       <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
-                      <span className="font-mono text-[11px] text-white/60">templates/<span style={{ color: '#fcd34d' }}>wedding-premium</span>/{selectedLayout === 'book' ? 'book' : 'scroll'}</span>
+                      <span className="font-mono text-[11px] text-white/60">templates/<span style={{ color: '#fcd34d' }}>wedding-premium</span>/{selectedLayout === 'book' ? 'book' : selectedLayout === 'album' ? 'album' : 'scroll'}</span>
                     </div>
                     <h2 className="text-xl font-extrabold leading-tight text-white flex items-center gap-2">
                       Gold Premium
                       {selectedLayout === 'book' && (
                         <BookOpen className="w-4 h-4" style={{ color: '#fcd34d' }} />
                       )}
+                      {selectedLayout === 'album' && (
+                        <Images className="w-4 h-4" style={{ color: '#fcd34d' }} />
+                      )}
                     </h2>
                     <p className="text-neutral-400 text-[13px] mt-0.5 leading-snug">
                       {selectedLayout === 'book'
                         ? 'Format Livre — expérience page-turning immersive'
+                        : selectedLayout === 'album'
+                        ? 'Format Album — scrapbooking & souvenirs photos'
                         : 'L\u2019invitation d\u2019exception pour un mariage inoubliable'}
                     </p>
                   </div>
@@ -1176,6 +1264,12 @@ const WeddingTemplate = ({ onBack, onSelectTemplate, isAuthenticated }: WeddingT
                         Format <span className="font-semibold" style={{ color: '#fcd34d' }}>Livre page-turning</span> avec
                         pages animées, Focus Rail navigation, cartes tilt interactives, galerie parallaxe unfurling,
                         Typewriter plume, jeux intégrés, musique de fond et notifications push.
+                      </>
+                    ) : selectedLayout === 'album' ? (
+                      <>
+                        Format <span className="font-semibold" style={{ color: '#fcd34d' }}>Album photo scrapbooking</span> avec
+                        style album/souvenirs, cadres polaroïd, effets ruban adhésif, galerie immersive,
+                        cartes tilt interactives, jeux intégrés, musique de fond et notifications push.
                       </>
                     ) : (
                       <>

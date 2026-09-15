@@ -30,6 +30,29 @@ const optimizeImage = (url: string, width: number = 800, quality: number = 70) =
   if (url.includes('cloudinary.com')) {
     return url.replace('/upload/', `/upload/w_${width},q_${quality},f_auto,c_limit/`);
   }
+  if (url.includes('images.unsplash.com') || url.includes('unsplash.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('q', String(quality));
+      u.searchParams.set('auto', 'format');
+      u.searchParams.set('fit', 'crop');
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+  if (url.includes('images.pexels.com') || url.includes('pexels.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('auto', 'compress');
+      u.searchParams.set('cs', 'tinysrgb');
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
   return url;
 };
 

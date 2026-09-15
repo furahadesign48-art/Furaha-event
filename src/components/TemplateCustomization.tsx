@@ -145,10 +145,10 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   const [primaryColor, setPrimaryColor] = useState('#f59e0b'); // amber-500
   const [secondaryColor, setSecondaryColor] = useState('#d97706'); // amber-600
   const [accentColor, setAccentColor] = useState('#f43f5e'); // rose-500
-  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book'>('default');
+  const [selectedLayout, setSelectedLayout] = useState<'default' | 'book' | 'album'>('default');
   const SHOW_LAYOUT_SELECTOR = true;
   const [showAdminPasswordModal, setShowAdminPasswordModal] = useState(false);
-  const [pendingLayout, setPendingLayout] = useState<'default' | 'book'>('default');
+  const [pendingLayout, setPendingLayout] = useState<'default' | 'book' | 'album'>('default');
   const isCurrentUserAdmin = user?.role === 'admin';
   const [selectedTextColor, setSelectedTextColor] = useState('#f59e0b');
   const [showQRInfo, setShowQRInfo] = useState(false);
@@ -194,21 +194,23 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   };
 
   // Initialiser les couleurs depuis le template au chargement
+  // PrioritÃ©: customizations.colors > colors > champs Ã  la racine
   useEffect(() => {
-    if (template.colors) {
-      setPrimaryColor(template.colors.primary);
-      setSecondaryColor(template.colors.secondary);
-      setAccentColor(template.colors.accent);
-    } else if (template.customizations?.colors) {
-      setPrimaryColor(template.customizations.colors.primary);
-      setSecondaryColor(template.customizations.colors.secondary);
-      setAccentColor(template.customizations.colors.accent);
-    }
-    const raw = (template as any).customizations?.layout || 'default';
-    setSelectedLayout(raw === 'book' ? 'book' : 'default');
+    const tAny = template as any;
+    const custoColors = tAny.customizations?.colors;
+    const objColors = tAny.colors;
+    // Source la plus fiable en prioritÃ©
+    const p = custoColors?.primary ?? objColors?.primary ?? tAny.primaryColor ?? '#f59e0b';
+    const s = custoColors?.secondary ?? objColors?.secondary ?? tAny.secondaryColor ?? '#d97706';
+    const a = custoColors?.accent ?? objColors?.accent ?? tAny.accentColor ?? '#f43f5e';
+    setPrimaryColor(p);
+    setSecondaryColor(s);
+    setAccentColor(a);
+    const raw = tAny.customizations?.layout ?? tAny.layout ?? 'default';
+    setSelectedLayout(raw === 'book' || raw === 'album' ? raw : 'default');
   }, [template]);
 
-  const handleLayoutSelectorClick = (targetLayout: 'default' | 'book') => {
+  const handleLayoutSelectorClick = (targetLayout: 'default' | 'book' | 'album') => {
     if (targetLayout === selectedLayout) return;
     if (isCurrentUserAdmin) {
       setSelectedLayout(targetLayout);
@@ -1023,7 +1025,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     <Shield className="w-3.5 h-3.5" style={{ color: '#fcd34d' }} />
                   </span>
                 </label>
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <button
                     onClick={() => handleLayoutSelectorClick('default')}
                     className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left ${selectedLayout === 'default' ? 'scale-[1.02]' : 'opacity-80 hover:opacity-100 hover:border-amber-400/40'}`}
@@ -1059,6 +1061,27 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     </div>
                     <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
                       Format livre avec animations
+                    </p>
+                  </button>
+                  <button
+                    onClick={() => handleLayoutSelectorClick('album')}
+                    className={`relative p-3 sm:p-4 rounded-xl border-2 transition-all duration-200 text-left ${selectedLayout === 'album' ? 'scale-[1.02]' : 'opacity-80 hover:opacity-100 hover:border-amber-400/40'}`}
+                    style={{
+                      background: selectedLayout === 'album' ? 'rgba(251,191,36,0.10)' : 'rgba(255,255,255,0.03)',
+                      borderColor: selectedLayout === 'album' ? 'rgba(251,191,36,0.6)' : 'rgba(255,255,255,0.08)'
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                      <span className="text-xs sm:text-sm font-bold text-white">Album</span>
+                      <div className="flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-wider uppercase" style={{ background: 'rgba(252,211,77,0.18)', color: '#fcd34d' }}>
+                          Nouveau
+                        </span>
+                        {selectedLayout === 'album' && <Check className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#fcd34d' }} />}
+                      </div>
+                    </div>
+                    <p className="text-[10px] sm:text-xs" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                      Format album photo livre
                     </p>
                   </button>
                 </div>
@@ -2803,6 +2826,20 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
             (data.eventPhoto2 as string) || '',
             (data.eventPhoto3 as string) || ''
           ]);
+          // SYNCHRONISER les couleurs et le layout depuis Firestore (source de vÃ©ritÃ©)
+          // Sans Ã§a, les useState gardent leurs valeurs par dÃ©faut et Ã©crasent
+          // les vraies couleurs en base si on modifie un autre champ.
+          const dAny = data as any;
+          const custoColors = dAny.customizations?.colors;
+          const objColors = dAny.colors;
+          const p = custoColors?.primary ?? objColors?.primary ?? dAny.primaryColor;
+          const s = custoColors?.secondary ?? objColors?.secondary ?? dAny.secondaryColor;
+          const a = custoColors?.accent ?? objColors?.accent ?? dAny.accentColor;
+          if (p) setPrimaryColor(p);
+          if (s) setSecondaryColor(s);
+          if (a) setAccentColor(a);
+          const rawLayout = dAny.customizations?.layout ?? dAny.layout;
+          if (rawLayout === 'book' || rawLayout === 'album') setSelectedLayout(rawLayout);
         }
       } catch (e) {
         console.warn('Erreur de rechargement du modèle utilisateur:', e);
@@ -3049,7 +3086,7 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
         isOpen={showAdminPasswordModal}
         onClose={() => setShowAdminPasswordModal(false)}
         onSuccess={handleAdminPasswordSuccess}
-        targetLayoutLabel={pendingLayout === 'book' ? 'Format Livre' : 'Scroll Classique'}
+        targetLayoutLabel={pendingLayout === 'book' ? 'Format Livre' : pendingLayout === 'album' ? 'Format Album' : 'Scroll Classique'}
       />
       {toast && (
         <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[1000] px-3 py-2 sm:px-4 sm:py-3 rounded-xl border text-xs sm:text-sm"

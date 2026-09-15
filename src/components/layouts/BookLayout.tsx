@@ -11,7 +11,7 @@ import {
   Gamepad2, Trophy, HelpCircle, Star, RefreshCw, Hotel, Mail,
   Globe, Plane, Train, Car, CarTaxiFront, ChevronRight, Info,
   ChevronLeft, ChevronRight as ChevronRightIcon, Calendar, Camera, Feather,
-  CheckCircle2, AlertTriangle, PartyPopper
+  CheckCircle2, AlertTriangle, PartyPopper, Image as ImageIcon
 } from 'lucide-react';
 import { GameConfiguration, GameResult, AVAILABLE_GAMES } from '../../services/templateService';
 import { UserModel, Invite } from '../../services/templateService';
@@ -36,6 +36,29 @@ const optimizeImage = (url: string, width: number = 800, quality: number = 70) =
   if (isMediaVideo(url)) return url;
   if (url.includes('cloudinary.com')) {
     return url.replace('/upload/', `/upload/w_${width},q_${quality},f_auto,c_limit/`);
+  }
+  if (url.includes('images.unsplash.com') || url.includes('unsplash.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('q', String(quality));
+      u.searchParams.set('auto', 'format');
+      u.searchParams.set('fit', 'crop');
+      return u.toString();
+    } catch {
+      return url;
+    }
+  }
+  if (url.includes('images.pexels.com') || url.includes('pexels.com')) {
+    try {
+      const u = new URL(url);
+      u.searchParams.set('w', String(width));
+      u.searchParams.set('auto', 'compress');
+      u.searchParams.set('cs', 'tinysrgb');
+      return u.toString();
+    } catch {
+      return url;
+    }
   }
   return url;
 };
@@ -411,7 +434,8 @@ const BookLayout: React.FC<BookLayoutProps> = (props) => {
     toggleMute, requestPermission, inviteDocPath,
     handleConfirmation, handleDrinkSelection, handleSendMessage,
     handleEditMessage, handleSaveEdit, handleDeleteMessage,
-    confirmDelete, downloadQRCode, optimizeImageFn
+    confirmDelete, downloadQRCode, optimizeImageFn,
+    downloadInvitationJpg,
   } = props;
 
   const accommodationVisible =
@@ -2551,16 +2575,45 @@ const BookLayout: React.FC<BookLayoutProps> = (props) => {
                     <p className="font-bold text-sm" style={{ color: BURG_DARK }}>{safeInvite.nom}</p>
                     <p className="text-[11px]" style={{ color: `${BURG_DARK}65` }}>Table : {safeInvite.table} • {selectedDrink.length > 0 ? selectedDrink.join(' + ') : 'Boisson à choisir'}</p>
                   </div>
+                  <div className="flex items-center gap-3 w-full mb-1">
+                    <button
+                      onClick={downloadQRCode}
+                      title="Télécharger le QR code"
+                      className="flex-1 py-3.5 rounded-full font-bold text-xs shadow-lg flex items-center justify-center space-x-2 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group active:scale-[0.98] text-white"
+                      style={{ 
+                        background: `linear-gradient(135deg, ${BURG_MID} 0%, ${BURG_DARK} 100%)`,
+                        boxShadow: `0 12px 28px -10px ${BURG_DARK}95, inset 0 1px 0 rgba(255,255,255,0.22)`
+                      }}
+                    >
+                      <QrCode className="h-4 w-4" />
+                      <span className="uppercase tracking-[0.15em]">QR</span>
+                    </button>
+                    {downloadInvitationJpg && (
+                      <button
+                        onClick={downloadInvitationJpg}
+                        title="Télécharger l'invitation en image"
+                        className="flex-1 py-3.5 rounded-full font-bold text-xs shadow-lg flex items-center justify-center space-x-2 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group active:scale-[0.98] text-white"
+                        style={{ 
+                          background: `linear-gradient(135deg, ${GOLD} 0%, #b8860b 100%)`,
+                          boxShadow: `0 12px 28px -10px ${GOLD}90, inset 0 1px 0 rgba(255,255,255,0.35)`
+                        }}
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                        <span className="uppercase tracking-[0.15em]">Image</span>
+                      </button>
+                    )}
+                  </div>
                   <button
                     onClick={downloadQRCode}
-                    className="w-full py-3.5 rounded-full font-bold text-xs shadow-lg flex items-center justify-center space-x-3 hover:scale-[1.02] transition-all duration-300 relative overflow-hidden group active:scale-[0.98] text-white"
+                    className="w-full py-3 rounded-full font-bold text-[10px] flex items-center justify-center space-x-2 transition-all duration-300 relative overflow-hidden group active:scale-[0.98]"
                     style={{ 
-                      background: `linear-gradient(135deg, ${BURG_MID} 0%, ${BURG_DARK} 100%)`,
-                      boxShadow: `0 12px 28px -10px ${BURG_DARK}95, inset 0 1px 0 rgba(255,255,255,0.22)`
+                      color: BURG_DARK,
+                      background: `${CREAM}`,
+                      border: `1px dashed ${BURG_MID}55`
                     }}
                   >
-                    <Download className="h-4 w-4" />
-                    <span className="uppercase tracking-[0.15em]">Télécharger</span>
+                    <Download className="h-3.5 w-3.5" />
+                    <span className="uppercase tracking-[0.18em]">Tout télécharger</span>
                   </button>
                 </div>
               </div>

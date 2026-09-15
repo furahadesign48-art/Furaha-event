@@ -297,6 +297,8 @@ exports.shareInvitation = onRequest({
         const blankDesc = '\u00a0';
 
         // Générer la page HTML avec les meta tags Open Graph
+        // IMPORTANT: Le loader affiché ICI est VISUELLEMENT IDENTIQUE au loader React de InvitationPreview
+        // pour que l'utilisateur ne voie QU'UN SEUL écran de chargement continu (et pas 2 successifs)
         const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -324,17 +326,164 @@ exports.shareInvitation = onRequest({
     <meta name="twitter:description" content="${blankDesc}">
     <meta name="twitter:image" content="${safeImage}">
     
-    <!-- Redirection automatique vers l'invitation -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: 'Poppins', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            min-height: 100vh;
+            background: #ffffff;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+        .wrap {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .bg-blobs {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .blob {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(64px);
+            opacity: 0.4;
+            animation: float 8s ease-in-out infinite;
+        }
+        .blob-1 {
+            width: 384px;
+            height: 384px;
+            background: #f59e0b1a;
+            top: 25%;
+            left: 25%;
+        }
+        .blob-2 {
+            width: 320px;
+            height: 320px;
+            background: #d946ef1a;
+            bottom: 33%;
+            right: 25%;
+            animation-delay: 2s;
+        }
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo {
+            width: 192px;
+            height: auto;
+            margin-bottom: 32px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 0.2s forwards;
+        }
+        .dots {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #f59e0b, #d946ef);
+            opacity: 0;
+            animation: pulse 1.4s ease-in-out infinite;
+        }
+        .dot:nth-child(1) { animation-delay: 0s; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        .loading-text {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 16px;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 0.8s forwards;
+            font-weight: 400;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) scale(1); opacity: 0.4; }
+            50% { transform: translateY(-40px) scale(1.1); opacity: 0.7; }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 0; transform: scale(0.6); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+        .fallback-link {
+            position: absolute;
+            bottom: 24px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            opacity: 0;
+            animation: fadeIn 0.6s ease-out 2s forwards;
+        }
+        .fallback-link a {
+            color: #f59e0b;
+            font-size: 12px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .fallback-link a:hover { text-decoration: underline; }
+    </style>
+    
+    <!-- Redirection instantanée vers l'invitation (même chemin que l'URL courte) -->
     <script>
-        setTimeout(() => {
-            window.location.href = '${redirectUrl}';
-        }, 100);
+        (function() {
+            var redirectUrl = '${redirectUrl}';
+            setTimeout(function() {
+                try {
+                    window.location.replace(redirectUrl);
+                } catch (e) {
+                    window.location.href = redirectUrl;
+                }
+            }, 50);
+        })();
     </script>
 </head>
-<body style="font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);">
-    <div style="text-align: center;">
-        <h1 style="color: #78350f; font-size: 2rem; margin-bottom: 1rem;">Redirection en cours...</h1>
-        <p style="color: #92400e;">Si rien ne se passe automatiquement, <a href="${redirectUrl}" style="color: #92400e; text-decoration: underline;">cliquez ici</a></p>
+<body>
+    <div class="wrap">
+        <div class="bg-blobs">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+        </div>
+        <div class="content">
+            <img
+                class="logo"
+                src="https://furaha-event-831ca.web.app/assets/FURAHA-GOLD-CAdZ807y.png"
+                alt="Furaha Logo"
+                onerror="this.onerror=null;this.src='/FURAHA-GOLD.png';"
+            />
+            <div class="dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <p class="loading-text">Chargement de votre invitation...</p>
+        </div>
+        <div class="fallback-link">
+            <a href="${redirectUrl}">Cliquez ici si la page ne s'ouvre pas</a>
+        </div>
     </div>
 </body>
 </html>`;
