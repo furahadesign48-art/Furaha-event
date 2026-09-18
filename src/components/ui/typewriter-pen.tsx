@@ -8,6 +8,7 @@ interface TypewriterWithPenProps {
   htmlContent: string;
   speed?: number;
   className?: string;
+  style?: React.CSSProperties;
   penColor?: string;
   penImage?: string;
 }
@@ -20,11 +21,14 @@ export const TypewriterWithPen = React.memo(({
   htmlContent, 
   speed = 30, 
   className = "", 
+  style,
   penColor = "#000",
   penImage
 }: TypewriterWithPenProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeCharRef = useRef<HTMLSpanElement>(null);
+  const startedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isInView = useInView(containerRef, { once: true, amount: 0.2 });
   const [visibleChars, setVisibleChars] = useState(0);
   const [isDone, setIsDone] = useState(false);
@@ -38,21 +42,32 @@ export const TypewriterWithPen = React.memo(({
   }, [htmlContent]);
 
   useEffect(() => {
+    if (startedRef.current) return;
     if (isInView && !isDone) {
+      startedRef.current = true;
       let current = 0;
-      const interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         if (current <= totalChars) {
           setVisibleChars(current);
           current++;
         } else {
           setIsDone(true);
-          clearInterval(interval);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
         }
       }, speed);
-      
-      return () => clearInterval(interval);
     }
   }, [isInView, totalChars, speed, isDone]);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   // Track the position of the last visible character to move the pen
   useEffect(() => {
@@ -134,6 +149,7 @@ export const TypewriterWithPen = React.memo(({
     <div 
       ref={containerRef} 
       className={`relative w-full text-center whitespace-pre-wrap ${className}`}
+      style={style}
     >
       <div className="inline-block w-full text-center relative">
         {renderContent()}

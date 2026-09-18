@@ -2643,6 +2643,7 @@ const InvitationPreviewContent: React.FC<{ embedded?: boolean; embeddedModel?: U
         setShowDeleteConfirm={setShowDeleteConfirm}
         setGuestMessage={setGuestMessage}
         toggleMute={toggleMute}
+        toggleMusic={toggleMusic}
         requestPermission={requestPermission}
         inviteDocPath={inviteDocPath}
         handleConfirmation={handleConfirmation}

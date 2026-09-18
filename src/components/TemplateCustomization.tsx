@@ -159,6 +159,15 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [isUploadingGalleryVideo, setIsUploadingGalleryVideo] = useState(false);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const musicFileInputRef = useRef<HTMLInputElement | null>(null);
+  const eventPhoto1InputRef = useRef<HTMLInputElement | null>(null);
+  const eventPhoto2InputRef = useRef<HTMLInputElement | null>(null);
+  const eventPhoto3InputRef = useRef<HTMLInputElement | null>(null);
+  const eventVenuePhotoInputRef = useRef<HTMLInputElement | null>(null);
+  const accommodationImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingLocalMusic, setIsUploadingLocalMusic] = useState(false);
+  const [isUploadingLocalMedia, setIsUploadingLocalMedia] = useState<string | null>(null);
+  const pendingAccommodationIdRef = useRef<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const showToast = (type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
@@ -337,6 +346,124 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
     );
 
     widget.open();
+  };
+
+  const handleLocalMusicUpload = async (file: File) => {
+    if (!file) return;
+    if (!user || !customTemplate.id) {
+      showToast('error', 'Vous devez être connecté');
+      return;
+    }
+    const maxSizeBytes = 6 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      showToast('error', 'Fichier trop volumineux (max 6 Mo)');
+      return;
+    }
+    if (!file.type.startsWith('audio/')) {
+      showToast('error', 'Veuillez sélectionner un fichier audio');
+      return;
+    }
+    setIsUploadingLocalMusic(true);
+    try {
+      const extFromName = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : undefined;
+      const ext = extFromName || (file.type === 'audio/mpeg' || file.type === 'audio/mp3' ? 'mp3' : 'm4a');
+      const storagePath = `users/${user.id}/templates/${customTemplate.id}/backgroundMusic-${Date.now()}.${ext}`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file, { contentType: file.type || 'audio/mpeg' });
+      const downloadUrl = await getDownloadURL(storageRef);
+      handleInputChange('backgroundMusic', downloadUrl);
+      const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+      await setDoc(modelRef, { backgroundMusic: downloadUrl, updatedAt: serverTimestamp() }, { merge: true });
+      onSave({ ...customTemplate, backgroundMusic: downloadUrl });
+      showToast('success', 'Musique téléchargée avec succès');
+    } catch (e) {
+      showToast('error', 'Erreur lors de la sauvegarde de la musique');
+    } finally {
+      setIsUploadingLocalMusic(false);
+      if (musicFileInputRef.current) musicFileInputRef.current.value = '';
+    }
+  };
+
+  const handleLocalMediaUpload = async (
+    field: 'eventPhoto1' | 'eventPhoto2' | 'eventPhoto3' | 'eventVenuePhoto' | 'accommodationImage',
+    file: File
+  ) => {
+    if (!file) return;
+    if (!user || !customTemplate.id) {
+      showToast('error', 'Vous devez être connecté');
+      return;
+    }
+    const maxSizeBytes = 6 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      showToast('error', 'Fichier trop volumineux (max 6 Mo)');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      showToast('error', 'Veuillez sélectionner une image');
+      return;
+    }
+    const loadingKey =
+      field === 'accommodationImage'
+        ? `acc:${pendingAccommodationIdRef.current || 'new'}`
+        : field;
+    setIsUploadingLocalMedia(loadingKey);
+    try {
+      const extFromName = file.name.includes('.') ? file.name.split('.').pop()?.toLowerCase() : undefined;
+      const mimeToExt: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/jpg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+      };
+      const ext = extFromName || mimeToExt[file.type] || 'jpg';
+      const accId = field === 'accommodationImage' ? pendingAccommodationIdRef.current || 'default' : '';
+      const storagePath =
+        field === 'accommodationImage'
+          ? `users/${user.id}/templates/${customTemplate.id}/accommodations/${accId}-${Date.now()}.${ext}`
+          : `users/${user.id}/templates/${customTemplate.id}/${field}-${Date.now()}.${ext}`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file, { contentType: file.type || 'image/jpeg' });
+      const downloadUrl = await getDownloadURL(storageRef);
+      if (field === 'accommodationImage') {
+        const accIdToApply = pendingAccommodationIdRef.current;
+        const list = (customTemplate.accommodations || []).map(a =>
+          a.id === accIdToApply ? { ...a, image: downloadUrl } : a
+        );
+        const updated = { ...customTemplate, accommodations: list } as TemplateData;
+        setCustomTemplate(updated);
+        if (user && customTemplate.id) {
+          try {
+            const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+            await setDoc(modelRef, { accommodations: list, updatedAt: serverTimestamp() }, { merge: true });
+            onSave(updated);
+          } catch {}
+        }
+        showToast('success', 'Image hébergement téléchargée');
+      } else {
+        handleInputChange(field as keyof TemplateData, downloadUrl);
+        if (user && customTemplate.id) {
+          const modelRef = doc(db, 'users', user.id, 'UserModel', customTemplate.id);
+          await setDoc(modelRef, { [field]: downloadUrl, updatedAt: serverTimestamp() }, { merge: true });
+          onSave({ ...customTemplate, [field]: downloadUrl });
+        }
+        showToast('success', 'Image téléchargée avec succès');
+      }
+    } catch (e) {
+      showToast('error', 'Erreur lors de la sauvegarde');
+    } finally {
+      setIsUploadingLocalMedia(null);
+      pendingAccommodationIdRef.current = null;
+      [
+        eventPhoto1InputRef,
+        eventPhoto2InputRef,
+        eventPhoto3InputRef,
+        eventVenuePhotoInputRef,
+        accommodationImageInputRef,
+      ].forEach(refObj => {
+        if (refObj.current) refObj.current.value = '';
+      });
+    }
   };
 
   const addDrinkOption = () => {
@@ -808,6 +935,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   />
                 </div>
 
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={customTemplate.invitationTextPhoto || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhoto', e.target.value)}
+                    placeholder="https://exemple.com/photo.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {customTemplate.invitationTextPhoto && (
+                    <button
+                      onClick={() => handleInputChange('invitationTextPhoto', '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Aperçu et upload */}
                 <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
@@ -896,6 +1048,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                     onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
                     placeholder="Ex: Sous-titre 2"
                   />
+                </div>
+
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={(customTemplate as any).invitationTextPhoto2 || ''}
+                    onChange={(e) => handleInputChange('invitationTextPhoto2' as any, e.target.value)}
+                    placeholder="https://exemple.com/photo.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {(customTemplate as any).invitationTextPhoto2 && (
+                    <button
+                      onClick={() => handleInputChange('invitationTextPhoto2' as any, '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Aperçu et upload photo 2 */}
@@ -1115,6 +1292,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 Image de fond
               </label>
               <div className="space-y-2.5 sm:space-y-3">
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={customTemplate.backgroundImage || ''}
+                    onChange={(e) => handleInputChange('backgroundImage', e.target.value)}
+                    placeholder="https://exemple.com/image.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {customTemplate.backgroundImage && (
+                    <button
+                      onClick={() => handleInputChange('backgroundImage', '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1322,6 +1524,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 fond de l'invitation
               </label>
               <div className="space-y-3">
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={customTemplate.patternBackgroundImage || ''}
+                    onChange={(e) => handleInputChange('patternBackgroundImage', e.target.value)}
+                    placeholder="https://exemple.com/motif.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {customTemplate.patternBackgroundImage && (
+                    <button
+                      onClick={() => handleInputChange('patternBackgroundImage', '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1403,6 +1630,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3">
+                  {/* Lien direct + suppression */}
+                  <div className="flex space-x-2.5 sm:space-x-3">
+                    <input
+                      type="text"
+                      value={customTemplate.guestInfoLeftImage || ''}
+                      onChange={(e) => handleInputChange('guestInfoLeftImage', e.target.value)}
+                      placeholder="https://exemple.com/ornement.png"
+                      className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    />
+                    {customTemplate.guestInfoLeftImage && (
+                      <button
+                        onClick={() => handleInputChange('guestInfoLeftImage', '')}
+                        className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                        style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                      >
+                        <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </button>
+                    )}
+                  </div>
+
                   <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
                        style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1472,6 +1724,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 </div>
 
                 <div className="space-y-4">
+                  {/* Lien direct + suppression */}
+                  <div className="flex space-x-2.5 sm:space-x-3">
+                    <input
+                      type="text"
+                      value={customTemplate.guestInfoRightImage || ''}
+                      onChange={(e) => handleInputChange('guestInfoRightImage', e.target.value)}
+                      placeholder="https://exemple.com/ornement.png"
+                      className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                      onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                      onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                    />
+                    {customTemplate.guestInfoRightImage && (
+                      <button
+                        onClick={() => handleInputChange('guestInfoRightImage', '')}
+                        className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                        style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                      >
+                        <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                      </button>
+                    )}
+                  </div>
+
                   <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
                        style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1547,6 +1824,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 Photo
               </label>
               <div className="space-y-3">
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={customTemplate.invitationPhoto || ''}
+                    onChange={(e) => handleInputChange('invitationPhoto', e.target.value)}
+                    placeholder="https://exemple.com/photo.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {customTemplate.invitationPhoto && (
+                    <button
+                      onClick={() => handleInputChange('invitationPhoto', '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 <div className="relative h-24 rounded-xl border-2 border-dashed transition-all duration-300 flex items-center justify-center group"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1597,6 +1899,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 MP4 ou WebM en boucle, sans son. Remplace la photo de fond en haut.
               </p>
               <div className="space-y-3">
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={(customTemplate as any).invitationVideo || ''}
+                    onChange={(e) => handleInputChange('invitationVideo' as any, e.target.value)}
+                    placeholder="https://exemple.com/video.mp4"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {(customTemplate as any).invitationVideo && (
+                    <button
+                      onClick={() => handleInputChange('invitationVideo' as any, '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 <div className="relative h-24 rounded-xl border-2 border-dashed transition-all duration-300 flex items-center justify-center group"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -1668,6 +1995,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       {label}
                     </label>
                     <div className="space-y-3">
+                      {/* Lien direct + suppression */}
+                      <div className="flex space-x-2.5 sm:space-x-3">
+                        <input
+                          type="text"
+                          value={(customTemplate as any)[field] || ''}
+                          onChange={(e) => handleInputChange(field as keyof TemplateData, e.target.value)}
+                          placeholder="https://exemple.com/image.jpg"
+                          className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        />
+                        {(customTemplate as any)[field] && (
+                          <button
+                            onClick={() => handleInputChange(field as keyof TemplateData, '')}
+                            className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                            style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                          >
+                            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="relative h-20 rounded-xl border-2 border-dashed transition-all duration-300 group"
                            style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -2005,6 +2357,32 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 Photo de la salle
               </label>
               <div className="space-y-1.5 sm:space-y-2">
+                {/* Lien direct + suppression */}
+                <div className="flex space-x-2.5 sm:space-x-3">
+                  <input
+                    type="text"
+                    value={customTemplate.eventVenuePhoto || ''}
+                    onChange={(e) => handleInputChange('eventVenuePhoto', e.target.value)}
+                    placeholder="https://exemple.com/photo.jpg"
+                    className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-200 outline-none text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                  {customTemplate.eventVenuePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleInputChange('eventVenuePhoto', '')}
+                      className="p-2.5 sm:p-3 rounded-xl border transition-all duration-200"
+                      style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                    >
+                      <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                    </button>
+                  )}
+                </div>
+
                 <div className="relative h-24 sm:h-28 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all duration-300"
                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -2023,19 +2401,39 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                 <div className="flex items-center space-x-1.5 sm:space-x-2">
                   <button
                     type="button"
-                    onClick={() => handleCloudinaryUpload('eventVenuePhoto')}
-                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                    disabled={isUploadingLocalMedia === 'eventVenuePhoto'}
+                    onClick={() => eventVenuePhotoInputRef.current?.click()}
+                    className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                     style={{
                       background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
                       color: '#0b0f17',
                       boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                    onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                    onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1)'; }}
                   >
-                    <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
-                    {customTemplate.eventVenuePhoto ? 'Changer la photo' : 'Charger une photo'}
+                    {isUploadingLocalMedia === 'eventVenuePhoto' ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2 animate-spin" />
+                        Chargement…
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
+                        {customTemplate.eventVenuePhoto ? 'Changer la photo' : 'Charger une photo'}
+                      </>
+                    )}
                   </button>
+                  <input
+                    ref={eventVenuePhotoInputRef}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleLocalMediaUpload('eventVenuePhoto', file);
+                    }}
+                  />
                   {customTemplate.eventVenuePhoto && (
                     <button
                       type="button"
@@ -2231,6 +2629,32 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                             <label className="block text-xs font-semibold mb-0.5" style={{ color: 'rgba(255,255,255,0.55)' }}>
                               <Camera className="h-3 w-3 inline mr-1" /> Photo de l'établissement
                             </label>
+                            {/* Lien direct + suppression */}
+                            <div className="flex space-x-2.5 sm:space-x-3 mb-1.5 sm:mb-2">
+                              <input
+                                type="text"
+                                value={acc.image || ''}
+                                onChange={(e) => updateAccommodation(acc.id, { image: e.target.value })}
+                                placeholder="https://exemple.com/photo.jpg"
+                                className="flex-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all duration-200 outline-none text-[10px] sm:text-xs"
+                                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                                onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                                onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              />
+                              {acc.image && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateAccommodation(acc.id, { image: '' })}
+                                  className="p-1.5 sm:p-2 rounded-xl border transition-all duration-200"
+                                  style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                </button>
+                              )}
+                            </div>
+
                             <div className="relative h-20 sm:h-24 rounded-xl border-2 border-dashed transition-all duration-300 group overflow-hidden"
                                  style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -2264,18 +2688,31 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                             <div className="mt-1.5">
                               <button
                                 type="button"
-                                onClick={() => handleCloudinaryUpload('invitationTextPhoto' as any, acc.id)}
-                                className="px-2.5 py-1.5 text-[10px] sm:text-xs rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                                disabled={isUploadingLocalMedia === `acc:${acc.id}`}
+                                onClick={() => {
+                                  pendingAccommodationIdRef.current = acc.id;
+                                  accommodationImageInputRef.current?.click();
+                                }}
+                                className="px-2.5 py-1.5 text-[10px] sm:text-xs rounded-xl transition-all duration-300 font-semibold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                                 style={{
                                   background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
                                   color: '#0b0f17',
                                   boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 6px 16px -6px rgba(251,191,36,0.55)',
                                 }}
-                                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                                onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                                onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1)'; }}
                               >
-                                <Upload className="h-3 w-3 mr-1" />
-                                Charger photo
+                                {isUploadingLocalMedia === `acc:${acc.id}` ? (
+                                  <>
+                                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                                    Chargement…
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="h-3 w-3 mr-1" />
+                                    Charger photo
+                                  </>
+                                )}
                               </button>
                             </div>
                           </div>
@@ -2437,6 +2874,32 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                   const previewSrc = (customTemplate[field] as string) || customTemplate.eventPhotos?.[idx] || customTemplate.invitationPhoto || customTemplate.backgroundImage;
                   return (
                     <div key={idx} className="space-y-1.5 sm:space-y-2">
+                      {/* Lien direct + suppression */}
+                      <div className="flex space-x-2.5 sm:space-x-3">
+                        <input
+                          type="text"
+                          value={(customTemplate[field] as string) || ''}
+                          onChange={(e) => handleInputChange(field, e.target.value)}
+                          placeholder="https://exemple.com/photo.jpg"
+                          className="flex-1 px-2 py-1.5 sm:px-3 sm:py-2 rounded-xl transition-all duration-200 outline-none text-[10px] sm:text-xs"
+                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff' }}
+                          onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.45)'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.12)'; }}
+                          onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.boxShadow = 'none'; }}
+                        />
+                        {(customTemplate[field] as string) && (
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange(field, '')}
+                            className="p-1.5 sm:p-2 rounded-xl border transition-all duration-200"
+                            style={{ borderColor: 'rgba(236,72,153,0.25)', color: 'rgba(255,255,255,0.55)' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(236,72,153,0.1)'; e.currentTarget.style.color = '#f9a8d4'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.4)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)'; e.currentTarget.style.borderColor = 'rgba(236,72,153,0.25)'; }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="relative h-16 sm:h-20 rounded-xl border-2 border-dashed flex items-center justify-center overflow-hidden transition-all duration-300"
                            style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(251,191,36,0.03) 100%)' }}
                            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(251,191,36,0.5)'; }}
@@ -2455,19 +2918,49 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
                       <div className="flex items-center space-x-1.5 sm:space-x-2">
                         <button
                           type="button"
-                          onClick={() => handleCloudinaryUpload(field)}
-                          className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center"
+                          disabled={isUploadingLocalMedia === field}
+                          onClick={() => {
+                            const refObj =
+                              idx === 0 ? eventPhoto1InputRef :
+                              idx === 1 ? eventPhoto2InputRef :
+                              eventPhoto3InputRef;
+                            refObj.current?.click();
+                          }}
+                          className="w-full px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm rounded-xl transition-all duration-300 font-semibold flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
                           style={{
                             background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
                             color: '#0b0f17',
                             boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                          onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                          onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1)'; }}
                         >
-                          <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
-                          Charger photo {idx + 1}
+                          {isUploadingLocalMedia === field ? (
+                            <>
+                              <RefreshCw className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2 animate-spin" />
+                              Chargement…
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="h-3.5 w-3.5 mr-1.5 sm:h-4 sm:w-4 sm:mr-2" />
+                              Charger photo {idx + 1}
+                            </>
+                          )}
                         </button>
+                        <input
+                          ref={
+                            idx === 0 ? eventPhoto1InputRef :
+                            idx === 1 ? eventPhoto2InputRef :
+                            eventPhoto3InputRef
+                          }
+                          type="file"
+                          accept="image/*"
+                          hidden
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleLocalMediaUpload(field as any, file);
+                          }}
+                        />
                       </div>
                     </div>
                   );
@@ -2770,19 +3263,30 @@ const TemplateCustomization = ({ template, onBack, onSave }: TemplateCustomizati
               
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <button
-                  onClick={() => handleCloudinaryUpload('backgroundMusic' as any)}
-                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-xs sm:text-sm"
+                  onClick={() => musicFileInputRef.current?.click()}
+                  disabled={isUploadingLocalMusic}
+                  className="flex-1 px-3 py-2 sm:px-4 sm:py-3 rounded-xl transition-all duration-300 font-semibold flex items-center justify-center text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
                     background: 'linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%)',
                     color: '#0b0f17',
                     boxShadow: '0 1px 0 rgba(255,255,255,0.25) inset, 0 0 0 1px rgba(251,191,36,0.5), 0 8px 20px -8px rgba(251,191,36,0.55)',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.08)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                  onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1.08)'; }}
+                  onMouseLeave={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.filter = 'brightness(1)'; }}
                 >
                   <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
-                  Télécharger une musique
+                  {isUploadingLocalMusic ? 'Chargement…' : 'Télécharger une musique'}
                 </button>
+                <input
+                  ref={musicFileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void handleLocalMusicUpload(file);
+                  }}
+                />
               </div>
             </div>
 
